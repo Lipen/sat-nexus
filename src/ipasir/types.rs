@@ -1,0 +1,196 @@
+#![allow(dead_code)]
+
+use std::convert::TryFrom;
+use std::fmt;
+
+use snafu::Snafu;
+
+/// A literal of the IPASIR implementing solver.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Lit(i32);
+
+impl Lit {
+    /// Creates a new `Lit` from the given value.
+    pub unsafe fn new_unchecked(val: i32) -> Self {
+        debug_assert!(val != 0);
+        Self(val)
+    }
+
+    /// Return literal's value.
+    /// Note: it is supposed to be called from ffi-code only.
+    pub fn to_ffi(self) -> i32 {
+        self.0
+    }
+
+    /// Returns the variable of `self`.
+    pub fn var(self) -> Var {
+        Var(self.0.unsigned_abs())
+    }
+
+    /// Returns the sign of `self`.
+    pub fn sign(self) -> Sign {
+        if self.0.is_positive() {
+            Sign::Pos
+        } else {
+            Sign::Neg
+        }
+    }
+}
+
+impl fmt::Display for Lit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Snafu)]
+#[snafu(display("Invalid literal value: {}", value))]
+pub struct InvalidLitValueError {
+    value: i32,
+}
+
+impl TryFrom<i32> for Lit {
+    type Error = InvalidLitValueError;
+
+    fn try_from(val: i32) -> std::result::Result<Self, Self::Error> {
+        if val == 0 || val == i32::MIN {
+            return InvalidLitValueContext { value: val }.fail();
+        }
+        Ok(Self(val))
+    }
+}
+
+impl TryFrom<&i32> for Lit {
+    type Error = <Self as TryFrom<i32>>::Error;
+
+    fn try_from(val: &i32) -> std::result::Result<Self, Self::Error> {
+        Self::try_from(*val)
+    }
+}
+
+// impl From<i32> for Lit {
+//     fn from(value: i32) -> Self {
+//         unsafe { Self::new_unchecked(value) }
+//     }
+// }
+//
+// impl From<&i32> for Lit {
+//     fn from(value: &i32) -> Self {
+//         Self::from(*value)
+//     }
+// }
+
+impl Into<i32> for Lit {
+    fn into(self) -> i32 {
+        self.0
+    }
+}
+
+impl From<Var> for Lit {
+    fn from(var: Var) -> Self {
+        var.lit()
+    }
+}
+
+/// The polarity of a literal.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Sign {
+    /// Positive polarity.
+    Pos,
+    /// Negative polarity.
+    Neg,
+}
+
+/// A variable of the IPASIR implementing solver.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Var(pub(crate) u32);
+
+impl Var {
+    fn lit(&self) -> Lit {
+        unsafe { Lit::new_unchecked(self.0 as i32) }
+    }
+}
+
+impl From<Lit> for Var {
+    fn from(lit: Lit) -> Self {
+        lit.var()
+    }
+}
+
+/// A clause from the IPASIR solver.
+pub struct Clause<'a> {
+    /// The zero-ended literals.
+    lits: &'a [Lit],
+}
+
+impl<'a> From<&'a [Lit]> for Clause<'a> {
+    fn from(lits: &'a [Lit]) -> Self {
+        debug_assert!(!lits.is_empty());
+        debug_assert_eq!(lits.last(), Some(&Lit(0)));
+        Self { lits }
+    }
+}
+
+impl<'a> Clause<'a> {
+    /// Returns the length of the clause.
+    pub fn len(&self) -> usize {
+        self.lits.len()
+    }
+
+    /// Returns `true` if the clause is empty.
+    ///
+    /// # Note
+    ///
+    /// Normally a clause should never be empty.
+    pub fn is_empty(&self) -> bool {
+        self.lits.len() == 0
+    }
+
+    /// Returns an iterator over the literals of the clause.
+    // pub fn iter(&self) -> LitIter {
+    //     LitIter { iter: self.lits.iter() }
+    // }
+    pub fn iter(&self) -> impl Iterator<Item = &Lit> {
+        self.lits.iter()
+    }
+}
+
+impl<'a, Idx> std::ops::Index<Idx> for Clause<'a>
+where
+    Idx: std::slice::SliceIndex<[Lit]>,
+{
+    type Output = <[Lit] as std::ops::Index<Idx>>::Output;
+
+    fn index(&self, index: Idx) -> &Self::Output {
+        &self.lits[index]
+    }
+}
+
+// /// Iterator over the literals of a clause.
+// #[derive(Debug, Clone)]
+// pub struct LitIter<'a> {
+//     /// The underlying iterator.
+//     iter: std::slice::Iter<'a, Lit>,
+// }
+//
+// impl<'a> ExactSizeIterator for LitIter<'a> {
+//     fn len(&self) -> usize {
+//         self.iter.len()
+//     }
+// }
+//
+// impl<'a> Iterator for LitIter<'a> {
+//     type Item = Lit;
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.iter.next().cloned()
+//     }
+// }
+//
+// impl<'a> DoubleEndedIterator for LitIter<'a> {
+//     fn next_back(&mut self) -> Option<Self::Item> {
+//         self.iter.next_back().cloned()
+//     }
+// }

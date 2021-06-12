@@ -1,0 +1,30 @@
+[package]
+name = "nexus-sat"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2018"
+
+[workspace]
+#members = [
+#    "ipasir-sys",
+#    "cadical-sys",
+#]
+
+[dependencies]
+#anyhow = "1.0.40"
+#eyre = "0.6.5"
+color-eyre = "0.5.11"
+ndarray = "0.15.2"
+type-map = "0.5.0"
+derive_more = "0.99.14"
+ipasir-sys = { path = "sys/ipasir-sys" }
+cadical-sys = { path = "sys/cadical-sys" }
+snafu = "0.6.10"
+lazy_static = "1.4.0"
+libloading = "0.7.0"
+itertools = "0.10.0"
+tap = "1.0.1"
+
+[dev-dependencies]
+quickcheck = "1.0.3"
+quickcheck_macros = "1.0.0"
