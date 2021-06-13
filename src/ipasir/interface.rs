@@ -129,7 +129,3 @@ pub trait Ipasir {
         }
     }
 }
-
-pub trait IpasirExt {
-    fn model(&self) -> Vec<bool>;
-}

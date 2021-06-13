@@ -1,6 +1,6 @@
-[submodule "sys/cadical-sys/vendor/cadical"]
+[submodule "cadical"]
 	path = sys/cadical-sys/vendor/cadical
 	url = https://github.com/arminbiere/cadical
-[submodule "sys/ipasir-sys/vendor/ipasir"]
+[submodule "ipasir"]
 	path = sys/ipasir-sys/vendor/ipasir
 	url = https://github.com/biotomas/ipasir
