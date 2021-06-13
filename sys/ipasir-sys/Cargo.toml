@@ -1,0 +1,11 @@
+[package]
+name = "ipasir-sys"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+libloading = "0.7.0"
+
+[build-dependencies]
+bindgen = "0.58.1"
