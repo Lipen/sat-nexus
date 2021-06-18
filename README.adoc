@@ -1,10 +1,9 @@
 = SAT Nexus
 :toc: macro
 
-image:https://github.com/Lipen/sat-nexus/workflows/CI/badge.svg["Build Status", link="https://github.com/Lipen/sat-nexus/actions"]
-
 Interfaces and wrappers for SAT solvers.
 
-MSRV: Rust 1.53 (stable).
+image:https://github.com/Lipen/sat-nexus/workflows/CI/badge.svg["Build Status", link="https://github.com/Lipen/sat-nexus/actions"]
+image:https://img.shields.io/badge/MSRV-1.53-green["Minimum supported Rust version"]
 
 toc::[]
