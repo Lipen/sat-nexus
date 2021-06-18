@@ -5,7 +5,7 @@ on: [ push, pull_request ]
 #  pull_request:
 #    branches: [ master ]
 
-name: Continuous integration
+name: CI
 
 env:
   CARGO_TERM_COLOR: always
