@@ -1,0 +1,8 @@
+= SAT Nexus
+:toc: macro
+
+Interfaces and wrappers for SAT solvers.
+
+MSRV: Rust 1.53 (stable).
+
+toc::[]
