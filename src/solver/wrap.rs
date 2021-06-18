@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
+use itertools::Itertools;
 use ndarray::ArrayD;
 
 use crate::context::Context;
@@ -114,7 +115,7 @@ impl GenericSolver for WrappedIpasirSolver<IpasirSolver> {
 
     fn new_var(&mut self) -> Lit {
         self.nvars += 1;
-        Lit::from(self.nvars as i32)
+        Lit::new(self.nvars as i32)
     }
 
     fn add_clause<I, L>(&mut self, lits: I)
@@ -123,7 +124,7 @@ impl GenericSolver for WrappedIpasirSolver<IpasirSolver> {
         L: Into<Lit>,
     {
         self.nclauses += 1;
-        self.inner.add_clause(lits.into_iter().map(|x| x.into()));
+        self.inner.add_clause(lits.into_iter().map_into::<Lit>());
     }
 
     fn add_clause_lit<L>(&mut self, lit: L)
@@ -168,13 +169,13 @@ mod tests {
     #[test]
     fn test_wrap_solver() -> color_eyre::Result<()> {
         let mut solver = WrappedIpasirSolver::new_cadical();
-        assert!(solver.signature().starts_with("cadical"));
+        assert!(solver.signature().contains("cadical"));
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
-        solver.add_clause(&[1, 2]);
-        solver.add_clause(&[3, 4]);
-        solver.add_clause(&[-1, -2]);
-        solver.add_clause(&[-3, -4]);
+        solver.add_clause([1, 2]);
+        solver.add_clause([3, 4]);
+        solver.add_clause([-1, -2]);
+        solver.add_clause([-3, -4]);
 
         // Problem is satisfiable
         let response = solver.solve();

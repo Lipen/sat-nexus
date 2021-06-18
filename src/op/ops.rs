@@ -24,7 +24,7 @@ pub trait Ops: GenericSolver {
 
     /// `lhs => rhs`
     fn imply(&mut self, lhs: Lit, rhs: Lit) {
-        self.add_clause_array([-lhs, rhs]);
+        self.add_clause([-lhs, rhs]);
     }
 
     /// `lhs <=> rhs`
@@ -53,11 +53,6 @@ pub trait Ops: GenericSolver {
         }
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_and_array<const N: usize>(&mut self, lhs: Lit, rhs: [Lit; N]) {
-        self.imply_and(lhs, array::IntoIter::new(rhs));
-    }
-
     /// `lhs => OR(rhs)`
     fn imply_or<I>(&mut self, lhs: Lit, rhs: I)
     where
@@ -76,14 +71,9 @@ pub trait Ops: GenericSolver {
         // self.finalize_clause();
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_or_array<const N: usize>(&mut self, lhs: Lit, rhs: [Lit; N]) {
-        self.imply_or(lhs, array::IntoIter::new(rhs))
-    }
-
     /// `x1 => (x2 => x3)`
     fn imply_imply(&mut self, x1: Lit, x2: Lit, x3: Lit) {
-        self.add_clause_array([-x1, -x2, x3]);
+        self.add_clause([-x1, -x2, x3]);
     }
 
     /// `x1 => (x2 <=> x3)`
@@ -113,11 +103,6 @@ pub trait Ops: GenericSolver {
         }
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_imply_and_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
-        self.imply_imply_and(x1, x2, array::IntoIter::new(xs));
-    }
-
     /// `x1 => (x2 => OR(xs))`
     fn imply_imply_or<I>(&mut self, x1: Lit, x2: Lit, xs: I)
     where
@@ -131,14 +116,9 @@ pub trait Ops: GenericSolver {
         self.add_clause(v);
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_imply_or_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
-        self.imply_imply_or(x1, x2, array::IntoIter::new(xs));
-    }
-
     /// `x1 => (x2 => (x3 => x4))`
     fn imply_imply_imply(&mut self, x1: Lit, x2: Lit, x3: Lit, x4: Lit) {
-        self.add_clause_array([-x1, -x2, -x3, x4]);
+        self.add_clause([-x1, -x2, -x3, x4]);
     }
 
     /// `x1 => (x2 => (x3 <=> x4))`
@@ -167,17 +147,6 @@ pub trait Ops: GenericSolver {
         }
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_imply_imply_and_array<const N: usize>(
-        &mut self,
-        x1: Lit,
-        x2: Lit,
-        x3: Lit,
-        xs: [Lit; N],
-    ) {
-        self.imply_imply_imply_and(x1, x2, x3, array::IntoIter::new(xs));
-    }
-
     /// `x1 => (x2 => OR(xs))`
     fn imply_imply_imply_or<I>(&mut self, x1: Lit, x2: Lit, x3: Lit, xs: I)
     where
@@ -192,20 +161,9 @@ pub trait Ops: GenericSolver {
         self.add_clause(v);
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_imply_imply_or_array<const N: usize>(
-        &mut self,
-        x1: Lit,
-        x2: Lit,
-        x3: Lit,
-        xs: [Lit; N],
-    ) {
-        self.imply_imply_imply_or(x1, x2, x3, array::IntoIter::new(xs));
-    }
-
     /// `x1 => (x2 => (x3 => (x4 => x5)))`
     fn imply_imply_imply_imply(&mut self, x1: Lit, x2: Lit, x3: Lit, x4: Lit, x5: Lit) {
-        self.add_clause_array([-x1, -x2, -x3, -x4, x5]);
+        self.add_clause([-x1, -x2, -x3, -x4, x5]);
     }
 
     /// `x1 => (x2 => (x3 => (x4 <=> x5)))`
@@ -239,11 +197,6 @@ pub trait Ops: GenericSolver {
         self.add_clause(v);
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn iff_and_array<const N: usize>(&mut self, lhs: Lit, xs: [Lit; N]) {
-        self.iff_and(lhs, array::IntoIter::new(xs));
-    }
-
     /// `lhs <=> OR(xs)`
     fn iff_or<I>(&mut self, lhs: Lit, xs: I)
     where
@@ -259,23 +212,18 @@ pub trait Ops: GenericSolver {
         self.add_clause(v);
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn iff_or_array<const N: usize>(&mut self, lhs: Lit, xs: [Lit; N]) {
-        self.iff_or(lhs, array::IntoIter::new(xs));
-    }
-
     /// `lhs <=> (x1 => x2)`
     fn iff_imply(&mut self, lhs: Lit, x1: Lit, x2: Lit) {
         self.imply_imply(lhs, x1, x2);
-        self.add_clause_array([lhs, x1]);
-        self.add_clause_array([lhs, -x2]);
+        self.add_clause([lhs, x1]);
+        self.add_clause([lhs, -x2]);
     }
 
     /// `lhs <=> (x1 <=> x2)`
     fn iff_iff(&mut self, lhs: Lit, x1: Lit, x2: Lit) {
         self.imply_iff(lhs, x1, x2);
-        self.add_clause_array([lhs, -x1, -x2]);
-        self.add_clause_array([lhs, x1, x2]);
+        self.add_clause([lhs, -x1, -x2]);
+        self.add_clause([lhs, x1, x2]);
     }
 
     /// `lhs <=> ITE(cond, a, b)`
@@ -306,11 +254,6 @@ pub trait Ops: GenericSolver {
         self.add_clause(v);
     }
 
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_iff_and_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
-        self.imply_iff_and(x1, x2, array::IntoIter::new(xs));
-    }
-
     /// `x1 => (x2 <=> OR(xs))`
     fn imply_iff_or<I>(&mut self, x1: Lit, x2: Lit, xs: I)
     where
@@ -325,11 +268,6 @@ pub trait Ops: GenericSolver {
             self.imply_imply(x1, x, x2);
         }
         self.add_clause(v);
-    }
-
-    // TODO: remove when `IntoIterator for [T;N]` is stabilized (Rust 1.53)
-    fn imply_iff_or_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
-        self.imply_iff_or(x1, x2, array::IntoIter::new(xs));
     }
 
     // TODO:
@@ -347,4 +285,60 @@ pub trait Ops: GenericSolver {
     //  imply_imply_iff_imply
     //  imply_imply_iff_iff
     //  imply_imply_iff_ite
+}
+
+/// **Note:** since `IntoIterator for [T;N]` was stabilized (Rust 1.53),
+/// the methods in this trait are not needed anymore!
+pub trait OpsArray: Ops {
+    fn imply_and_array<const N: usize>(&mut self, lhs: Lit, rhs: [Lit; N]) {
+        self.imply_and(lhs, array::IntoIter::new(rhs));
+    }
+
+    fn imply_or_array<const N: usize>(&mut self, lhs: Lit, rhs: [Lit; N]) {
+        self.imply_or(lhs, array::IntoIter::new(rhs))
+    }
+
+    fn imply_imply_and_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
+        self.imply_imply_and(x1, x2, array::IntoIter::new(xs));
+    }
+
+    fn imply_imply_or_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
+        self.imply_imply_or(x1, x2, array::IntoIter::new(xs));
+    }
+
+    fn imply_imply_imply_and_array<const N: usize>(
+        &mut self,
+        x1: Lit,
+        x2: Lit,
+        x3: Lit,
+        xs: [Lit; N],
+    ) {
+        self.imply_imply_imply_and(x1, x2, x3, array::IntoIter::new(xs));
+    }
+
+    fn imply_imply_imply_or_array<const N: usize>(
+        &mut self,
+        x1: Lit,
+        x2: Lit,
+        x3: Lit,
+        xs: [Lit; N],
+    ) {
+        self.imply_imply_imply_or(x1, x2, x3, array::IntoIter::new(xs));
+    }
+
+    fn iff_and_array<const N: usize>(&mut self, lhs: Lit, xs: [Lit; N]) {
+        self.iff_and(lhs, array::IntoIter::new(xs));
+    }
+
+    fn iff_or_array<const N: usize>(&mut self, lhs: Lit, xs: [Lit; N]) {
+        self.iff_or(lhs, array::IntoIter::new(xs));
+    }
+
+    fn imply_iff_and_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
+        self.imply_iff_and(x1, x2, array::IntoIter::new(xs));
+    }
+
+    fn imply_iff_or_array<const N: usize>(&mut self, x1: Lit, x2: Lit, xs: [Lit; N]) {
+        self.imply_iff_or(x1, x2, array::IntoIter::new(xs));
+    }
 }

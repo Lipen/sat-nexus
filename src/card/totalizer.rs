@@ -142,7 +142,7 @@ impl Totalizer {
             .unwrap_or(self.output_vars.len());
         for i in (ub..=max).rev() {
             // Note: totalizer is 0-based, but all params are naturally 1-based
-            solver.add_clause_array([-self.output_vars[i - 1]]);
+            solver.add_clause([-self.output_vars[i - 1]]);
         }
     }
 
@@ -155,7 +155,7 @@ impl Totalizer {
         let min = self.declared_lower_bound.replace(lb).unwrap_or(1);
         for i in min..=lb {
             // Note: totalizer is 0-based, but all params are naturally 1-based
-            solver.add_clause_array([self.output_vars[i - 1]]);
+            solver.add_clause([self.output_vars[i - 1]]);
         }
     }
 }

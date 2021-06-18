@@ -3,6 +3,8 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
+use itertools::Itertools;
+
 use crate::context::Context;
 use crate::ipasir::{LitValue, SolveResponse};
 use crate::solver::GenericSolver;
@@ -10,7 +12,7 @@ use crate::types::Lit;
 
 #[derive(Debug)]
 pub struct MockSolver {
-    context: Context,
+    context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
     clauses: Vec<Vec<Lit>>,
@@ -20,7 +22,7 @@ pub struct MockSolver {
 impl MockSolver {
     pub fn new() -> Self {
         Self {
-            context: Context::new(),
+            context: Rc::new(RefCell::new(Context::new())),
             nvars: 0,
             nclauses: 0,
             clauses: Vec::new(),
@@ -48,16 +50,8 @@ impl GenericSolver for MockSolver {
     }
 
     fn context(&self) -> Rc<RefCell<Context>> {
-        todo!()
+        Rc::clone(&self.context)
     }
-    // fn context(&self) -> Ref<Context> {
-    //     // &self.context
-    //     todo!()
-    // }
-    // fn context_mut(& self) -> RefMut<Context> {
-    //     // &mut self.context
-    //     todo!()
-    // }
 
     fn num_vars(&self) -> usize {
         self.nvars
@@ -78,7 +72,7 @@ impl GenericSolver for MockSolver {
     {
         self.nclauses += 1;
         self.clauses
-            .push(lits.into_iter().map(|x| x.into()).collect());
+            .push(lits.into_iter().map_into::<Lit>().collect());
     }
 
     fn add_clause_lit<L>(&mut self, lit: L)
@@ -97,7 +91,7 @@ impl GenericSolver for MockSolver {
     where
         L: Into<Lit>,
     {
-        // TODO
+        todo!()
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -128,12 +122,12 @@ mod tests {
         }
         assert_eq!(solver.nvars, 4);
 
-        solver.add_clause(&[1, 2]);
-        solver.add_clause(&[3, 4]);
-        solver.add_clause(&[-1, -2]);
-        solver.add_clause(&[-3, -4]);
-        solver.add_clause(&[1]);
-        solver.add_clause(&[-3]);
+        solver.add_clause([1, 2]);
+        solver.add_clause([3, 4]);
+        solver.add_clause([-1, -2]);
+        solver.add_clause([-3, -4]);
+        solver.add_clause([1]);
+        solver.add_clause([-3]);
         assert_eq!(solver.nclauses, 6);
 
         Ok(())

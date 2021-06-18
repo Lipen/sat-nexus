@@ -10,7 +10,7 @@ use derive_more::Deref;
 use ndarray::{Array, Array1, ArrayD};
 use type_map::TypeMap;
 
-use nexus_sat::context::Context;
+use sat_nexus::context::Context;
 
 mod ipasir;
 
@@ -18,8 +18,8 @@ fn main() -> color_eyre::eyre::Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    use nexus_sat::solver::wrap::WrappedIpasirSolver;
-    use nexus_sat::solver::GenericSolver;
+    use sat_nexus::solver::wrap::WrappedIpasirSolver;
+    use sat_nexus::solver::GenericSolver;
 
     let mut solver = WrappedIpasirSolver::new_cadical();
     println!("Solver signature: {}", solver.signature());

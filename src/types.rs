@@ -12,6 +12,7 @@ use crate::ipasir::Lit as IpasirLit;
 use crate::ipasir::LitValue;
 use crate::op::encodings::Encodings;
 use crate::solver::GenericSolver;
+use std::convert::TryInto;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Lit(i32);
@@ -47,7 +48,7 @@ impl From<&i32> for Lit {
 
 impl From<usize> for Lit {
     fn from(val: usize) -> Self {
-        Self::from(val as i32)
+        Self::new(val.try_into().unwrap())
     }
 }
 
@@ -78,70 +79,6 @@ impl Neg for Lit {
         Self::from(-self.0)
     }
 }
-
-// #[derive(Debug)]
-// pub struct IntVar {
-//     domain: Vec<i32>,
-//     lits: Vec<Lit>,
-// }
-//
-// impl IntVar {
-//     pub fn new<S, I>(solver: &mut S, domain: I) -> Self
-//     where
-//         S: GenericSolver,
-//         I: IntoIterator<Item = i32>,
-//     {
-//         Self::new_onehot(solver, domain)
-//     }
-//
-//     pub fn new_bare<S, I>(solver: &mut S, domain: I) -> Self
-//     where
-//         S: GenericSolver,
-//         I: IntoIterator<Item = i32>,
-//     {
-//         let domain: Vec<i32> = domain.into_iter().collect();
-//         let lits: Vec<Lit> = (0..domain.len()).map(|_| solver.new_var()).collect();
-//         Self { domain, lits }
-//     }
-//
-//     pub fn new_onehot<S, I>(solver: &mut S, domain: I) -> Self
-//     where
-//         S: GenericSolver,
-//         I: IntoIterator<Item = i32>,
-//     {
-//         let var = Self::new_bare(solver, domain);
-//         encode_onehot(solver, &var.lits);
-//         var
-//     }
-//
-//     pub fn eq(&self, rhs: i32) -> Lit {
-//         debug_assert!(self.domain.contains(&rhs));
-//         let index = self.domain.iter().position(|&x| x == rhs).unwrap();
-//         self.lits[index]
-//     }
-//
-//     pub fn ne(&self, rhs: i32) -> Lit {
-//         -self.eq(rhs)
-//     }
-//
-//     pub fn eval<S>(&self, solver: &S) -> i32
-//     where
-//         S: GenericSolver,
-//     {
-//         let index = self
-//             .lits
-//             .iter()
-//             .position(|&x| matches!(solver.val(x), LitValue::True))
-//             .unwrap();
-//         self.domain[index]
-//     }
-// }
-//
-// impl fmt::Display for IntVar {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(f, "IntVar({:?})", self.domain)
-//     }
-// }
 
 #[derive(Debug)]
 pub struct DomainVar<T> {
