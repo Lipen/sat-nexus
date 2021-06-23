@@ -28,7 +28,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Rust
+      - name: Set up Rust ${{ matrix.rust }}
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
