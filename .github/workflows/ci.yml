@@ -51,7 +51,7 @@ jobs:
         with:
           command: build
 
-      - name: Build Cadical dynamic library
+      - name: Build Cadical shared library
         working-directory: sys/cadical-sys
         run: |
           git clone https://github.com/arminbiere/cadical
