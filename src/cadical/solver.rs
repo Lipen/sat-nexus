@@ -6,23 +6,23 @@ use super::ffi::*;
 use super::interface::*;
 
 pub struct CadicalSolver {
-    ffi: &'static CadicalFFI,
-    ptr: CadicalPtr,
+    ffi: &'static CCadicalFFI,
+    ptr: CCadicalPtr,
 }
 
 impl CadicalSolver {
     pub fn new() -> Self {
-        Self::new_custom(&CADICAL)
+        Self::new_custom(CCadicalFFI::instance())
     }
 
-    pub fn new_custom(ffi: &'static CadicalFFI) -> Self {
+    pub fn new_custom(ffi: &'static CCadicalFFI) -> Self {
         Self {
             ffi,
             ptr: unsafe { ffi.ccadical_init() },
         }
     }
 
-    pub fn new_null(ffi: &'static CadicalFFI) -> Self {
+    pub fn new_null(ffi: &'static CCadicalFFI) -> Self {
         Self {
             ffi,
             ptr: std::ptr::null_mut(),
@@ -31,10 +31,10 @@ impl CadicalSolver {
 }
 
 impl CadicalSolver {
-    pub fn _i_really_want_ffi(&self) -> &'static CadicalFFI {
+    pub fn _i_really_want_ffi(&self) -> &'static CCadicalFFI {
         self.ffi
     }
-    pub fn _i_really_want_ptr(&self) -> CadicalPtr {
+    pub fn _i_really_want_ptr(&self) -> CCadicalPtr {
         self.ptr
     }
 }
@@ -193,6 +193,7 @@ impl CadicalSolver {
             .into_iter()
             .map(|x| x.try_into())
             .collect::<Result<_, _>>()?;
-        Ok(self.add_clause(lits))
+        self.add_clause(lits);
+        Ok(())
     }
 }

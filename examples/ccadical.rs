@@ -3,8 +3,10 @@ use color_eyre::eyre::Result;
 use sat_nexus::cadical::ffi::*;
 
 fn main() -> Result<()> {
+    color_eyre::install()?;
+
     unsafe {
-        let lib = load_cadical("cadical");
+        let lib = CCadicalFFI::load("cadical");
         let ptr = lib.ccadical_init();
         lib.ccadical_add(ptr, 1);
         lib.ccadical_add(ptr, 2);

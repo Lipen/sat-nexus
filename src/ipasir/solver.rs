@@ -18,14 +18,21 @@ impl IpasirSolver {
         }
     }
 
-    pub fn new_cadical() -> Self {
-        Self::new_custom(&CADICAL)
+    pub fn new(name: &str) -> Self {
+        Self::new_custom(instance!(name))
     }
+
     pub fn new_minisat() -> Self {
-        Self::new_custom(&MINISAT)
+        // Self::new_custom(IpasirFFI::instance_minisat())
+        Self::new("minisat")
     }
     pub fn new_glucose() -> Self {
-        Self::new_custom(&GLUCOSE)
+        // Self::new_custom(IpasirFFI::instance_glucose())
+        Self::new("glucose")
+    }
+    pub fn new_cadical() -> Self {
+        // Self::new_custom(IpasirFFI::instance_cadical())
+        Self::new("cadical")
     }
 }
 
@@ -84,6 +91,7 @@ impl IpasirSolver {
             .into_iter()
             .map(|x| x.try_into())
             .collect::<Result<_, _>>()?;
-        Ok(self.add_clause(lits))
+        self.add_clause(lits);
+        Ok(())
     }
 }

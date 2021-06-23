@@ -11,16 +11,16 @@ use super::Lit;
 use std::convert::TryInto;
 
 pub struct CadicalSolver2 {
-    ffi: &'static CadicalFFI,
-    ptr: CadicalPtr,
+    ffi: &'static CCadicalFFI,
+    ptr: CCadicalPtr,
 }
 
 impl CadicalSolver2 {
     pub fn new() -> Self {
-        Self::new_custom(&CADICAL)
+        Self::new_custom(CCadicalFFI::instance())
     }
 
-    pub fn new_custom(ffi: &'static CadicalFFI) -> Self {
+    pub fn new_custom(ffi: &'static CCadicalFFI) -> Self {
         CadicalSolver2 {
             ffi,
             ptr: unsafe { ffi.ccadical_init() },
@@ -40,6 +40,7 @@ impl fmt::Display for CadicalSolver2 {
     }
 }
 
+/// Cadical interface methods.
 impl CadicalSolver2 {
     pub fn signature(&self) -> &'static str {
         let c_chars = unsafe { self.ffi.ccadical_signature() };
@@ -122,6 +123,7 @@ impl CadicalSolver2 {
     }
 }
 
+/// Additional CadicalSolver methods.
 impl CadicalSolver2 {
     pub fn add_clause<I, L>(&self, lits: I)
     where

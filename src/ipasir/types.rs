@@ -69,21 +69,10 @@ impl TryFrom<&i32> for Lit {
     }
 }
 
-// impl From<i32> for Lit {
-//     fn from(value: i32) -> Self {
-//         unsafe { Self::new_unchecked(value) }
-//     }
-// }
-//
-// impl From<&i32> for Lit {
-//     fn from(value: &i32) -> Self {
-//         Self::from(*value)
-//     }
-// }
-
-impl Into<i32> for Lit {
-    fn into(self) -> i32 {
-        self.0
+// Into<i32>
+impl From<Lit> for i32 {
+    fn from(lit: Lit) -> Self {
+        lit.0
     }
 }
 

@@ -41,7 +41,7 @@ impl Context {
     {
         self.storage
             .entry::<NamedStorage<T>>()
-            .or_insert_with(|| NamedStorage::new())
+            .or_insert_with(NamedStorage::new)
             .insert(name.into(), value)
     }
 

@@ -83,7 +83,7 @@ impl GenericSolver for MockSolver {
     }
 
     fn finalize_clause(&mut self) {
-        let lits = std::mem::replace(&mut self.tmp_clause, Vec::new());
+        let lits = std::mem::take(&mut self.tmp_clause);
         self.add_clause(lits);
     }
 

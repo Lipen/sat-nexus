@@ -86,7 +86,7 @@ impl From<IpasirSolver> for WrappedIpasirSolver<IpasirSolver> {
 
 impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Wrapped({})", self.signature())
+        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
@@ -135,7 +135,7 @@ impl GenericSolver for WrappedIpasirSolver<IpasirSolver> {
     }
 
     fn finalize_clause(&mut self) {
-        let lits = std::mem::replace(&mut self.tmp_clause, Vec::new());
+        let lits = std::mem::take(&mut self.tmp_clause);
         self.add_clause(lits);
     }
 

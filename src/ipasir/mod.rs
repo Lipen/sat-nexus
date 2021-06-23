@@ -1,4 +1,4 @@
-//! Reimplementation of https://github.com/Robbepop/ipasir-rs
+//! Reimplementation of <https://github.com/Robbepop/ipasir-rs>
 
 pub use interface::*;
 pub use types::*;
