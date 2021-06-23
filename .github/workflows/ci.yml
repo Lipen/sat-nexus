@@ -49,7 +49,7 @@ jobs:
           ./configure -fPIC
           cd build
           make -j8 libcadical.so
-          install -m 644 libcadical.so -Dt /usr/local/lib
+          sudo install -m 644 libcadical.so -Dt /usr/local/lib
           sudo ldconfig -n /usr/local/lib
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib" >> $GITHUB_ENV
 
