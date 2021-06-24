@@ -4,13 +4,12 @@ use std::fmt;
 use std::rc::Rc;
 
 use itertools::Itertools;
-use ndarray::ArrayD;
 
 use crate::context::Context;
 use crate::ipasir::solver::IpasirSolver;
 use crate::ipasir::{Ipasir, LitValue, SolveResponse};
 use crate::solver::GenericSolver;
-use crate::types::{DomainVar, Lit};
+use crate::types::Lit;
 
 #[derive(Debug)]
 pub struct WrappedIpasirSolver<S>
@@ -43,29 +42,6 @@ impl WrappedIpasirSolver<IpasirSolver> {
     }
     pub fn new_glucose() -> Self {
         Self::new(IpasirSolver::new_glucose())
-    }
-
-    pub fn new_domain_var<T, I>(&mut self, domain: I) -> DomainVar<T>
-    where
-        T: std::hash::Hash + Eq + Copy,
-        I: IntoIterator<Item = T>,
-    {
-        DomainVar::new(self, domain)
-    }
-
-    pub fn new_array<A, F>(shape: &[usize], f: F) -> ArrayD<A>
-    where
-        F: FnMut() -> A,
-    {
-        ArrayD::from_shape_simple_fn(shape, f)
-    }
-
-    pub fn new_var_array(&mut self, shape: &[usize]) -> ArrayD<Lit> {
-        ArrayD::from_shape_simple_fn(shape, || self.new_var())
-    }
-
-    pub fn new_var_vec(&mut self, len: usize) -> Vec<Lit> {
-        (0..len).map(|_| self.new_var()).collect()
     }
 
     pub fn add_unit<L>(&mut self, lit: L)

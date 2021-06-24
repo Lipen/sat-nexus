@@ -16,9 +16,9 @@ fn main() -> Result<()> {
     // let myvar = solver.new_array(&[num_states, num_trans], |solver| {
     //     solver.new_domain_var(0..=num_states)
     // });
-    let myvar = WrappedIpasirSolver::new_array(&[num_states, num_trans], || {
-        solver.new_domain_var(0..=num_states)
-    });
+    let myvar = solver.new_domain_var_array([num_states, num_trans], |_| {
+        0..=num_states
+    }).into_dyn();
     // .tap_mut(|it| it[[3, 0]].reverse_domain());
     println!("myvar (Debug):\n{:?}", myvar);
 

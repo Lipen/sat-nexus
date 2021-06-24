@@ -125,7 +125,7 @@ where
         self.map[&rhs]
     }
 
-    pub fn ne(&self, rhs: T) -> Lit {
+    pub fn neq(&self, rhs: T) -> Lit {
         -self.eq(rhs)
     }
 

@@ -2,9 +2,11 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use ndarray::{Array, ArrayD, Dimension, IxDyn, ShapeBuilder};
+
 use crate::context::Context;
 use crate::ipasir::{LitValue, SolveResponse};
-use crate::types::Lit;
+use crate::types::{DomainVar, Lit};
 
 pub trait GenericSolver {
     fn signature(&self) -> Cow<str>;
@@ -18,6 +20,65 @@ pub trait GenericSolver {
     fn num_clauses(&self) -> usize;
 
     fn new_var(&mut self) -> Lit;
+
+    fn new_var_array<D, Sh>(&mut self, shape: Sh) -> Array<Lit, D>
+    where
+        D: Dimension,
+        Sh: ShapeBuilder<Dim = D>,
+    {
+        Array::from_shape_simple_fn(shape, || self.new_var())
+    }
+
+    fn new_var_array_dyn<Sh>(&mut self, shape: Sh) -> ArrayD<Lit>
+    where
+        Sh: ShapeBuilder<Dim = IxDyn>,
+    {
+        self.new_var_array(shape).into_dyn()
+    }
+
+    fn new_var_vec(&mut self, len: usize) -> Vec<Lit> {
+        (0..len).map(|_| self.new_var()).collect()
+    }
+
+    fn new_domain_var<T, I>(&mut self, domain: I) -> DomainVar<T>
+    where
+        Self: Sized,
+        T: std::hash::Hash + Eq + Copy,
+        I: IntoIterator<Item = T>,
+    {
+        DomainVar::new(self, domain)
+    }
+
+    fn new_domain_var_array<T, I, D, Sh, F>(
+        &mut self,
+        shape: Sh,
+        mut f_domain: F,
+    ) -> Array<DomainVar<T>, D>
+    where
+        Self: Sized,
+        T: std::hash::Hash + Eq + Copy,
+        I: IntoIterator<Item = T>,
+        D: Dimension,
+        Sh: ShapeBuilder<Dim = D>,
+        F: FnMut(D::Pattern) -> I,
+    {
+        Array::from_shape_fn(shape, |pat| self.new_domain_var(f_domain(pat)))
+    }
+
+    fn new_domain_var_array_dyn<T, I, Sh, F>(
+        &mut self,
+        shape: Sh,
+        f_domain: F,
+    ) -> ArrayD<DomainVar<T>>
+    where
+        Self: Sized,
+        T: std::hash::Hash + Eq + Copy,
+        I: IntoIterator<Item = T>,
+        Sh: ShapeBuilder<Dim = IxDyn>,
+        F: FnMut(<IxDyn as Dimension>::Pattern) -> I,
+    {
+        self.new_domain_var_array(shape, f_domain).into_dyn()
+    }
 
     fn add_clause<I, L>(&mut self, lits: I)
     where

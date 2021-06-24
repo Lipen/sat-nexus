@@ -1,4 +1,4 @@
-pub use interface::GenericSolver;
+pub use interface::*;
 
 mod interface;
 pub mod mock;
