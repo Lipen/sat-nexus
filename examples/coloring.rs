@@ -6,8 +6,8 @@ use ndarray::ArrayD;
 
 use sat_nexus::ipasir::SolveResponse;
 use sat_nexus::op::ops::Ops;
-use sat_nexus::solver::GenericSolver;
 use sat_nexus::solver::wrap::WrappedIpasirSolver;
+use sat_nexus::solver::GenericSolver;
 use sat_nexus::types::DomainVar;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -41,7 +41,9 @@ where
     context.insert_named("num_colors", num_colors);
     context.insert_named("edges", edges.clone());
 
-    let color = solver.new_domain_var_array([num_vertices], |_| 1..=num_colors).into_dyn();
+    let color = solver
+        .new_domain_var_array([num_vertices], |_| 1..=num_colors)
+        .into_dyn();
     context.insert_named("color", color);
 }
 
