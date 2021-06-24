@@ -17,7 +17,6 @@ impl CCadicalFFI {
     }
 }
 
-#[macro_export]
 macro_rules! instance {
     ($name:expr) => {{
         use once_cell::sync::OnceCell;
