@@ -1,3 +1,11 @@
 .idea/
 target/
 Cargo.lock
+
+*.dll
+*.so
+*.a
+
+_*.rs
+original-ipasir-sys
+sys/cadical-lib-static
