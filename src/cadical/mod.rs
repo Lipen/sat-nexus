@@ -1,9 +1,10 @@
 pub use interface::*;
 
 pub mod ffi;
-mod interface;
 pub mod less;
 pub mod solver;
+
+mod interface;
 
 #[cfg(test)]
 mod tests;

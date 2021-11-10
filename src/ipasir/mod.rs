@@ -4,8 +4,9 @@ pub use interface::*;
 pub use types::*;
 
 pub mod ffi;
-mod interface;
 pub mod solver;
+
+mod interface;
 mod types;
 
 #[cfg(test)]
