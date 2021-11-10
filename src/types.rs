@@ -2,6 +2,7 @@
 
 use std::any::type_name;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::fmt;
 use std::hash::Hash;
 use std::ops::Neg;
@@ -12,7 +13,6 @@ use crate::ipasir::Lit as IpasirLit;
 use crate::ipasir::LitValue;
 use crate::op::encodings::Encodings;
 use crate::solver::GenericSolver;
-use std::convert::TryInto;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Lit(i32);

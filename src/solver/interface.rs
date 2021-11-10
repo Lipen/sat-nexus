@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::hash::Hash;
 use std::rc::Rc;
 
 use ndarray::{Array, ArrayD, Dimension, IxDyn, ShapeBuilder};
@@ -43,7 +44,7 @@ pub trait GenericSolver {
     fn new_domain_var<T, I>(&mut self, domain: I) -> DomainVar<T>
     where
         Self: Sized,
-        T: std::hash::Hash + Eq + Copy,
+        T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
     {
         DomainVar::new(self, domain)
@@ -56,7 +57,7 @@ pub trait GenericSolver {
     ) -> Array<DomainVar<T>, D>
     where
         Self: Sized,
-        T: std::hash::Hash + Eq + Copy,
+        T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
         D: Dimension,
         Sh: ShapeBuilder<Dim = D>,
@@ -72,7 +73,7 @@ pub trait GenericSolver {
     ) -> ArrayD<DomainVar<T>>
     where
         Self: Sized,
-        T: std::hash::Hash + Eq + Copy,
+        T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
         Sh: ShapeBuilder<Dim = IxDyn>,
         F: FnMut(<IxDyn as Dimension>::Pattern) -> I,

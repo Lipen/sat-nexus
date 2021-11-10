@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fmt;
 use std::os::raw::c_int;
@@ -8,7 +9,6 @@ use crate::ipasir;
 
 use super::ffi::*;
 use super::Lit;
-use std::convert::TryInto;
 
 pub struct CadicalSolver2 {
     ffi: &'static CCadicalFFI,
