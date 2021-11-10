@@ -19,7 +19,7 @@ fn main() -> color_eyre::eyre::Result<()> {
     println!("Hello, world!");
 
     use sat_nexus::solver::wrap::WrappedIpasirSolver;
-    use sat_nexus::solver::GenericSolver;
+    use sat_nexus::solver::Solver;
 
     let mut solver = WrappedIpasirSolver::new_cadical();
     println!("Solver signature: {}", solver.signature());

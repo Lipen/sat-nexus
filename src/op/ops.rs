@@ -1,11 +1,11 @@
 use std::array;
 
-use crate::solver::GenericSolver;
+use crate::solver::Solver;
 use crate::types::Lit;
 
-impl<S> Ops for S where S: GenericSolver + ?Sized {}
+impl<S> Ops for S where S: Solver + ?Sized {}
 
-pub trait Ops: GenericSolver {
+pub trait Ops: Solver {
     // old stuff
     fn declare<C, I, L>(&mut self, clauses: C)
     where

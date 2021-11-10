@@ -1,13 +1,13 @@
 use itertools::Itertools;
 
-use crate::solver::GenericSolver;
+use crate::solver::Solver;
 use crate::types::Lit;
 
 use super::ops::Ops;
 
-impl<S> Encodings for S where S: GenericSolver + ?Sized {}
+impl<S> Encodings for S where S: Solver + ?Sized {}
 
-pub trait Encodings: GenericSolver {
+pub trait Encodings: Solver {
     fn encode_onehot(&mut self, lits: &[Lit]) {
         self.encode_at_least_one(lits);
         self.encode_at_most_one(lits);

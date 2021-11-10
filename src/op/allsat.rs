@@ -1,12 +1,12 @@
 use itertools::Itertools;
 
 use crate::ipasir::SolveResponse;
-use crate::solver::GenericSolver;
+use crate::solver::Solver;
 use crate::types::Lit;
 
-impl<S> AllSat for S where S: GenericSolver + ?Sized {}
+impl<S> AllSat for S where S: Solver + ?Sized {}
 
-pub trait AllSat: GenericSolver {
+pub trait AllSat: Solver {
     fn all_sat<T, F>(&mut self, f: F) -> AllSolutionsIter<Self, F>
     where
         Self: Sized,
@@ -28,7 +28,7 @@ pub trait AllSat: GenericSolver {
 
 pub struct AllSolutionsIter<'a, S, F>
 where
-    S: GenericSolver,
+    S: Solver,
 {
     solver: &'a mut S,
     callback: F,
@@ -38,7 +38,7 @@ where
 
 impl<'a, S, F> AllSolutionsIter<'a, S, F>
 where
-    S: GenericSolver,
+    S: Solver,
 {
     fn new(solver: &'a mut S, callback: F, essential: Vec<Lit>) -> Self {
         Self {
@@ -52,7 +52,7 @@ where
 
 impl<'a, T, S, F> Iterator for AllSolutionsIter<'a, S, F>
 where
-    S: GenericSolver,
+    S: Solver,
     F: FnMut(&mut S) -> T,
 {
     type Item = T;

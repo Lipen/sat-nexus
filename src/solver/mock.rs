@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use crate::context::Context;
 use crate::ipasir::{LitValue, SolveResponse};
-use crate::solver::GenericSolver;
+use crate::solver::Solver;
 use crate::types::Lit;
 
 #[derive(Debug)]
@@ -37,7 +37,7 @@ impl fmt::Display for MockSolver {
     }
 }
 
-impl GenericSolver for MockSolver {
+impl Solver for MockSolver {
     fn signature(&self) -> Cow<str> {
         "MockSolver".into()
     }

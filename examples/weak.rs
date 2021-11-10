@@ -3,7 +3,7 @@ use std::rc::{Rc, Weak};
 use color_eyre::eyre::Result;
 
 use sat_nexus::solver::wrap::WrappedIpasirSolver;
-use sat_nexus::solver::GenericSolver;
+use sat_nexus::solver::Solver;
 use sat_nexus::types::Lit;
 use std::cell::RefCell;
 
@@ -13,7 +13,7 @@ struct Store<S> {
 
 impl<S> Store<S>
 where
-    S: GenericSolver,
+    S: Solver,
 {
     fn declare_something(&mut self) -> Lit {
         let shared = self.weak.upgrade().unwrap();

@@ -8,7 +8,7 @@ use itertools::Itertools;
 use crate::context::Context;
 use crate::ipasir::solver::IpasirSolver;
 use crate::ipasir::{Ipasir, LitValue, SolveResponse};
-use crate::solver::GenericSolver;
+use crate::solver::Solver;
 use crate::types::Lit;
 
 #[derive(Debug)]
@@ -66,7 +66,7 @@ impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
     }
 }
 
-impl GenericSolver for WrappedIpasirSolver<IpasirSolver> {
+impl Solver for WrappedIpasirSolver<IpasirSolver> {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }

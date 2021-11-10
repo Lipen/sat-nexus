@@ -12,7 +12,7 @@ use itertools::Itertools;
 use crate::ipasir::Lit as IpasirLit;
 use crate::ipasir::LitValue;
 use crate::op::encodings::Encodings;
-use crate::solver::GenericSolver;
+use crate::solver::Solver;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Lit(i32);
@@ -93,7 +93,7 @@ where
 {
     pub fn new<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: GenericSolver,
+        S: Solver,
         I: IntoIterator<Item = T>,
     {
         Self::new_onehot(solver, domain)
@@ -101,7 +101,7 @@ where
 
     pub fn new_onehot<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: GenericSolver,
+        S: Solver,
         I: IntoIterator<Item = T>,
     {
         let var = Self::new_bare(solver, domain);
@@ -111,7 +111,7 @@ where
 
     pub fn new_bare<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: GenericSolver,
+        S: Solver,
         I: IntoIterator<Item = T>,
     {
         let domain = domain.into_iter().collect_vec();
@@ -131,7 +131,7 @@ where
 
     pub fn eval<S>(&self, solver: &S) -> T
     where
-        S: GenericSolver,
+        S: Solver,
     {
         if cfg!(debug_assertions) {
             let indices = self

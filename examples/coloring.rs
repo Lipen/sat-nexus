@@ -7,7 +7,7 @@ use ndarray::ArrayD;
 use sat_nexus::ipasir::SolveResponse;
 use sat_nexus::op::ops::Ops;
 use sat_nexus::solver::wrap::WrappedIpasirSolver;
-use sat_nexus::solver::GenericSolver;
+use sat_nexus::solver::Solver;
 use sat_nexus::types::DomainVar;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -15,7 +15,7 @@ struct Edge(usize, usize);
 
 fn declare_variables<S>(solver: &mut S, num_vertices: usize, num_colors: usize, edges: &[Edge])
 where
-    S: GenericSolver,
+    S: Solver,
 {
     assert!(num_vertices > 0, "Number of vertices must be positive");
     assert!(num_colors > 0, "Number of colors must be positive");
@@ -49,7 +49,7 @@ where
 
 fn declare_constraints<S>(solver: &mut S)
 where
-    S: GenericSolver,
+    S: Solver,
 {
     println!("=> Declaring constraints...");
 

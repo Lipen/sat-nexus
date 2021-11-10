@@ -2,7 +2,7 @@ use color_eyre::eyre::Result;
 use ndarray::ArrayD;
 
 use sat_nexus::solver::wrap::WrappedIpasirSolver;
-use sat_nexus::solver::GenericSolver;
+use sat_nexus::solver::Solver;
 use sat_nexus::types::DomainVar;
 
 fn main() -> Result<()> {

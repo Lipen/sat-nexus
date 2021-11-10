@@ -9,7 +9,7 @@ use crate::context::Context;
 use crate::ipasir::{LitValue, SolveResponse};
 use crate::types::{DomainVar, Lit};
 
-pub trait GenericSolver {
+pub trait Solver {
     fn signature(&self) -> Cow<str>;
 
     fn reset(&mut self);
