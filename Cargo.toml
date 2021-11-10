@@ -2,7 +2,7 @@
 name = "sat-nexus"
 version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [workspace]
 members = [
