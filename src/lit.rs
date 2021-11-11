@@ -24,21 +24,18 @@ impl fmt::Display for Lit {
     }
 }
 
-// impl From<&Lit> for Lit {
-//     fn from(val: &Lit) -> Self {
-//         *val
-//     }
-// }
+impl<L> From<&L> for Lit
+where
+    L: Into<Lit> + Copy,
+{
+    fn from(val: &L) -> Self {
+        (*val).into()
+    }
+}
 
 impl From<i32> for Lit {
     fn from(val: i32) -> Self {
         Self::new(val)
-    }
-}
-
-impl From<&i32> for Lit {
-    fn from(val: &i32) -> Self {
-        Self::from(*val)
     }
 }
 
