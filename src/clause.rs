@@ -1,5 +1,7 @@
 use crate::lit::Lit;
 
+use itertools::Itertools;
+
 pub struct Clause {
     pub lits: Vec<Lit>,
 }
@@ -10,15 +12,12 @@ impl Clause {
     }
 }
 
-impl From<Vec<Lit>> for Clause {
-    fn from(value: Vec<Lit>) -> Self {
-        Self::new(value)
-    }
-}
-
-impl From<&[Lit]> for Clause {
-    fn from(value: &[Lit]) -> Self {
-        Self::new(value.to_vec())
+impl<L> FromIterator<L> for Clause
+where
+    L: Into<Lit>,
+{
+    fn from_iter<T: IntoIterator<Item = L>>(iter: T) -> Self {
+        Self::new(iter.into_iter().map_into::<Lit>().collect())
     }
 }
 
