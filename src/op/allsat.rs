@@ -13,34 +13,48 @@ pub trait AllSat: Solver {
         F: FnMut(&mut Self) -> T,
     {
         // If no essential vars were passed, then *all* variables are essential!
-        let essential = (1..=self.num_vars()).map_into::<Lit>().collect();
+        let essential = 1..=self.num_vars();
         self.all_sat_essential(essential, f)
     }
 
-    fn all_sat_essential<T, F>(&mut self, essential: Vec<Lit>, f: F) -> AllSolutionsIter<Self, F>
+    fn all_sat_essential<I, L, T, F>(&mut self, essential: I, f: F) -> AllSolutionsIter<Self, F>
     where
         Self: Sized,
+        I: IntoIterator<Item = L>,
+        L: Into<Lit>,
         F: FnMut(&mut Self) -> T,
     {
         AllSolutionsIter::new(self, f, essential)
     }
+
+    fn build_refutation(&self, essential: &[Lit]) -> Vec<Lit> {
+        essential
+            .iter()
+            .map(|&x| if self.val(x).bool() { -x } else { x })
+            .collect_vec()
+    }
 }
 
-pub struct AllSolutionsIter<'a, S, F>
+pub struct AllSolutionsIter<'s, S, F>
 where
     S: Solver,
 {
-    solver: &'a mut S,
+    solver: &'s mut S,
     callback: F,
     essential: Vec<Lit>,
     refutation: Option<Vec<Lit>>,
 }
 
-impl<'a, S, F> AllSolutionsIter<'a, S, F>
+impl<'s, S, F> AllSolutionsIter<'s, S, F>
 where
     S: Solver,
 {
-    fn new(solver: &'a mut S, callback: F, essential: Vec<Lit>) -> Self {
+    fn new<I, L>(solver: &'s mut S, callback: F, essential: I) -> Self
+    where
+        I: IntoIterator<Item = L>,
+        L: Into<Lit>,
+    {
+        let essential = essential.into_iter().map_into::<Lit>().collect_vec();
         Self {
             solver,
             callback,
@@ -50,7 +64,7 @@ where
     }
 }
 
-impl<'a, T, S, F> Iterator for AllSolutionsIter<'a, S, F>
+impl<'s, T, S, F> Iterator for AllSolutionsIter<'s, S, F>
 where
     S: Solver,
     F: FnMut(&mut S) -> T,
@@ -65,12 +79,7 @@ where
 
         if let SolveResponse::Sat = self.solver.solve() {
             // Build the refutation
-            self.refutation = Some(
-                self.essential
-                    .iter()
-                    .map(|&x| if self.solver.val(x).bool() { -x } else { x })
-                    .collect_vec(),
-            );
+            self.refutation = Some(self.solver.build_refutation(&self.essential));
 
             // Call the callback in the SAT state
             Some((self.callback)(self.solver))
