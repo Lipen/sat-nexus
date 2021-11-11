@@ -41,9 +41,7 @@ where
     context.insert_named("num_colors", num_colors);
     context.insert_named("edges", edges.clone());
 
-    let color = solver
-        .new_domain_var_array([num_vertices], |_| 1..=num_colors)
-        .into_dyn();
+    let color = solver.new_domain_var_array_dyn([num_vertices], |_| 1..=num_colors);
     context.insert_named("color", color);
 }
 

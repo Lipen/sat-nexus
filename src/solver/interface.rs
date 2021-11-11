@@ -67,7 +67,7 @@ pub trait Solver {
         Array::from_shape_fn(shape, |pat| self.new_domain_var(f_domain(pat)))
     }
 
-    fn new_domain_var_array_dyn<T, I, Sh, F>(
+    fn new_domain_var_array_dyn<T, I, D, Sh, F>(
         &mut self,
         shape: Sh,
         f_domain: F,
@@ -76,8 +76,9 @@ pub trait Solver {
         Self: Sized,
         T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
-        Sh: ShapeBuilder<Dim = IxDyn>,
-        F: FnMut(<IxDyn as Dimension>::Pattern) -> I,
+        D: Dimension,
+        Sh: ShapeBuilder<Dim = D>,
+        F: FnMut(D::Pattern) -> I,
     {
         self.new_domain_var_array(shape, f_domain).into_dyn()
     }
