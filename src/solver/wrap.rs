@@ -8,8 +8,8 @@ use itertools::Itertools;
 use crate::context::Context;
 use crate::ipasir::solver::IpasirSolver;
 use crate::ipasir::{Ipasir, LitValue, SolveResponse};
+use crate::lit::Lit;
 use crate::solver::Solver;
-use crate::types::Lit;
 
 #[derive(Debug)]
 pub struct WrappedIpasirSolver<S>

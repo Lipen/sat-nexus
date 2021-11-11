@@ -69,6 +69,12 @@ impl Context {
     }
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl From<TypeMap> for Context {
     fn from(map: TypeMap) -> Self {
         Context { storage: map }

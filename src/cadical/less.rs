@@ -28,6 +28,12 @@ impl CadicalSolver2 {
     }
 }
 
+impl Default for CadicalSolver2 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Drop for CadicalSolver2 {
     fn drop(&mut self) {
         unsafe { self.ffi.ccadical_release(self.ptr) }

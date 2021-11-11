@@ -4,11 +4,11 @@ use color_eyre::eyre::Result;
 use itertools::Itertools;
 use ndarray::ArrayD;
 
+use sat_nexus::domainvar::DomainVar;
 use sat_nexus::ipasir::SolveResponse;
 use sat_nexus::op::ops::Ops;
 use sat_nexus::solver::wrap::WrappedIpasirSolver;
 use sat_nexus::solver::Solver;
-use sat_nexus::types::DomainVar;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);

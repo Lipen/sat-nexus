@@ -2,9 +2,9 @@ use std::rc::{Rc, Weak};
 
 use color_eyre::eyre::Result;
 
+use sat_nexus::lit::Lit;
 use sat_nexus::solver::wrap::WrappedIpasirSolver;
 use sat_nexus::solver::Solver;
-use sat_nexus::types::Lit;
 use std::cell::RefCell;
 
 struct Store<S> {

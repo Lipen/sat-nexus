@@ -8,8 +8,8 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 
+use crate::lit::Lit;
 use crate::solver::Solver;
-use crate::types::Lit;
 
 pub struct Totalizer {
     output_vars: Vec<Lit>,

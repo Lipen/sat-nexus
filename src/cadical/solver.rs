@@ -39,6 +39,12 @@ impl CadicalSolver {
     }
 }
 
+impl Default for CadicalSolver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CadicalInterface for CadicalSolver {
     fn signature(&self) -> &'static str {
         let c_chars = unsafe { self.ffi.ccadical_signature() };

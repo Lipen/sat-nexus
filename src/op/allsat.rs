@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
 use crate::ipasir::SolveResponse;
+use crate::lit::Lit;
 use crate::solver::Solver;
-use crate::types::Lit;
 
 impl<S> AllSat for S where S: Solver + ?Sized {}
 

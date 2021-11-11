@@ -7,8 +7,8 @@ use itertools::Itertools;
 
 use crate::context::Context;
 use crate::ipasir::{LitValue, SolveResponse};
+use crate::lit::Lit;
 use crate::solver::Solver;
-use crate::types::Lit;
 
 #[derive(Debug)]
 pub struct MockSolver {
@@ -28,6 +28,12 @@ impl MockSolver {
             clauses: Vec::new(),
             tmp_clause: Vec::new(),
         }
+    }
+}
+
+impl Default for MockSolver {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
