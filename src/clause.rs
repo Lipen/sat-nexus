@@ -1,6 +1,6 @@
-use crate::lit::Lit;
-
 use itertools::Itertools;
+
+use crate::lit::Lit;
 
 pub struct Clause {
     pub lits: Vec<Lit>,
