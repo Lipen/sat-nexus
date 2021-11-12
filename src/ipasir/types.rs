@@ -14,7 +14,7 @@ impl Lit {
     /// Creates a new `Lit` from the given value.
     pub unsafe fn new_unchecked(val: i32) -> Self {
         debug_assert!(val != 0);
-        Self(val)
+        Lit(val)
     }
 
     /// Return literal's value.
