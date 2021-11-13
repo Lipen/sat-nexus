@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::hash::Hash;
 use std::rc::Rc;
 
-use ndarray::{Array, ArrayD, Dimension, IxDyn, ShapeBuilder};
+use ndarray::{Array, ArrayD, Dimension, ShapeBuilder};
 
 use crate::context::Context;
 use crate::domainvar::DomainVar;
@@ -31,9 +31,10 @@ pub trait Solver {
         Array::from_shape_simple_fn(shape, || self.new_var())
     }
 
-    fn new_var_array_dyn<Sh>(&mut self, shape: Sh) -> ArrayD<Lit>
+    fn new_var_array_dyn<D, Sh>(&mut self, shape: Sh) -> ArrayD<Lit>
     where
-        Sh: ShapeBuilder<Dim = IxDyn>,
+        D: Dimension,
+        Sh: ShapeBuilder<Dim = D>,
     {
         self.new_var_array(shape).into_dyn()
     }
