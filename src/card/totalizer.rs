@@ -162,11 +162,11 @@ impl Totalizer {
 
 #[cfg(test)]
 mod tests {
+    use crate::card::Cardinality;
     use crate::op::allsat::AllSat;
     use crate::op::ops::Ops;
     use crate::solver::wrap::WrappedIpasirSolver;
 
-    use super::super::Cardinality;
     use super::*;
 
     #[test]
