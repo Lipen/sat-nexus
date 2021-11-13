@@ -44,6 +44,15 @@ impl fmt::Display for Lit {
     }
 }
 
+impl<L> From<&L> for Lit
+where
+    L: Into<Lit> + Copy,
+{
+    fn from(val: &L) -> Self {
+        (*val).into()
+    }
+}
+
 #[derive(Debug, Snafu)]
 #[snafu(display("Invalid literal value: {}", value))]
 pub struct InvalidLitValueError {
@@ -58,14 +67,6 @@ impl TryFrom<i32> for Lit {
             return InvalidLitValueContext { value: val }.fail();
         }
         Ok(Self(val))
-    }
-}
-
-impl TryFrom<&i32> for Lit {
-    type Error = <Self as TryFrom<i32>>::Error;
-
-    fn try_from(val: &i32) -> std::result::Result<Self, Self::Error> {
-        Self::try_from(*val)
     }
 }
 
@@ -109,17 +110,11 @@ impl From<Lit> for Var {
 }
 
 /// A clause from the IPASIR solver.
+///
+/// Note: last literal is 0.
 pub struct Clause<'a> {
     /// The zero-ended literals.
     lits: &'a [Lit],
-}
-
-impl<'a> From<&'a [Lit]> for Clause<'a> {
-    fn from(lits: &'a [Lit]) -> Self {
-        debug_assert!(!lits.is_empty());
-        debug_assert_eq!(lits.last(), Some(&Lit(0)));
-        Self { lits }
-    }
 }
 
 impl<'a> Clause<'a> {
@@ -138,11 +133,16 @@ impl<'a> Clause<'a> {
     }
 
     /// Returns an iterator over the literals of the clause.
-    // pub fn iter(&self) -> LitIter {
-    //     LitIter { iter: self.lits.iter() }
-    // }
     pub fn iter(&self) -> impl Iterator<Item = &Lit> {
         self.lits.iter()
+    }
+}
+
+impl<'a> From<&'a [Lit]> for Clause<'a> {
+    fn from(lits: &'a [Lit]) -> Self {
+        debug_assert!(!lits.is_empty());
+        debug_assert_eq!(lits.last(), Some(&Lit(0)));
+        Self { lits }
     }
 }
 
@@ -156,30 +156,3 @@ where
         &self.lits[index]
     }
 }
-
-// /// Iterator over the literals of a clause.
-// #[derive(Debug, Clone)]
-// pub struct LitIter<'a> {
-//     /// The underlying iterator.
-//     iter: std::slice::Iter<'a, Lit>,
-// }
-//
-// impl<'a> ExactSizeIterator for LitIter<'a> {
-//     fn len(&self) -> usize {
-//         self.iter.len()
-//     }
-// }
-//
-// impl<'a> Iterator for LitIter<'a> {
-//     type Item = Lit;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.iter.next().cloned()
-//     }
-// }
-//
-// impl<'a> DoubleEndedIterator for LitIter<'a> {
-//     fn next_back(&mut self) -> Option<Self::Item> {
-//         self.iter.next_back().cloned()
-//     }
-// }
