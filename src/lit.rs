@@ -16,6 +16,10 @@ impl Lit {
     pub fn get(&self) -> i32 {
         self.0
     }
+
+    pub fn var(self) -> u32 {
+        self.get().unsigned_abs()
+    }
 }
 
 impl fmt::Display for Lit {
