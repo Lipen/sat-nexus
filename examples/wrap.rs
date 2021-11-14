@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::solver::wrap::WrappedIpasirSolver;
+use sat_nexus::solver::wrap_ipasir::WrappedIpasirSolver;
 use sat_nexus::solver::Solver;
 
 fn main() -> Result<()> {

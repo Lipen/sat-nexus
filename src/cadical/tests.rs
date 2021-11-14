@@ -2,6 +2,8 @@ use std::convert::TryInto;
 
 use solver::CadicalSolver;
 
+use crate::ipasir::{LitValue, SolveResponse};
+
 use super::*;
 
 fn lit_value_to_bool(value: LitValue) -> bool {

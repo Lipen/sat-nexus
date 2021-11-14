@@ -1,14 +1,8 @@
-#![allow(unused)]
-
-use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fmt;
 use std::os::raw::c_int;
 
-use crate::ipasir;
-
 use super::ffi::*;
-use super::Lit;
 
 pub struct CadicalSolver2 {
     ffi: &'static CCadicalFFI,
@@ -36,7 +30,7 @@ impl Default for CadicalSolver2 {
 
 impl Drop for CadicalSolver2 {
     fn drop(&mut self) {
-        unsafe { self.ffi.ccadical_release(self.ptr) }
+        self.release()
     }
 }
 
@@ -56,8 +50,16 @@ impl CadicalSolver2 {
             .expect("The implementation returned invalid UTF-8.")
     }
 
-    pub fn release(&self) {
-        unsafe { self.ffi.ccadical_release(self.ptr) }
+    pub fn reset(&mut self) {
+        self.release();
+        self.ptr = unsafe { self.ffi.ccadical_init() };
+    }
+
+    pub fn release(&mut self) {
+        if !self.ptr.is_null() {
+            unsafe { self.ffi.ccadical_release(self.ptr) }
+            self.ptr = std::ptr::null_mut();
+        }
     }
 
     pub fn add(&self, lit: c_int) {

@@ -1,4 +1,4 @@
-pub use crate::ipasir::{Lit, LitValue, Result, SolveResponse, SolverError};
+use crate::ipasir::{Lit, LitValue, Result, SolveResponse};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FixedValue {

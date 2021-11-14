@@ -165,7 +165,7 @@ mod tests {
     use crate::card::Cardinality;
     use crate::op::allsat::AllSat;
     use crate::op::ops::Ops;
-    use crate::solver::wrap::WrappedIpasirSolver;
+    use crate::solver::wrap_ipasir::WrappedIpasirSolver;
 
     use super::*;
 

@@ -2,6 +2,8 @@ use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fmt;
 
+use crate::ipasir::{Lit, LitValue, Result, SolveResponse, SolverError};
+
 use super::ffi::*;
 use super::interface::*;
 
@@ -42,6 +44,18 @@ impl CadicalSolver {
 impl Default for CadicalSolver {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Drop for CadicalSolver {
+    fn drop(&mut self) {
+        self.release()
+    }
+}
+
+impl fmt::Display for CadicalSolver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.signature())
     }
 }
 
@@ -163,18 +177,6 @@ impl CadicalInterface for CadicalSolver {
             20 => Ok(SimplifyResponse::Unsat),
             invalid => Err(SolverError::InvalidResponseSimplify { value: invalid }),
         }
-    }
-}
-
-impl Drop for CadicalSolver {
-    fn drop(&mut self) {
-        self.release()
-    }
-}
-
-impl fmt::Display for CadicalSolver {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.signature())
     }
 }
 
