@@ -17,12 +17,6 @@ impl Lit {
         Lit(val)
     }
 
-    /// Return literal's value.
-    /// Note: it is supposed to be called from ffi-code only.
-    pub fn to_ffi(self) -> i32 {
-        self.0
-    }
-
     /// Returns the variable of `self`.
     pub fn var(self) -> Var {
         Var(self.0.unsigned_abs())

@@ -71,7 +71,7 @@ impl CadicalInterface for CadicalSolver {
     }
 
     fn assume(&self, lit: Lit) {
-        unsafe { self.ffi.ccadical_assume(self.ptr, lit.to_ffi()) }
+        unsafe { self.ffi.ccadical_assume(self.ptr, lit.into()) }
     }
 
     fn solve(&self) -> Result<SolveResponse> {
@@ -84,10 +84,10 @@ impl CadicalInterface for CadicalSolver {
     }
 
     fn val(&self, lit: Lit) -> Result<LitValue> {
-        match unsafe { self.ffi.ccadical_val(self.ptr, lit.to_ffi()) } {
+        match unsafe { self.ffi.ccadical_val(self.ptr, lit.into()) } {
             0 => Ok(LitValue::DontCare),
-            p if p == lit.to_ffi() => Ok(LitValue::True),
-            n if n == -lit.to_ffi() => Ok(LitValue::False),
+            p if p == <i32>::from(lit) => Ok(LitValue::True),
+            n if n == -<i32>::from(lit) => Ok(LitValue::False),
             invalid => Err(SolverError::InvalidResponseVal {
                 lit,
                 value: invalid,
@@ -96,7 +96,7 @@ impl CadicalInterface for CadicalSolver {
     }
 
     fn failed(&self, lit: Lit) -> Result<bool> {
-        match unsafe { self.ffi.ccadical_failed(self.ptr, lit.to_ffi()) } {
+        match unsafe { self.ffi.ccadical_failed(self.ptr, lit.into()) } {
             0 => Ok(true),
             1 => Ok(false),
             invalid => Err(SolverError::InvalidResponseFailed { value: invalid }),
@@ -128,7 +128,7 @@ impl CadicalInterface for CadicalSolver {
     }
 
     fn fixed(&self, lit: Lit) -> Result<FixedValue> {
-        match unsafe { self.ffi.ccadical_fixed(self.ptr, lit.to_ffi()) } {
+        match unsafe { self.ffi.ccadical_fixed(self.ptr, lit.into()) } {
             1 => Ok(FixedValue::Implied),
             -1 => Ok(FixedValue::Negation),
             0 => Ok(FixedValue::Unclear),
@@ -141,11 +141,11 @@ impl CadicalInterface for CadicalSolver {
     }
 
     fn freeze(&self, lit: Lit) {
-        unsafe { self.ffi.ccadical_freeze(self.ptr, lit.to_ffi()) }
+        unsafe { self.ffi.ccadical_freeze(self.ptr, lit.into()) }
     }
 
     fn frozen(&self, lit: Lit) -> Result<bool> {
-        match unsafe { self.ffi.ccadical_frozen(self.ptr, lit.to_ffi()) } {
+        match unsafe { self.ffi.ccadical_frozen(self.ptr, lit.into()) } {
             0 => Ok(true),
             1 => Ok(false),
             invalid => Err(SolverError::InvalidResponseFrozen { value: invalid }),
@@ -153,7 +153,7 @@ impl CadicalInterface for CadicalSolver {
     }
 
     fn melt(&self, lit: Lit) {
-        unsafe { self.ffi.ccadical_melt(self.ptr, lit.to_ffi()) }
+        unsafe { self.ffi.ccadical_melt(self.ptr, lit.into()) }
     }
 
     fn simplify(&self) -> Result<SimplifyResponse> {

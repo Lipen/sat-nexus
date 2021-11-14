@@ -97,7 +97,7 @@ pub trait Ipasir {
     }
 
     fn assume(&self, lit: Lit) {
-        unsafe { self.ffi().ipasir_assume(self.ptr(), lit.to_ffi()) }
+        unsafe { self.ffi().ipasir_assume(self.ptr(), lit.into()) }
     }
 
     fn solve(&self) -> Result<SolveResponse> {
@@ -110,10 +110,10 @@ pub trait Ipasir {
     }
 
     fn val(&self, lit: Lit) -> Result<LitValue> {
-        match unsafe { self.ffi().ipasir_val(self.ptr(), lit.to_ffi()) } {
+        match unsafe { self.ffi().ipasir_val(self.ptr(), lit.into()) } {
             0 => Ok(LitValue::DontCare),
-            p if p == lit.to_ffi() => Ok(LitValue::True),
-            n if n == -lit.to_ffi() => Ok(LitValue::False),
+            p if p == <i32>::from(lit) => Ok(LitValue::True),
+            n if n == -<i32>::from(lit) => Ok(LitValue::False),
             invalid => Err(SolverError::InvalidResponseVal {
                 lit,
                 value: invalid,
@@ -122,7 +122,7 @@ pub trait Ipasir {
     }
 
     fn failed(&self, lit: Lit) -> Result<bool> {
-        match unsafe { self.ffi().ipasir_failed(self.ptr(), lit.to_ffi()) } {
+        match unsafe { self.ffi().ipasir_failed(self.ptr(), lit.into()) } {
             0 => Ok(true),
             1 => Ok(false),
             invalid => Err(SolverError::InvalidResponseFailed { value: invalid }),
