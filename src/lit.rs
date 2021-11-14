@@ -13,7 +13,7 @@ impl Lit {
         Lit(val)
     }
 
-    pub fn get(&self) -> i32 {
+    pub fn get(self) -> i32 {
         self.0
     }
 
