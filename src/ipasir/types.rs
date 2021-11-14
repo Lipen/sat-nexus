@@ -11,18 +11,22 @@ use snafu::Snafu;
 pub struct Lit(i32);
 
 impl Lit {
-    /// Creates a new `Lit` from the given value.
+    /// Creates a new [Lit] from the given value.
+    ///
+    /// # Safety
+    ///
+    /// Passed value [val] must be non-zero.
     pub unsafe fn new_unchecked(val: i32) -> Self {
         debug_assert!(val != 0);
         Lit(val)
     }
 
-    /// Returns the variable of `self`.
+    /// Returns the corresponding [Var].
     pub fn var(self) -> Var {
         Var(self.0.unsigned_abs())
     }
 
-    /// Returns the sign of `self`.
+    /// Returns the sign.
     pub fn sign(self) -> Sign {
         if self.0.is_positive() {
             Sign::Pos
