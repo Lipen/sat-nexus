@@ -44,6 +44,19 @@ impl fmt::Display for Lit {
     }
 }
 
+// Into<i32>
+impl From<Lit> for i32 {
+    fn from(lit: Lit) -> Self {
+        lit.0
+    }
+}
+
+impl From<Var> for Lit {
+    fn from(var: Var) -> Self {
+        var.lit()
+    }
+}
+
 impl<L> From<&L> for Lit
 where
     L: Into<Lit> + Copy,
@@ -70,16 +83,11 @@ impl TryFrom<i32> for Lit {
     }
 }
 
-// Into<i32>
-impl From<Lit> for i32 {
-    fn from(lit: Lit) -> Self {
-        lit.0
-    }
-}
+impl TryFrom<&i32> for Lit {
+    type Error = <Self as TryFrom<i32>>::Error;
 
-impl From<Var> for Lit {
-    fn from(var: Var) -> Self {
-        var.lit()
+    fn try_from(val: &i32) -> std::result::Result<Self, Self::Error> {
+        Self::try_from(*val)
     }
 }
 
