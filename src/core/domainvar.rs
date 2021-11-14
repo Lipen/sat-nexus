@@ -5,8 +5,8 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 
+use crate::core::lit::Lit;
 use crate::ipasir::LitValue;
-use crate::lit::Lit;
 use crate::op::encodings::Encodings;
 use crate::solver::Solver;
 

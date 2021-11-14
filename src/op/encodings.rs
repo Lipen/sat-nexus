@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::lit::Lit;
+use crate::core::lit::Lit;
 use crate::solver::Solver;
 
 use super::ops::Ops;

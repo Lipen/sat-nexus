@@ -1,6 +1,6 @@
 use std::array;
 
-use crate::lit::Lit;
+use crate::core::lit::Lit;
 use crate::solver::Solver;
 
 impl<S> Ops for S where S: Solver + ?Sized {}

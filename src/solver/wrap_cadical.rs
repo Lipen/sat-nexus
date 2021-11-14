@@ -7,8 +7,8 @@ use itertools::Itertools;
 
 use crate::cadical::less::CadicalSolver2;
 use crate::context::Context;
+use crate::core::lit::Lit;
 use crate::ipasir::{LitValue, SolveResponse, SolverError};
-use crate::lit::Lit;
 use crate::solver::Solver;
 
 // #[derive(Debug)]

@@ -6,9 +6,9 @@ use std::rc::Rc;
 use ndarray::{Array, ArrayD, Dimension, ShapeBuilder};
 
 use crate::context::Context;
-use crate::domainvar::DomainVar;
+use crate::core::domainvar::DomainVar;
+use crate::core::lit::Lit;
 use crate::ipasir::{LitValue, SolveResponse};
-use crate::lit::Lit;
 
 pub trait Solver {
     fn signature(&self) -> Cow<str>;

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::lit::Lit;
+use crate::core::lit::Lit;
 
 pub struct Model {
     data: Vec<bool>,

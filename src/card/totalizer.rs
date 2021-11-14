@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 
-use crate::lit::Lit;
+use crate::core::lit::Lit;
 use crate::solver::Solver;
 
 pub struct Totalizer {
@@ -164,7 +164,7 @@ impl Totalizer {
 mod tests {
     use crate::card::Cardinality;
     use crate::op::allsat::AllSat;
-    use crate::op::ops::Ops;
+    use crate::op::Ops;
     use crate::solver::wrap_ipasir::WrappedIpasirSolver;
 
     use super::*;

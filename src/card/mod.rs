@@ -1,6 +1,6 @@
 use totalizer::Totalizer;
 
-use crate::lit::Lit;
+use crate::core::lit::Lit;
 use crate::solver::Solver;
 
 pub mod totalizer;

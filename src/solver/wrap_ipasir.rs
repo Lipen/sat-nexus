@@ -6,9 +6,9 @@ use std::rc::Rc;
 use itertools::Itertools;
 
 use crate::context::Context;
+use crate::core::lit::Lit;
 use crate::ipasir::solver::IpasirSolver;
 use crate::ipasir::{Ipasir, LitValue, SolveResponse};
-use crate::lit::Lit;
 use crate::solver::Solver;
 
 #[derive(Debug)]
