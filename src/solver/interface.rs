@@ -49,7 +49,7 @@ pub trait Solver {
         T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
     {
-        DomainVar::new(self, domain)
+        DomainVar::new_onehot(self, domain)
     }
 
     fn new_domain_var_array<T, I, D, Sh, F>(

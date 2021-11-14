@@ -26,7 +26,10 @@ where
         S: Solver,
         I: IntoIterator<Item = T>,
     {
-        Self::new_onehot(solver, domain)
+        let domain = domain.into_iter().collect_vec();
+        let lits = (0..domain.len()).map(|_| solver.new_var()).collect_vec();
+        let map = domain.iter().copied().zip(lits.iter().copied()).collect();
+        Self { map, domain, lits }
     }
 
     pub fn new_onehot<S, I>(solver: &mut S, domain: I) -> Self
@@ -34,20 +37,9 @@ where
         S: Solver,
         I: IntoIterator<Item = T>,
     {
-        let var = Self::new_bare(solver, domain);
+        let var = Self::new(solver, domain);
         solver.encode_onehot(&var.lits);
         var
-    }
-
-    pub fn new_bare<S, I>(solver: &mut S, domain: I) -> Self
-    where
-        S: Solver,
-        I: IntoIterator<Item = T>,
-    {
-        let domain = domain.into_iter().collect_vec();
-        let lits = (0..domain.len()).map(|_| solver.new_var()).collect_vec();
-        let map = domain.iter().copied().zip(lits.iter().copied()).collect();
-        Self { map, domain, lits }
     }
 
     pub fn eq(&self, rhs: T) -> Lit {
