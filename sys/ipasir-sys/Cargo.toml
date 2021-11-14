@@ -9,4 +9,4 @@ libloading = "0.7.0"
 once_cell = "1.8.0"
 
 [build-dependencies]
-bindgen = "0.58.1"
+bindgen = "0.59.1"
