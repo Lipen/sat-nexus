@@ -29,6 +29,18 @@ impl IpasirSolver {
     }
 }
 
+impl Drop for IpasirSolver {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
+impl fmt::Display for IpasirSolver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.signature())
+    }
+}
+
 impl Ipasir for IpasirSolver {
     fn ffi(&self) -> &'static IpasirFFI {
         self.ffi
@@ -48,18 +60,6 @@ impl Ipasir for IpasirSolver {
             unsafe { self.ffi.ipasir_release(self.ptr) }
             self.ptr = std::ptr::null_mut();
         }
-    }
-}
-
-impl Drop for IpasirSolver {
-    fn drop(&mut self) {
-        self.release();
-    }
-}
-
-impl fmt::Display for IpasirSolver {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.signature())
     }
 }
 
