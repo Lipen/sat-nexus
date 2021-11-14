@@ -21,6 +21,11 @@ impl Lit {
         Lit(val)
     }
 
+    /// Returns the backing integer of [self].
+    pub fn get(self) -> i32 {
+        self.0
+    }
+
     /// Returns the corresponding [Var].
     pub fn var(self) -> Var {
         Var(self.0.unsigned_abs())

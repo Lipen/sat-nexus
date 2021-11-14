@@ -112,8 +112,8 @@ pub trait Ipasir {
     fn val(&self, lit: Lit) -> Result<LitValue> {
         match unsafe { self.ffi().ipasir_val(self.ptr(), lit.into()) } {
             0 => Ok(LitValue::DontCare),
-            p if p == <i32>::from(lit) => Ok(LitValue::True),
-            n if n == -<i32>::from(lit) => Ok(LitValue::False),
+            p if p == lit.get() => Ok(LitValue::True),
+            n if n == -lit.get() => Ok(LitValue::False),
             invalid => Err(SolverError::InvalidResponseVal {
                 lit,
                 value: invalid,
