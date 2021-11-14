@@ -55,15 +55,14 @@ where
     where
         S: Solver,
     {
-        if cfg!(debug_assertions) {
-            let indices = self
-                .lits
+        // There must be exactly 1 literal which is True in the model.
+        debug_assert_eq!(
+            self.lits
                 .iter()
                 .positions(|&l| matches!(solver.val(l), LitValue::True))
-                .collect_vec();
-            // There must be exactly 1 literal which is True in the model.
-            debug_assert_eq!(indices.len(), 1);
-        }
+                .count(),
+            1
+        );
 
         let index = self
             .lits
