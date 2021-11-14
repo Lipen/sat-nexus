@@ -11,7 +11,6 @@ use crate::ipasir::solver::IpasirSolver;
 use crate::ipasir::{Ipasir, LitValue, SolveResponse};
 use crate::solver::Solver;
 
-#[derive(Debug)]
 pub struct WrappedIpasirSolver<S>
 where
     S: Ipasir,
@@ -20,7 +19,6 @@ where
     context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
-    tmp_clause: Vec<Lit>,
 }
 
 impl WrappedIpasirSolver<IpasirSolver> {
@@ -30,7 +28,6 @@ impl WrappedIpasirSolver<IpasirSolver> {
             context: Rc::new(RefCell::new(Context::new())),
             nvars: 0,
             nclauses: 0,
-            tmp_clause: Vec::new(),
         }
     }
 
@@ -43,26 +40,11 @@ impl WrappedIpasirSolver<IpasirSolver> {
     pub fn new_glucose() -> Self {
         Self::new(IpasirSolver::new_glucose())
     }
-
-    pub fn add_unit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.nclauses += 1;
-        self.inner.add(lit.into().get());
-        self.inner.add(0);
-    }
 }
 
 impl From<IpasirSolver> for WrappedIpasirSolver<IpasirSolver> {
     fn from(inner: IpasirSolver) -> Self {
         WrappedIpasirSolver::new(inner)
-    }
-}
-
-impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
@@ -103,18 +85,6 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
         self.inner.add_clause(lits.into_iter().map_into::<Lit>());
     }
 
-    fn add_clause_lit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.tmp_clause.push(lit.into());
-    }
-
-    fn finalize_clause(&mut self) {
-        let lits = std::mem::take(&mut self.tmp_clause);
-        self.add_clause(lits);
-    }
-
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
@@ -135,6 +105,21 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
         self.inner
             .val(lit.into().into())
             .expect("Could not get literal value")
+    }
+}
+
+impl WrappedIpasirSolver<IpasirSolver> {
+    pub fn add_unit<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.add_clause([lit]);
+    }
+}
+
+impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 

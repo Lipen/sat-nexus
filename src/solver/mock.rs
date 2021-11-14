@@ -16,7 +16,6 @@ pub struct MockSolver {
     nvars: usize,
     nclauses: usize,
     clauses: Vec<Vec<Lit>>,
-    tmp_clause: Vec<Lit>,
 }
 
 impl MockSolver {
@@ -26,7 +25,6 @@ impl MockSolver {
             nvars: 0,
             nclauses: 0,
             clauses: Vec::new(),
-            tmp_clause: Vec::new(),
         }
     }
 }
@@ -79,18 +77,6 @@ impl Solver for MockSolver {
         self.nclauses += 1;
         self.clauses
             .push(lits.into_iter().map_into::<Lit>().collect());
-    }
-
-    fn add_clause_lit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.tmp_clause.push(lit.into());
-    }
-
-    fn finalize_clause(&mut self) {
-        let lits = std::mem::take(&mut self.tmp_clause);
-        self.add_clause(lits);
     }
 
     fn assume<L>(&mut self, _lit: L)

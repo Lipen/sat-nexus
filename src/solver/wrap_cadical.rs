@@ -11,13 +11,11 @@ use crate::core::lit::Lit;
 use crate::ipasir::{LitValue, SolveResponse, SolverError};
 use crate::solver::Solver;
 
-// #[derive(Debug)]
 pub struct WrappedCadicalSolver {
     inner: CadicalSolver2,
     context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
-    tmp_clause: Vec<Lit>,
 }
 
 impl WrappedCadicalSolver {
@@ -31,18 +29,8 @@ impl WrappedCadicalSolver {
             context: Rc::new(RefCell::new(Context::new())),
             nvars: 0,
             nclauses: 0,
-            tmp_clause: Vec::new(),
         }
     }
-
-    // pub fn add_unit<L>(&mut self, lit: L)
-    // where
-    //     L: Into<Lit>,
-    // {
-    //     self.nclauses += 1;
-    //     self.inner.add(lit.into().get());
-    //     self.inner.add(0);
-    // }
 }
 
 impl Default for WrappedCadicalSolver {
@@ -54,12 +42,6 @@ impl Default for WrappedCadicalSolver {
 impl From<CadicalSolver2> for WrappedCadicalSolver {
     fn from(inner: CadicalSolver2) -> Self {
         WrappedCadicalSolver::new_custom(inner)
-    }
-}
-
-impl fmt::Display for WrappedCadicalSolver {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
@@ -100,18 +82,6 @@ impl Solver for WrappedCadicalSolver {
         self.inner.add_clause(lits.into_iter().map_into::<Lit>());
     }
 
-    fn add_clause_lit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.tmp_clause.push(lit.into());
-    }
-
-    fn finalize_clause(&mut self) {
-        let lits = std::mem::take(&mut self.tmp_clause);
-        self.add_clause(lits);
-    }
-
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
@@ -144,6 +114,21 @@ impl Solver for WrappedCadicalSolver {
             }),
         }
         .unwrap_or_else(|e| panic!("Could not get literal value: {}", e))
+    }
+}
+
+impl WrappedCadicalSolver {
+    pub fn add_unit<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.add_clause([lit]);
+    }
+}
+
+impl fmt::Display for WrappedCadicalSolver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 

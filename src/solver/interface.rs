@@ -89,11 +89,6 @@ pub trait Solver {
         I: IntoIterator<Item = L>,
         L: Into<Lit>;
 
-    fn add_clause_lit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>;
-    fn finalize_clause(&mut self);
-
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>;
