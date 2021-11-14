@@ -149,9 +149,9 @@ mod tests {
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
         solver.add_clause([1, 2]);
-        solver.add_clause([3, 4]);
-        solver.add_clause([-1, -2]);
-        solver.add_clause([-3, -4]);
+        solver.add_clause(&[3, 4]);
+        solver.add_clause(vec![-1, -2]);
+        solver.add_clause(&vec![-3, -4]);
 
         // Problem is satisfiable
         let response = solver.solve();
@@ -159,7 +159,7 @@ mod tests {
 
         // Assuming both 1 and 2 to be true
         solver.assume(1);
-        solver.assume(2);
+        solver.assume(&2);
         // Problem is unsatisfiable under assumptions
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Unsat);

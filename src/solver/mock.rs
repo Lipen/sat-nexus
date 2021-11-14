@@ -129,11 +129,11 @@ mod tests {
         assert_eq!(solver.nvars, 4);
 
         solver.add_clause([1, 2]);
-        solver.add_clause([3, 4]);
-        solver.add_clause([-1, -2]);
-        solver.add_clause([-3, -4]);
+        solver.add_clause(&[3, 4]);
+        solver.add_clause(vec![-1, -2]);
+        solver.add_clause(&vec![-3, -4]);
         solver.add_clause([1]);
-        solver.add_clause([-3]);
+        solver.add_clause(&[-3]);
         assert_eq!(solver.nclauses, 6);
 
         Ok(())
