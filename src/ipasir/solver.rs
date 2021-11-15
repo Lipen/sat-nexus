@@ -46,7 +46,7 @@ impl Ipasir for IpasirSolver {
 
     fn reset(&mut self) {
         self.release();
-        self.ptr = unsafe { self.ffi.ipasir_init() };
+        self.ptr = self.ffi.init();
     }
 
     fn release(&mut self) {
