@@ -5,6 +5,8 @@ use crate::core::solver::Solver;
 
 pub mod totalizer;
 
+impl<S> Cardinality for S where S: Solver + ?Sized {}
+
 trait Cardinality: Solver {
     fn declare_totalizer(&mut self, input_vars: &[Lit]) -> Totalizer
     where
@@ -13,5 +15,3 @@ trait Cardinality: Solver {
         Totalizer::declare(self, input_vars)
     }
 }
-
-impl<S: Solver> Cardinality for S {}
