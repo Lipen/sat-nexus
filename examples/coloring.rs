@@ -6,7 +6,7 @@ use ndarray::ArrayD;
 
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::solver::wrap_ipasir::WrappedIpasirSolver;
-use sat_nexus::core::solver::{SolveResponse, Solver};
+use sat_nexus::core::solver::{LitValue, SolveResponse, Solver};
 use sat_nexus::op::Ops;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -121,6 +121,9 @@ fn main() -> Result<()> {
 
         let color = context.extract_named::<ArrayD<DomainVar<usize>>, _>("color");
 
+        assert!(matches!(solver.eval(&color[[1 - 1]].eq(1)), LitValue::True));
+
+        println!("color = {}", solver.eval(color));
         for v in 1..=num_vertices {
             println!("color[{: >2}] = {}", v, color[[v - 1]].eval(&solver));
         }

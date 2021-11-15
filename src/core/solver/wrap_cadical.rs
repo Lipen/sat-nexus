@@ -111,15 +111,6 @@ impl Solver for WrappedCadicalSolver {
     }
 }
 
-impl WrappedCadicalSolver {
-    pub fn add_unit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.add_clause([lit]);
-    }
-}
-
 impl fmt::Display for WrappedCadicalSolver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WrappedSolver({})", self.signature())

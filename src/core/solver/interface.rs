@@ -124,6 +124,13 @@ pub trait Solver {
         I: IntoIterator<Item = L>,
         L: Into<Lit>;
 
+    fn add_unit<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.add_clause([lit]);
+    }
+
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>;
@@ -136,9 +143,51 @@ pub trait Solver {
 
     // TODO: model
 
-    // fn add_unit_clause(&mut self, lit: Lit) {
-    //     self.add_clause(&[lit]);
-    // }
-    // fn add_binary_clause(&mut self, lit1: Lit, lit2: Lit);
-    // fn add_ternary_clause(&mut self, lit1: Lit, lit2: Lit, lit3: Lit);
+    fn eval<T, E>(&self, value: &E) -> T
+    where
+        Self: Sized,
+        E: Eval<T>,
+    {
+        value.eval(self)
+    }
+}
+
+pub trait Eval<T> {
+    fn eval<S>(&self, solver: &S) -> T
+    where
+        S: Solver;
+}
+
+impl Eval<LitValue> for Lit {
+    fn eval<S>(&self, solver: &S) -> LitValue
+    where
+        S: Solver,
+    {
+        solver.val(self)
+    }
+}
+
+impl<T> Eval<T> for DomainVar<T>
+where
+    T: Hash + Eq + Copy,
+{
+    fn eval<S>(&self, solver: &S) -> T
+    where
+        S: Solver,
+    {
+        DomainVar::eval(self, solver)
+    }
+}
+
+impl<T, E, D> Eval<Array<T, D>> for Array<E, D>
+where
+    E: Eval<T>,
+    D: Dimension,
+{
+    fn eval<S>(&self, solver: &S) -> Array<T, D>
+    where
+        S: Solver,
+    {
+        self.map(|v| v.eval(solver))
+    }
 }

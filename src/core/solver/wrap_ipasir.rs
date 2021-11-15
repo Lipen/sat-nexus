@@ -118,15 +118,6 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
     }
 }
 
-impl WrappedIpasirSolver<IpasirSolver> {
-    pub fn add_unit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.add_clause([lit]);
-    }
-}
-
 impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WrappedSolver({})", self.signature())
