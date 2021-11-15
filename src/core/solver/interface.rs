@@ -34,6 +34,7 @@ impl LitValue {
         }
     }
 }
+
 impl fmt::Display for LitValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use LitValue::*;

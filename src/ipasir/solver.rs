@@ -35,6 +35,18 @@ impl From<&'static IpasirFFI> for IpasirSolver {
     }
 }
 
+impl Drop for IpasirSolver {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
+impl fmt::Display for IpasirSolver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.signature())
+    }
+}
+
 impl Ipasir for IpasirSolver {
     fn ffi(&self) -> &'static IpasirFFI {
         self.ffi
@@ -80,17 +92,5 @@ impl IpasirSolver {
             .collect::<Result<_, _>>()?;
         self.add_clause(lits);
         Ok(())
-    }
-}
-
-impl Drop for IpasirSolver {
-    fn drop(&mut self) {
-        self.release();
-    }
-}
-
-impl fmt::Display for IpasirSolver {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.signature())
     }
 }

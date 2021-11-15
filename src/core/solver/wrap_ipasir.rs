@@ -49,6 +49,12 @@ impl From<IpasirSolver> for WrappedIpasirSolver<IpasirSolver> {
     }
 }
 
+impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WrappedSolver({})", self.signature())
+    }
+}
+
 impl Solver for WrappedIpasirSolver<IpasirSolver> {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
@@ -115,12 +121,6 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
             Ok(ipasir::LitValue::DontCare) => LitValue::DontCare,
             Err(e) => panic!("Could not get literal value: {}", e),
         }
-    }
-}
-
-impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
