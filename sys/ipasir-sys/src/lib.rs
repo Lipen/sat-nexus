@@ -13,7 +13,7 @@ pub type IpasirPtr = *mut ::std::os::raw::c_void;
 impl IpasirFFI {
     pub fn load(name: &str) -> Self {
         unsafe { Self::new(libloading::library_filename(name)) }
-            .expect(&format!("Could not load shared library '{}'", name))
+            .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}", name, e))
     }
 }
 
