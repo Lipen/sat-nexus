@@ -143,23 +143,27 @@ pub trait Solver {
 
     // TODO: model
 
-    fn eval<T, E>(&self, value: &E) -> T
+    fn eval<E>(&self, value: &E) -> E::Output
     where
         Self: Sized,
-        E: Eval<T>,
+        E: Eval,
     {
         value.eval(self)
     }
 }
 
-pub trait Eval<T> {
-    fn eval<S>(&self, solver: &S) -> T
+pub trait Eval {
+    type Output;
+
+    fn eval<S>(&self, solver: &S) -> Self::Output
     where
         S: Solver;
 }
 
-impl Eval<LitValue> for Lit {
-    fn eval<S>(&self, solver: &S) -> LitValue
+impl Eval for Lit {
+    type Output = LitValue;
+
+    fn eval<S>(&self, solver: &S) -> Self::Output
     where
         S: Solver,
     {
@@ -167,11 +171,13 @@ impl Eval<LitValue> for Lit {
     }
 }
 
-impl<T> Eval<T> for DomainVar<T>
+impl<T> Eval for DomainVar<T>
 where
     T: Hash + Eq + Copy,
 {
-    fn eval<S>(&self, solver: &S) -> T
+    type Output = T;
+
+    fn eval<S>(&self, solver: &S) -> Self::Output
     where
         S: Solver,
     {
@@ -179,12 +185,14 @@ where
     }
 }
 
-impl<T, E, D> Eval<Array<T, D>> for Array<E, D>
+impl<T, E, D> Eval for Array<E, D>
 where
-    E: Eval<T>,
+    E: Eval<Output = T>,
     D: Dimension,
 {
-    fn eval<S>(&self, solver: &S) -> Array<T, D>
+    type Output = Array<T, D>;
+
+    fn eval<S>(&self, solver: &S) -> Self::Output
     where
         S: Solver,
     {
