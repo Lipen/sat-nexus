@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::core::lit::Lit;
 use crate::core::solver::Solver;
 
-use super::ops::Ops;
+use super::Ops;
 
 impl<S> Encodings for S where S: Solver + ?Sized {}
 
