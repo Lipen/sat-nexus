@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::core::lit::Lit;
-use crate::solver::Solver;
+use crate::core::solver::Solver;
 
 use super::ops::Ops;
 

@@ -6,9 +6,8 @@ use std::hash::Hash;
 use itertools::Itertools;
 
 use crate::core::lit::Lit;
-use crate::ipasir::LitValue;
+use crate::core::solver::{LitValue, Solver};
 use crate::op::encodings::Encodings;
-use crate::solver::Solver;
 
 #[derive(Debug)]
 pub struct DomainVar<T> {

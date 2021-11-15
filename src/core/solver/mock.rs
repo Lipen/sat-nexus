@@ -7,8 +7,7 @@ use itertools::Itertools;
 
 use crate::context::Context;
 use crate::core::lit::Lit;
-use crate::ipasir::{LitValue, SolveResponse};
-use crate::solver::Solver;
+use crate::core::solver::{LitValue, SolveResponse, Solver};
 
 #[derive(Debug)]
 pub struct MockSolver {

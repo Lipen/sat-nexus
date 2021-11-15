@@ -1,8 +1,7 @@
 use itertools::Itertools;
 
 use crate::core::lit::Lit;
-use crate::ipasir::SolveResponse;
-use crate::solver::Solver;
+use crate::core::solver::{SolveResponse, Solver};
 
 impl<S> AllSat for S where S: Solver + ?Sized {}
 
@@ -77,7 +76,7 @@ where
             self.solver.add_clause(refutation);
         }
 
-        if let SolveResponse::Sat = self.solver.solve() {
+        if matches!(self.solver.solve(), SolveResponse::Sat) {
             // Build the refutation
             self.refutation = Some(self.solver.build_refutation(&self.essential));
 
@@ -91,7 +90,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::solver::wrap_ipasir::WrappedIpasirSolver;
+    use crate::core::solver::wrap_ipasir::WrappedIpasirSolver;
 
     use super::*;
 

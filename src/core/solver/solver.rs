@@ -8,7 +8,7 @@ use ndarray::{Array, ArrayD, Dimension, ShapeBuilder};
 use crate::context::Context;
 use crate::core::domainvar::DomainVar;
 use crate::core::lit::Lit;
-use crate::ipasir::{LitValue, SolveResponse};
+use crate::core::solver::{LitValue, SolveResponse};
 
 pub trait Solver {
     fn signature(&self) -> Cow<str>;

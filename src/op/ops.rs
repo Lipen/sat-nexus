@@ -1,7 +1,7 @@
 use std::array;
 
 use crate::core::lit::Lit;
-use crate::solver::Solver;
+use crate::core::solver::Solver;
 
 impl<S> Ops for S where S: Solver + ?Sized {}
 

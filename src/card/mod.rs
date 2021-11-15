@@ -1,7 +1,7 @@
 use totalizer::Totalizer;
 
 use crate::core::lit::Lit;
-use crate::solver::Solver;
+use crate::core::solver::Solver;
 
 pub mod totalizer;
 

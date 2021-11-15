@@ -3,8 +3,8 @@ use std::rc::{Rc, Weak};
 use color_eyre::eyre::Result;
 
 use sat_nexus::core::lit::Lit;
-use sat_nexus::solver::wrap_ipasir::WrappedIpasirSolver;
-use sat_nexus::solver::Solver;
+use sat_nexus::core::solver::wrap_ipasir::WrappedIpasirSolver;
+use sat_nexus::core::solver::Solver;
 use std::cell::RefCell;
 
 struct Store<S> {

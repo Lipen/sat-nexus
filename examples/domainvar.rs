@@ -2,8 +2,8 @@ use color_eyre::eyre::Result;
 use ndarray::ArrayD;
 
 use sat_nexus::core::domainvar::DomainVar;
-use sat_nexus::solver::wrap_ipasir::WrappedIpasirSolver;
-use sat_nexus::solver::Solver;
+use sat_nexus::core::solver::wrap_ipasir::WrappedIpasirSolver;
+use sat_nexus::core::solver::Solver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
