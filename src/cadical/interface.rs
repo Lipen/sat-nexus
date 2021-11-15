@@ -1,15 +1,32 @@
-use crate::ipasir::{Lit, LitValue, Result, SolveResponse};
+use snafu::Snafu;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FixedValue {
-    /// The literal is implied by the formula.
-    Implied,
-    /// The negation of the literal is implied by the formula.
-    Negation,
-    /// It is unclear at this point whether the literal is implied by the formula.
-    Unclear,
+pub type Result<T, E = CadicalSolverError> = std::result::Result<T, E>;
+
+#[derive(Debug, Snafu)]
+pub enum CadicalSolverError {
+    #[snafu(display("Literal must be non-zero"))]
+    ZeroLiteral,
+
+    #[snafu(display("Invalid response from `simplify()`: {}", value))]
+    InvalidResponseSimplify { value: i32 },
+
+    #[snafu(display("Invalid response from `solve()`: {}", value))]
+    InvalidResponseSolve { value: i32 },
+
+    #[snafu(display("Invalid response from `val({})`: {}", lit, value))]
+    InvalidResponseVal { lit: i32, value: i32 },
+
+    #[snafu(display("Invalid response from `failed({})`: {}", lit, value))]
+    InvalidResponseFailed { lit: i32, value: i32 },
+
+    #[snafu(display("Invalid response from `fixed({})`: {}", lit, value))]
+    InvalidResponseFixed { lit: i32, value: i32 },
+
+    #[snafu(display("Invalid response from `frozen({})`: {}", lit, value))]
+    InvalidResponseFrozen { lit: i32, value: i32 },
 }
 
+/// Possible responses from a call to `simplify`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SimplifyResponse {
     Unknown = 0,
@@ -17,51 +34,48 @@ pub enum SimplifyResponse {
     Unsat = 20,
 }
 
-pub trait CadicalInterface {
-    fn signature(&self) -> &'static str;
-    fn reset(&mut self);
-    fn release(&mut self);
-    fn add(&self, lit_or_zero: i32);
-    fn assume(&self, lit: Lit);
-    fn solve(&self) -> Result<SolveResponse>;
-    fn val(&self, lit: Lit) -> Result<LitValue>;
-    fn failed(&self, lit: Lit) -> Result<bool>;
-    // TODO: set_terminate
-    // TODO: set_learn
-    fn set_option(&self, name: &'static str, val: i32);
-    fn limit(&self, name: &'static str, limit: i32);
-    fn get_option(&self, name: &'static str) -> i32;
-    fn print_statistics(&self);
-    fn active(&self) -> i64;
-    fn irredundant(&self) -> i64;
-    fn fixed(&self, lit: Lit) -> Result<FixedValue>;
-    fn terminate(&self);
-    fn freeze(&self, lit: Lit);
-    fn frozen(&self, lit: Lit) -> Result<bool>;
-    fn melt(&self, lit: Lit);
-    fn simplify(&self) -> Result<SimplifyResponse>;
+/// Possible responses from a call to `solve`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SolveResponse {
+    /// The solver found the input to be satisfiable.
+    Sat = 10,
+    /// The solver found the input to be unsatisfiable.
+    Unsat = 20,
+    /// The solver was interrupted.
+    Interrupted = 0,
 }
 
-// Symbols:
-//   ccadical_signature,
-//   ccadical_init,
-//   ccadical_release,
-//   ccadical_add,
-//   ccadical_assume,
-//   ccadical_solve,
-//   ccadical_val,
-//   ccadical_failed,
-//   ccadical_set_terminate,
-//   ccadical_set_learn,
-//   ccadical_set_option,
-//   ccadical_limit,
-//   ccadical_get_option,
-//   ccadical_print_statistics,
-//   ccadical_active,
-//   ccadical_irredundant,
-//   ccadical_fixed,
-//   ccadical_terminate,
-//   ccadical_freeze,
-//   ccadical_frozen,
-//   ccadical_melt,
-//   ccadical_simplify,
+/// Possible literal values from a call to `val`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum LitValue {
+    True,
+    False,
+}
+
+// Into<bool>
+impl From<LitValue> for bool {
+    fn from(v: LitValue) -> Self {
+        match v {
+            LitValue::True => true,
+            LitValue::False => false,
+        }
+    }
+}
+
+/// Possible responses from a call to `fixed`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FixedResponse {
+    /// The literal is implied by the formula.
+    Implied = 1,
+    /// The negation of the literal is implied by the formula.
+    Negation = -1,
+    /// It is unclear at this point whether the literal is implied by the formula.
+    Unclear = 0,
+}
+
+/// Possible responses from a call to `frozen`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FrozenResponse {
+    Frozen,
+    NotFrozen,
+}

@@ -5,13 +5,14 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::cadical::less::CadicalSolver2;
+use crate::cadical;
+use crate::cadical::solver::CadicalSolver;
 use crate::context::Context;
 use crate::core::lit::Lit;
 use crate::core::solver::{LitValue, SolveResponse, Solver};
 
 pub struct WrappedCadicalSolver {
-    inner: CadicalSolver2,
+    inner: CadicalSolver,
     context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
@@ -19,10 +20,10 @@ pub struct WrappedCadicalSolver {
 
 impl WrappedCadicalSolver {
     pub fn new() -> Self {
-        Self::new_custom(CadicalSolver2::new())
+        Self::new_custom(CadicalSolver::new())
     }
 
-    pub fn new_custom(inner: CadicalSolver2) -> Self {
+    pub fn new_custom(inner: CadicalSolver) -> Self {
         Self {
             inner,
             context: Rc::new(RefCell::new(Context::new())),
@@ -38,9 +39,15 @@ impl Default for WrappedCadicalSolver {
     }
 }
 
-impl From<CadicalSolver2> for WrappedCadicalSolver {
-    fn from(inner: CadicalSolver2) -> Self {
+impl From<CadicalSolver> for WrappedCadicalSolver {
+    fn from(inner: CadicalSolver) -> Self {
         WrappedCadicalSolver::new_custom(inner)
+    }
+}
+
+impl fmt::Display for WrappedCadicalSolver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
@@ -89,11 +96,12 @@ impl Solver for WrappedCadicalSolver {
     }
 
     fn solve(&mut self) -> SolveResponse {
+        use cadical::SolveResponse as CadicalSolveResponse;
         match self.inner.solve() {
-            0 => SolveResponse::Unknown,
-            10 => SolveResponse::Sat,
-            20 => SolveResponse::Unsat,
-            invalid => panic!("Could not solve: {}", invalid),
+            Ok(CadicalSolveResponse::Sat) => SolveResponse::Sat,
+            Ok(CadicalSolveResponse::Unsat) => SolveResponse::Unsat,
+            Ok(CadicalSolveResponse::Interrupted) => SolveResponse::Unknown,
+            Err(e) => panic!("Could not solve: {}", e),
         }
     }
 
@@ -101,19 +109,12 @@ impl Solver for WrappedCadicalSolver {
     where
         L: Into<Lit>,
     {
-        let lit = lit.into();
-        match self.inner.val(lit.into()) {
-            0 => LitValue::DontCare,
-            p if p == lit.get() => LitValue::True,
-            n if n == -lit.get() => LitValue::False,
-            invalid => panic!("Could not get literal value: {}", invalid),
+        use cadical::LitValue as CadicalLitValue;
+        match self.inner.val(lit.into().into()) {
+            Ok(CadicalLitValue::True) => LitValue::True,
+            Ok(CadicalLitValue::False) => LitValue::False,
+            Err(e) => panic!("Could not get literal value: {}", e),
         }
-    }
-}
-
-impl fmt::Display for WrappedCadicalSolver {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "WrappedSolver({})", self.signature())
     }
 }
 

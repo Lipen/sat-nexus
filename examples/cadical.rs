@@ -1,9 +1,6 @@
-use std::convert::TryInto;
-
 use color_eyre::eyre::Result;
 
 use sat_nexus::cadical::solver::CadicalSolver;
-use sat_nexus::cadical::CadicalInterface;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -20,24 +17,24 @@ fn main() -> Result<()> {
     // let extracted = *context.extract::<i32>();
     // println!("extracted = {:?}", extracted);
 
-    solver.try_add_clause(&[1, 2])?;
-    solver.try_add_clause(&[3, 4])?;
-    solver.try_add_clause(&[-1, -2])?;
-    solver.try_add_clause(&[-3, -4])?;
-    solver.try_add_clause(&[5, -5])?;
+    solver.add_clause([1, 2]);
+    solver.add_clause(vec![3, 4]);
+    solver.try_add_clause([-1, -2])?;
+    solver.try_add_clause(vec![-3, -4])?;
+    solver.try_add_clause([5, -5])?;
     let response = solver.solve();
     println!("Solver returned: {:?}", response);
 
-    solver.assume(1.try_into()?);
-    solver.assume(2.try_into()?);
-    let response = solver.solve();
+    solver.assume(1);
+    solver.assume(2);
+    let response = solver.solve()?;
     println!("Solver returned: {:?}", response);
 
-    let response = solver.solve();
+    let response = solver.solve()?;
     println!("Solver returned: {:?}", response);
 
     for i in 1..=5 {
-        println!("solver.val({}) = {:?}", i, solver.val(i.try_into()?));
+        println!("solver.val({}) = {:?}", i, solver.val(i)?);
     }
 
     Ok(())

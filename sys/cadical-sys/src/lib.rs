@@ -15,6 +15,10 @@ impl CCadicalFFI {
         unsafe { Self::new(libloading::library_filename(name)) }
             .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}", name, e))
     }
+
+    pub fn init(&self) -> CCadicalPtr {
+        unsafe { self.ccadical_init() }
+    }
 }
 
 macro_rules! instance {

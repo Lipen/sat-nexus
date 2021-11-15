@@ -6,33 +6,19 @@ use snafu::Snafu;
 use super::ffi::*;
 use super::Lit;
 
+pub type Result<T, E = SolverError> = std::result::Result<T, E>;
+
 #[derive(Debug, Snafu)]
 pub enum SolverError {
-    #[snafu(display("Invalid response from `val`: {}", value))]
-    InvalidResponseVal { lit: Lit, value: i32 },
-
-    #[snafu(display("Invalid response from `failed`: {}", value))]
-    InvalidResponseFailed { value: i32 },
-
-    #[snafu(display("Invalid response from `solve`: {}", value))]
+    #[snafu(display("Invalid response from `solve()`: {}", value))]
     InvalidResponseSolve { value: i32 },
 
-    // cadical
-    #[snafu(display("Invalid response from `frozen`: {}", value))]
-    InvalidResponseFrozen { value: i32 },
+    #[snafu(display("Invalid response from `val({})`: {}", lit, value))]
+    InvalidResponseVal { lit: Lit, value: i32 },
 
-    // cadical
-    #[snafu(display("Invalid response from `fixed`: {}", value))]
-    InvalidResponseFixed { value: i32 },
-
-    // cadical
-    #[snafu(display("Invalid response from `simplify`: {}", value))]
-    InvalidResponseSimplify { value: i32 },
-    // #[snafu(display("Invalid solver state"))]
-    // InvalidSolverState,
+    #[snafu(display("Invalid response from `failed({})`: {}", lit, value))]
+    InvalidResponseFailed { lit: Lit, value: i32 },
 }
-
-pub type Result<T, E = SolverError> = std::result::Result<T, E>;
 
 /// Possible responses from a call to `ipasir_solve`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -125,7 +111,10 @@ pub trait Ipasir {
         match unsafe { self.ffi().ipasir_failed(self.ptr(), lit.into()) } {
             0 => Ok(true),
             1 => Ok(false),
-            invalid => Err(SolverError::InvalidResponseFailed { value: invalid }),
+            invalid => Err(SolverError::InvalidResponseFailed {
+                lit,
+                value: invalid,
+            }),
         }
     }
 }
