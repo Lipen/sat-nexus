@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 use std::fmt;
-use std::os::raw::c_int;
+use std::os::raw::{c_char, c_int};
 
 use super::ffi::*;
 
@@ -9,6 +9,7 @@ pub struct CadicalSolver2 {
     ptr: CCadicalPtr,
 }
 
+// TODO: move it to cadical-sys
 impl CadicalSolver2 {
     pub fn new() -> Self {
         Self::new_custom(CCadicalFFI::instance())
@@ -82,16 +83,16 @@ impl CadicalSolver2 {
         unsafe { self.ffi.ccadical_failed(self.ptr, lit) }
     }
 
-    pub fn set_option(&self, _name: *const i8, _val: i32) {
-        todo!()
+    pub fn set_option(&self, name: *const c_char, val: c_int) {
+        unsafe { self.ffi.ccadical_set_option(self.ptr, name, val) }
     }
 
-    pub fn limit(&self, _name: *const i8, _limit: i32) {
-        todo!()
+    pub fn limit(&self, name: *const c_char, limit: c_int) {
+        unsafe { self.ffi.ccadical_limit(self.ptr, name, limit) }
     }
 
-    pub fn get_option(&self, _name: *const i8) -> i32 {
-        todo!()
+    pub fn get_option(&self, name: *const c_char) -> c_int {
+        unsafe { self.ffi.ccadical_get_option(self.ptr, name) }
     }
 
     pub fn print_statistics(&self) {
