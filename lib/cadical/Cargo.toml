@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 cadical-sys = { path = "../../sys/cadical-sys" }
 snafu = "0.6.10"
-itertools = "0.10.0"
+itertools = "0.10.1"
 
 [dev-dependencies]
 color-eyre = "0.5.11"

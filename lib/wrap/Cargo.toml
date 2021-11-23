@@ -10,8 +10,8 @@ api = { path = "../api" }
 cadical = {path = "../cadical"}
 ipasir = {path = "../ipasir"}
 snafu = "0.6.10"
-itertools = "0.10.0"
+itertools = "0.10.1"
 
 [dev-dependencies]
 color-eyre = "0.5.11"
-ndarray = "0.15.3"
+ndarray = "0.15.4"
