@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::context::Context;
+use crate::core::context::Context;
 use crate::core::lit::Lit;
 use crate::core::solver::{LitValue, SolveResponse, Solver};
 

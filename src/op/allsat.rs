@@ -90,7 +90,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::core::solver::wrap_ipasir::WrappedIpasirSolver;
+    use crate::wrap::ipasir::WrappedIpasirSolver;
 
     use super::*;
 

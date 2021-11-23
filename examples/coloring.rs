@@ -5,9 +5,9 @@ use itertools::Itertools;
 use ndarray::ArrayD;
 
 use sat_nexus::core::domainvar::DomainVar;
-use sat_nexus::core::solver::wrap_ipasir::WrappedIpasirSolver;
 use sat_nexus::core::solver::{LitValue, SolveResponse, Solver};
 use sat_nexus::op::Ops;
+use sat_nexus::wrap::ipasir::WrappedIpasirSolver;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);

@@ -9,7 +9,7 @@ use std::ops::Deref;
 use ndarray::{Array, Array1, ArrayD};
 use type_map::TypeMap;
 
-use sat_nexus::context::Context;
+use sat_nexus::core::context::Context;
 use sat_nexus::core::solver::Solver;
 
 mod ipasir;
@@ -18,7 +18,7 @@ fn main() -> color_eyre::eyre::Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    use sat_nexus::core::solver::wrap_ipasir::WrappedIpasirSolver;
+    use sat_nexus::wrap::ipasir::WrappedIpasirSolver;
     let mut solver = WrappedIpasirSolver::new_cadical();
 
     // use sat_nexus::solver::wrap_cadical::WrappedCadicalSolver;
