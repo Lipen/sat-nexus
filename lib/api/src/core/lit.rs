@@ -2,8 +2,6 @@ use std::convert::TryInto;
 use std::fmt;
 use std::ops::Neg;
 
-use crate::ipasir::Lit as IpasirLit;
-
 #[derive(Debug, Copy, Clone)]
 pub struct Lit(i32);
 
@@ -53,19 +51,6 @@ impl From<usize> for Lit {
 impl From<Lit> for i32 {
     fn from(lit: Lit) -> Self {
         lit.0
-    }
-}
-
-impl From<IpasirLit> for Lit {
-    fn from(lit: IpasirLit) -> Self {
-        Self::new(lit.into())
-    }
-}
-
-// Into<IpasirLit>
-impl From<Lit> for IpasirLit {
-    fn from(lit: Lit) -> Self {
-        unsafe { IpasirLit::new_unchecked(lit.0) }
     }
 }
 

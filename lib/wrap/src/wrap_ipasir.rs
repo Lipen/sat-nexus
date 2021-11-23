@@ -5,25 +5,34 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::cadical;
-use crate::cadical::solver::CadicalSolver;
-use crate::core::context::Context;
-use crate::core::lit::Lit;
-use crate::core::solver::{LitValue, SolveResponse, Solver};
+use api::core::context::Context;
+use api::core::lit::Lit;
+use api::core::solver::{LitValue, SolveResponse, Solver};
+use ipasir::solver::IpasirSolver;
+use ipasir::Ipasir;
 
-pub struct WrappedCadicalSolver {
-    inner: CadicalSolver,
+trait Ext {
+    fn to_ipasir(self) -> ipasir::Lit;
+}
+
+impl Ext for Lit {
+    fn to_ipasir(self) -> ipasir::Lit {
+        unsafe { ipasir::Lit::new_unchecked(self.into()) }
+    }
+}
+
+pub struct WrappedIpasirSolver<S>
+where
+    S: Ipasir,
+{
+    inner: S,
     context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
 }
 
-impl WrappedCadicalSolver {
-    pub fn new() -> Self {
-        Self::new_custom(CadicalSolver::new())
-    }
-
-    pub fn new_custom(inner: CadicalSolver) -> Self {
+impl WrappedIpasirSolver<IpasirSolver> {
+    pub fn new(inner: IpasirSolver) -> Self {
         Self {
             inner,
             context: Rc::new(RefCell::new(Context::new())),
@@ -31,27 +40,31 @@ impl WrappedCadicalSolver {
             nclauses: 0,
         }
     }
-}
 
-impl Default for WrappedCadicalSolver {
-    fn default() -> Self {
-        WrappedCadicalSolver::new()
+    pub fn new_cadical() -> Self {
+        Self::new(IpasirSolver::new_cadical())
+    }
+    pub fn new_minisat() -> Self {
+        Self::new(IpasirSolver::new_minisat())
+    }
+    pub fn new_glucose() -> Self {
+        Self::new(IpasirSolver::new_glucose())
     }
 }
 
-impl From<CadicalSolver> for WrappedCadicalSolver {
-    fn from(inner: CadicalSolver) -> Self {
-        WrappedCadicalSolver::new_custom(inner)
+impl From<IpasirSolver> for WrappedIpasirSolver<IpasirSolver> {
+    fn from(inner: IpasirSolver) -> Self {
+        WrappedIpasirSolver::new(inner)
     }
 }
 
-impl fmt::Display for WrappedCadicalSolver {
+impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
-impl Solver for WrappedCadicalSolver {
+impl Solver for WrappedIpasirSolver<IpasirSolver> {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -85,23 +98,26 @@ impl Solver for WrappedCadicalSolver {
         L: Into<Lit>,
     {
         self.nclauses += 1;
-        self.inner.add_clause(lits.into_iter().map_into::<Lit>());
+        self.inner
+            .add_clause(lits.into_iter().map_into::<Lit>().map(|x| x.to_ipasir()));
     }
 
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
     {
-        self.inner.assume(lit.into().into());
+        self.inner.assume(lit.into().to_ipasir());
     }
 
     fn solve(&mut self) -> SolveResponse {
-        use cadical::SolveResponse as CadicalSolveResponse;
         match self.inner.solve() {
-            Ok(CadicalSolveResponse::Sat) => SolveResponse::Sat,
-            Ok(CadicalSolveResponse::Unsat) => SolveResponse::Unsat,
-            Ok(CadicalSolveResponse::Interrupted) => SolveResponse::Unknown,
-            Err(e) => panic!("Could not solve: {}", e),
+            Ok(ipasir::SolveResponse::Sat) => SolveResponse::Sat,
+            Ok(ipasir::SolveResponse::Unsat) => SolveResponse::Unsat,
+            Ok(ipasir::SolveResponse::Interrupted) => SolveResponse::Unknown,
+            Err(e) => {
+                eprintln!("Could not solve: {}", e);
+                SolveResponse::Unknown
+            }
         }
     }
 
@@ -109,10 +125,10 @@ impl Solver for WrappedCadicalSolver {
     where
         L: Into<Lit>,
     {
-        use cadical::LitValue as CadicalLitValue;
-        match self.inner.val(lit.into().into()) {
-            Ok(CadicalLitValue::True) => LitValue::True,
-            Ok(CadicalLitValue::False) => LitValue::False,
+        match self.inner.val(lit.into().to_ipasir()) {
+            Ok(ipasir::LitValue::True) => LitValue::True,
+            Ok(ipasir::LitValue::False) => LitValue::False,
+            Ok(ipasir::LitValue::DontCare) => LitValue::DontCare,
             Err(e) => panic!("Could not get literal value: {}", e),
         }
     }
@@ -124,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_wrap_solver() -> color_eyre::Result<()> {
-        let mut solver = WrappedCadicalSolver::new();
+        let mut solver = WrappedIpasirSolver::new_cadical();
         assert!(solver.signature().contains("cadical"));
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]

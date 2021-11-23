@@ -7,7 +7,7 @@ pub mod totalizer;
 
 impl<S> Cardinality for S where S: Solver + ?Sized {}
 
-trait Cardinality: Solver {
+pub trait Cardinality: Solver {
     fn declare_totalizer(&mut self, input_vars: &[Lit]) -> Totalizer
     where
         Self: Sized,

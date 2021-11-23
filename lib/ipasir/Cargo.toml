@@ -1,0 +1,13 @@
+[package]
+name = "ipasir"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+ipasir-sys = { path = "../../sys/ipasir-sys" }
+snafu = "0.6.10"
+itertools = "0.10.0"
+
+[dev-dependencies]
+color-eyre = "0.5.11"

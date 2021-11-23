@@ -19,11 +19,11 @@ fn main() -> Result<()> {
     let extracted = *context.extract::<i32>();
     println!("extracted = {:?}", extracted);
 
-    solver.add_clause(&[1, 2]);
+    solver.add_clause([1, 2]);
     solver.add_clause(&[3, 4]);
-    solver.add_clause(&[-1, -2]);
-    solver.add_clause(&[-3, -4]);
-    solver.add_clause(&[5, -5]);
+    solver.add_clause(vec![-1, -2]);
+    solver.add_clause(&vec![-3, -4]);
+    solver.add_unit(5);
     let response = solver.solve();
     println!("Solver returned: {:?}", response);
 
