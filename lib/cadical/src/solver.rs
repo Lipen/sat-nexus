@@ -57,8 +57,8 @@ impl CadicalSolver {
         }
     }
 
-    /// Explicit version of setting an option.  If the option '<name>' exists
-    /// and '<val>' can be parsed then 'true' is returned.  If the option value
+    /// Explicit version of setting an option.  If the option 'name' exists
+    /// and 'val' can be parsed then 'true' is returned.  If the option value
     /// is out of range the actual value is computed as the closest (minimum or
     /// maximum) value possible, but still 'true' is returned.
     ///
@@ -71,8 +71,8 @@ impl CadicalSolver {
         }
     }
 
-    // Get the current value of the option 'name'.  If 'name' is invalid then
-    // zero is returned.  Here '--...' arguments as invalid options.
+    /// Get the current value of the option 'name'.  If 'name' is invalid then
+    /// zero is returned.  Here '--...' arguments as invalid options.
     pub fn get_option(&self, name: &'static str) -> i32 {
         let c_string = CString::new(name).expect("CString::new failed");
         let c_chars = c_string.as_ptr();
