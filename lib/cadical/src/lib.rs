@@ -1,9 +1,9 @@
-pub use interface::*;
+pub use api::*;
 
 pub mod ffi;
 pub mod solver;
 
-mod interface;
+mod api;
 
 #[cfg(test)]
 mod tests;

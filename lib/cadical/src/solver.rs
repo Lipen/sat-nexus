@@ -1,8 +1,8 @@
 use std::ffi::{CStr, CString};
 use std::fmt;
 
-use super::ffi::*;
-use super::interface::*;
+use crate::api::*;
+use crate::ffi::*;
 
 pub struct CadicalSolver {
     ffi: &'static CCadicalFFI,
