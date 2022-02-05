@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 pub mod bindings {
     #![allow(non_upper_case_globals)]
     #![allow(non_camel_case_types)]
@@ -19,6 +21,14 @@ impl IpasirFFI {
 
     pub fn init(&self) -> IpasirPtr {
         unsafe { self.ipasir_init() }
+    }
+
+    pub fn signature(&self) -> &'static str {
+        let c_chars = unsafe { self.ipasir_signature() };
+        let c_str = unsafe { CStr::from_ptr(c_chars) };
+        c_str
+            .to_str()
+            .expect("The IPASIR implementation returned invalid UTF-8.")
     }
 }
 

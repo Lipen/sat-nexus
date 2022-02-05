@@ -1,4 +1,3 @@
-use std::ffi::CStr;
 use std::fmt;
 
 use snafu::Snafu;
@@ -72,11 +71,7 @@ pub trait Ipasir {
     fn release(&mut self);
 
     fn signature(&self) -> &'static str {
-        let c_chars = unsafe { self.ffi().ipasir_signature() };
-        let c_str = unsafe { CStr::from_ptr(c_chars) };
-        c_str
-            .to_str()
-            .expect("The IPASIR implementation returned invalid UTF-8.")
+        self.ffi().signature()
     }
 
     fn add(&self, lit_or_zero: i32) {
