@@ -1,4 +1,4 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::fmt;
 
 use super::api::*;
@@ -43,11 +43,7 @@ impl fmt::Display for CadicalSolver {
 /// Cadical interface.
 impl CadicalSolver {
     pub fn signature(&self) -> &'static str {
-        let c_chars = unsafe { self.ffi.ccadical_signature() };
-        let c_str = unsafe { CStr::from_ptr(c_chars) };
-        c_str
-            .to_str()
-            .expect("The implementation returned invalid UTF-8.")
+        self.ffi.signature()
     }
 
     pub fn release(&mut self) {
