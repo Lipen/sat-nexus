@@ -6,7 +6,7 @@ use crate::solver::Solver;
 impl<S> Ops for S where S: Solver + ?Sized {}
 
 pub trait Ops: Solver {
-    // old stuff
+    #[deprecated = "old stuff"]
     fn declare<C, I, L>(&mut self, clauses: C)
     where
         C: IntoIterator<Item = I>,
@@ -287,8 +287,7 @@ pub trait Ops: Solver {
     //  imply_imply_iff_ite
 }
 
-/// **Note:** since `IntoIterator for [T;N]` was stabilized (Rust 1.53),
-/// the methods in this trait are not needed anymore!
+#[deprecated = "`IntoIterator for [T;N]` was stabilized in Rust 1.53"]
 pub trait OpsArray: Ops {
     fn imply_and_array<const N: usize>(&mut self, lhs: Lit, rhs: [Lit; N]) {
         self.imply_and(lhs, array::IntoIter::new(rhs));
