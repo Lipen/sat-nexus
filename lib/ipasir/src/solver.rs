@@ -29,15 +29,15 @@ impl IpasirSolver {
     }
 }
 
-impl From<&'static IpasirFFI> for IpasirSolver {
-    fn from(ffi: &'static IpasirFFI) -> Self {
-        Self::new_custom(ffi)
-    }
-}
-
 impl Drop for IpasirSolver {
     fn drop(&mut self) {
         self.release();
+    }
+}
+
+impl From<&'static IpasirFFI> for IpasirSolver {
+    fn from(ffi: &'static IpasirFFI) -> Self {
+        Self::new_custom(ffi)
     }
 }
 
