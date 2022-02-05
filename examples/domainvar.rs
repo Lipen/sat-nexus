@@ -3,7 +3,7 @@ use ndarray::ArrayD;
 
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::solver::Solver;
-use sat_nexus::wrap::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;

@@ -1,10 +1,10 @@
-use sat_nexus::card::Cardinality;
-use sat_nexus::core::solver::Solver;
-use sat_nexus::op::allsat::AllSat;
-use sat_nexus::op::Ops;
-use sat_nexus::wrap::ipasir::WrappedIpasirSolver;
-
 use itertools::Itertools;
+
+use sat_nexus::core::card::Cardinality;
+use sat_nexus::core::op::allsat::AllSat;
+use sat_nexus::core::op::Ops;
+use sat_nexus::core::solver::Solver;
+use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 #[test]
 fn test_totalizer() {

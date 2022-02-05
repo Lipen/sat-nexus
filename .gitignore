@@ -6,6 +6,8 @@ Cargo.lock
 *.so
 *.a
 
+
+# Local stuff
+stuff/
 _*.rs
-original-ipasir-sys
-sys/cadical-lib-static
+*.txt

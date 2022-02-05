@@ -6,15 +6,25 @@ edition = "2021"
 
 [workspace]
 members = [
-    "sys/cadical-sys",
-    "sys/ipasir-sys",
+    "lib/cadical-sys",
+    "lib/ipasir-sys",
 ]
 
 [dependencies]
-api = { path = "lib/api" }
+sat-nexus-core = { path = "lib/core" }
+sat-nexus-wrappers = { path = "lib/wrappers" }
 ipasir = { path = "lib/ipasir" }
 cadical = { path = "lib/cadical" }
-wrap = { path = "lib/wrap" }
+
+#cadical-sys = { path = "sys/cadical-sys" }
+#ipasir-sys = { path = "sys/ipasir-sys" }
+#ndarray = "0.15.4"
+#type-map = "0.5.0"
+#derive_more = "0.99.16"
+#snafu = "0.6.10"
+#itertools = "0.10.1"
+#tap = "1.0.1"
+#once_cell = "1.8.0"
 
 [dev-dependencies]
 color-eyre = "0.5.11"

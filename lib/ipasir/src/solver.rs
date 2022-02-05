@@ -1,8 +1,8 @@
 use std::convert::TryInto;
 use std::fmt;
 
+use super::api::*;
 use super::ffi::*;
-use super::interface::*;
 use super::types::*;
 
 pub struct IpasirSolver {

@@ -1,13 +1,16 @@
 [package]
-name = "ipasir"
+name = "sat-nexus-wrappers"
 version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-ipasir-sys = { path = "../ipasir-sys" }
+sat-nexus-core = { path = "../core" }
+cadical = { path = "../cadical" }
+ipasir = { path = "../ipasir" }
 snafu = "0.6.10"
 itertools = "0.10.1"
 
 [dev-dependencies]
 color-eyre = "0.5.11"
+ndarray = "0.15.4"

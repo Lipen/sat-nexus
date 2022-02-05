@@ -5,7 +5,7 @@ authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-cadical-sys = { path = "../../sys/cadical-sys" }
+cadical-sys = { path = "../cadical-sys" }
 snafu = "0.6.10"
 itertools = "0.10.1"
 

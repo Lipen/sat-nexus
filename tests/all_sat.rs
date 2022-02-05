@@ -1,7 +1,7 @@
 use sat_nexus::core::lit::Lit;
+use sat_nexus::core::op::allsat::AllSat;
 use sat_nexus::core::solver::Solver;
-use sat_nexus::op::allsat::AllSat;
-use sat_nexus::wrap::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 #[test]
 fn all_solutions_5vars() {
