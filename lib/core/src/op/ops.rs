@@ -305,23 +305,11 @@ pub trait OpsArray: Ops {
         self.imply_imply_or(x1, x2, array::IntoIter::new(xs));
     }
 
-    fn imply_imply_imply_and_array<const N: usize>(
-        &mut self,
-        x1: Lit,
-        x2: Lit,
-        x3: Lit,
-        xs: [Lit; N],
-    ) {
+    fn imply_imply_imply_and_array<const N: usize>(&mut self, x1: Lit, x2: Lit, x3: Lit, xs: [Lit; N]) {
         self.imply_imply_imply_and(x1, x2, x3, array::IntoIter::new(xs));
     }
 
-    fn imply_imply_imply_or_array<const N: usize>(
-        &mut self,
-        x1: Lit,
-        x2: Lit,
-        x3: Lit,
-        xs: [Lit; N],
-    ) {
+    fn imply_imply_imply_or_array<const N: usize>(&mut self, x1: Lit, x2: Lit, x3: Lit, xs: [Lit; N]) {
         self.imply_imply_imply_or(x1, x2, x3, array::IntoIter::new(xs));
     }
 

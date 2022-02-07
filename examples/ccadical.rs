@@ -1,5 +1,3 @@
-use std::ffi::CStr;
-
 use color_eyre::eyre::Result;
 
 use sat_nexus::cadical::ffi::*;
@@ -10,25 +8,25 @@ fn main() -> Result<()> {
     unsafe {
         let lib = CCadicalFFI::load("cadical");
         let ptr = lib.ccadical_init();
+
+        let signature = lib.signature();
+        println!("signature = {}", signature);
+
         lib.ccadical_add(ptr, 1);
         lib.ccadical_add(ptr, 2);
         lib.ccadical_add(ptr, 0);
+
         lib.ccadical_add(ptr, 3);
         lib.ccadical_add(ptr, 4);
         lib.ccadical_add(ptr, 0);
+
         lib.ccadical_add(ptr, -1);
         lib.ccadical_add(ptr, -2);
         lib.ccadical_add(ptr, 0);
+
         lib.ccadical_add(ptr, -3);
         lib.ccadical_add(ptr, -4);
         lib.ccadical_add(ptr, 0);
-
-        let c_chars = lib.ccadical_signature();
-        let c_str = CStr::from_ptr(c_chars);
-        let signature = c_str
-            .to_str()
-            .expect("The implementation returned invalid UTF-8.");
-        println!("signature = {}", signature);
 
         const SAT: i32 = 10;
         const UNSAT: i32 = 20;

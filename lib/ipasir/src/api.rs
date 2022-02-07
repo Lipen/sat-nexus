@@ -96,10 +96,7 @@ pub trait Ipasir {
             0 => Ok(LitValue::DontCare),
             p if p == lit.get() => Ok(LitValue::True),
             n if n == -lit.get() => Ok(LitValue::False),
-            invalid => Err(SolverError::InvalidResponseVal {
-                lit,
-                value: invalid,
-            }),
+            invalid => Err(SolverError::InvalidResponseVal { lit, value: invalid }),
         }
     }
 
@@ -107,10 +104,7 @@ pub trait Ipasir {
         match unsafe { self.ffi().ipasir_failed(self.ptr(), lit.into()) } {
             0 => Ok(true),
             1 => Ok(false),
-            invalid => Err(SolverError::InvalidResponseFailed {
-                lit,
-                value: invalid,
-            }),
+            invalid => Err(SolverError::InvalidResponseFailed { lit, value: invalid }),
         }
     }
 }

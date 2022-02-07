@@ -75,8 +75,7 @@ impl Solver for MockSolver {
         L: Into<Lit>,
     {
         self.nclauses += 1;
-        self.clauses
-            .push(lits.into_iter().map_into::<Lit>().collect());
+        self.clauses.push(lits.into_iter().map_into::<Lit>().collect());
     }
 
     fn assume<L>(&mut self, _lit: L)

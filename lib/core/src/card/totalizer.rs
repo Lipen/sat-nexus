@@ -136,10 +136,7 @@ impl Totalizer {
     {
         assert!(ub <= self.output_vars.len());
 
-        let max = self
-            .declared_upper_bound
-            .replace(ub)
-            .unwrap_or(self.output_vars.len());
+        let max = self.declared_upper_bound.replace(ub).unwrap_or(self.output_vars.len());
         for i in (ub..=max).rev() {
             // Note: totalizer is 0-based, but all params are naturally 1-based
             solver.add_clause([-self.output_vars[i - 1]]);

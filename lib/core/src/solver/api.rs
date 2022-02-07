@@ -89,11 +89,7 @@ pub trait Solver {
         DomainVar::new_onehot(self, domain)
     }
 
-    fn new_domain_var_array<T, I, D, Sh, F>(
-        &mut self,
-        shape: Sh,
-        mut f_domain: F,
-    ) -> Array<DomainVar<T>, D>
+    fn new_domain_var_array<T, I, D, Sh, F>(&mut self, shape: Sh, mut f_domain: F) -> Array<DomainVar<T>, D>
     where
         Self: Sized,
         T: Hash + Eq + Copy,
@@ -105,11 +101,7 @@ pub trait Solver {
         Array::from_shape_fn(shape, |pat| self.new_domain_var(f_domain(pat)))
     }
 
-    fn new_domain_var_array_dyn<T, I, D, Sh, F>(
-        &mut self,
-        shape: Sh,
-        f_domain: F,
-    ) -> ArrayD<DomainVar<T>>
+    fn new_domain_var_array_dyn<T, I, D, Sh, F>(&mut self, shape: Sh, f_domain: F) -> ArrayD<DomainVar<T>>
     where
         Self: Sized,
         T: Hash + Eq + Copy,

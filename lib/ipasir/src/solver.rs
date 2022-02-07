@@ -86,10 +86,7 @@ impl IpasirSolver {
         I: IntoIterator<Item = L>,
         L: TryInto<Lit>,
     {
-        let lits: Vec<Lit> = lits
-            .into_iter()
-            .map(|x| x.try_into())
-            .collect::<Result<_, _>>()?;
+        let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
         self.add_clause(lits);
         Ok(())
     }

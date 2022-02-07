@@ -10,13 +10,6 @@ fn main() -> Result<()> {
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);
 
-    // let context = solver.context_mut();
-    // let value: i32 = 4;
-    // println!("value = {:?}", value);
-    // context.insert(value);
-    // let extracted = *context.extract::<i32>();
-    // println!("extracted = {:?}", extracted);
-
     solver.add_clause([1, 2]);
     solver.add_clause(vec![3, 4]);
     solver.try_add_clause([-1, -2])?;

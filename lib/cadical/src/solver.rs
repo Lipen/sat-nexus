@@ -15,10 +15,7 @@ impl CadicalSolver {
     }
 
     pub fn new_custom(ffi: &'static CCadicalFFI) -> Self {
-        CadicalSolver {
-            ffi,
-            ptr: ffi.init(),
-        }
+        CadicalSolver { ffi, ptr: ffi.init() }
     }
 }
 
@@ -61,10 +58,7 @@ impl CadicalSolver {
     /// Options can only be set right after initialization.
     pub fn set_option(&self, name: &'static str, val: i32) {
         let c_string = CString::new(name).expect("CString::new failed");
-        unsafe {
-            self.ffi
-                .ccadical_set_option(self.ptr, c_string.as_ptr(), val)
-        }
+        unsafe { self.ffi.ccadical_set_option(self.ptr, c_string.as_ptr(), val) }
     }
 
     /// Get the current value of the option 'name'.  If 'name' is invalid then
@@ -147,10 +141,7 @@ impl CadicalSolver {
             // 0 => Ok(LitValue::DontCare),
             p if p == lit => Ok(LitValue::True),
             n if n == -lit => Ok(LitValue::False),
-            invalid => Err(CadicalSolverError::InvalidResponseVal {
-                lit,
-                value: invalid,
-            }),
+            invalid => Err(CadicalSolverError::InvalidResponseVal { lit, value: invalid }),
         }
     }
 
@@ -163,10 +154,7 @@ impl CadicalSolver {
         match unsafe { self.ffi.ccadical_failed(self.ptr, lit) } {
             0 => Ok(true),
             1 => Ok(false),
-            invalid => Err(CadicalSolverError::InvalidResponseFailed {
-                lit,
-                value: invalid,
-            }),
+            invalid => Err(CadicalSolverError::InvalidResponseFailed { lit, value: invalid }),
         }
     }
 
@@ -194,10 +182,7 @@ impl CadicalSolver {
             1 => Ok(FixedResponse::Implied),
             -1 => Ok(FixedResponse::Negation),
             0 => Ok(FixedResponse::Unclear),
-            invalid => Err(CadicalSolverError::InvalidResponseFixed {
-                lit,
-                value: invalid,
-            }),
+            invalid => Err(CadicalSolverError::InvalidResponseFixed { lit, value: invalid }),
         }
     }
 
@@ -207,10 +192,7 @@ impl CadicalSolver {
         match unsafe { self.ffi.ccadical_frozen(self.ptr, lit) } {
             0 => Ok(FrozenResponse::NotFrozen),
             1 => Ok(FrozenResponse::Frozen),
-            invalid => Err(CadicalSolverError::InvalidResponseFrozen {
-                lit,
-                value: invalid,
-            }),
+            invalid => Err(CadicalSolverError::InvalidResponseFrozen { lit, value: invalid }),
         }
     }
 
@@ -250,10 +232,7 @@ impl CadicalSolver {
         I: IntoIterator<Item = L>,
         L: TryInto<i32>,
     {
-        let lits: Vec<i32> = lits
-            .into_iter()
-            .map(|x| x.try_into())
-            .collect::<Result<_, _>>()?;
+        let lits: Vec<i32> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
         self.add_clause(lits);
         Ok(())
     }

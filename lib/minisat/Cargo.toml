@@ -1,0 +1,13 @@
+[package]
+name = "minisat"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+minisat-sys = { path = "../minisat-sys" }
+snafu = "0.6.10"
+itertools = "0.10.1"
+
+[dev-dependencies]
+color-eyre = "0.5.11"

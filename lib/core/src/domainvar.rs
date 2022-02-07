@@ -89,11 +89,6 @@ where
     pub fn reverse_domain(&mut self) {
         // Note: reverse only `domain` (and, correspondingly, keys of `map`), but not `lits`!
         self.domain.reverse();
-        self.map = self
-            .domain
-            .iter()
-            .copied()
-            .zip(self.lits.iter().copied())
-            .collect();
+        self.map = self.domain.iter().copied().zip(self.lits.iter().copied()).collect();
     }
 }

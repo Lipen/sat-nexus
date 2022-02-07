@@ -73,13 +73,8 @@ impl Context {
     {
         // Note: we have to `clone` here because of the second use of `name` in `unwrap_or_else`.
         let name = name.into();
-        self.get_named(name.clone()).unwrap_or_else(|| {
-            panic!(
-                "Could not extract {} with name `{}`",
-                type_name::<T>(),
-                name
-            )
-        })
+        self.get_named(name.clone())
+            .unwrap_or_else(|| panic!("Could not extract {} with name `{}`", type_name::<T>(), name))
     }
 }
 
