@@ -138,7 +138,6 @@ impl CadicalSolver {
         debug_assert_ne!(lit, 0, "Literal must be non-zero");
         // ensure!(lit != 0, ZeroLiteral);
         match unsafe { self.ffi.ccadical_val(self.ptr, lit) } {
-            // 0 => Ok(LitValue::DontCare),
             p if p == lit => Ok(LitValue::True),
             n if n == -lit => Ok(LitValue::False),
             invalid => Err(CadicalSolverError::InvalidResponseVal { lit, value: invalid }),
