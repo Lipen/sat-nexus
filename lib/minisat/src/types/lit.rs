@@ -2,7 +2,6 @@ use std::fmt;
 use std::ops;
 
 use crate::ffi::bindings::minisat_Lit;
-use crate::ffi::bindings::minisat_Var;
 
 use super::Var;
 
@@ -11,20 +10,20 @@ pub struct Lit(minisat_Lit);
 
 impl Lit {
     pub fn new(x: minisat_Lit) -> Self {
-        debug_assert!(x.0 >= 0);
+        debug_assert!(x >= 0);
         Lit(x)
     }
 
     pub fn var(self) -> Var {
-        minisat_Var(self.0 .0 >> 1).into()
+        (self.0 >> 1).into()
     }
 
     pub fn sign(self) -> i32 {
-        self.0 .0 & 1
+        self.0 & 1
     }
 
-    pub fn negate(self) -> Self {
-        minisat_Lit(self.0 .0 ^ 1).into()
+    pub fn negate(self) -> Lit {
+        (self.0 ^ 1).into()
     }
 }
 

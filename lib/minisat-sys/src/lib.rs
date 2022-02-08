@@ -1,5 +1,3 @@
-use std::fmt;
-
 pub mod bindings;
 
 pub type MiniSatFFI = bindings::minisat;
@@ -56,16 +54,4 @@ impl MiniSatFFI {
     // pub fn minisat_l_undef(&self) -> bindings::minisat_lbool {
     //     unsafe { self.minisat_get_l_Undef() }
     // }
-}
-
-impl fmt::Display for bindings::minisat_Lit {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl fmt::Display for bindings::minisat_Var {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
 }

@@ -5,7 +5,7 @@ pub struct Var(minisat_Var);
 
 impl Var {
     pub fn new(var: minisat_Var) -> Self {
-        debug_assert!(var.0 >= 0);
+        debug_assert!(var >= 0);
         Var(var)
     }
 }

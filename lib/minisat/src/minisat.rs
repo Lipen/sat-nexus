@@ -75,7 +75,7 @@ impl MiniSat {
     // Customize variables
 
     pub fn set_polarity(&self, var: Var, pol: LBool) {
-        unsafe { self.ffi.minisat_setPolarity(self.ptr, var.into(), pol.to_c(self.ffi).0) }
+        unsafe { self.ffi.minisat_setPolarity(self.ptr, var.into(), pol.to_c(self.ffi)) }
     }
     pub fn set_decision_var(&self, var: Var, pol: bool) {
         unsafe { self.ffi.minisat_setPolarity(self.ptr, var.into(), pol.into()) }
