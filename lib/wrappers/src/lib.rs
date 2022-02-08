@@ -1,11 +1,8 @@
-mod wrap_ipasir;
+#[path = "wrap_ipasir.rs"]
+pub mod ipasir;
 
-pub mod ipasir {
-    pub use super::wrap_ipasir::*;
-}
+#[path = "wrap_cadical.rs"]
+pub mod cadical;
 
-mod wrap_cadical;
-
-pub mod cadical {
-    pub use super::wrap_cadical::*;
-}
+#[path = "wrap_minisat.rs"]
+pub mod minisat;

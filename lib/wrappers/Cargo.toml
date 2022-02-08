@@ -8,6 +8,7 @@ edition = "2021"
 sat-nexus-core = { path = "../core" }
 cadical = { path = "../cadical" }
 ipasir = { path = "../ipasir" }
+minisat = { path = "../minisat" }
 snafu = "0.6.10"
 itertools = "0.10.1"
 
