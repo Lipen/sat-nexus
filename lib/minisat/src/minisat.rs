@@ -122,6 +122,18 @@ impl MiniSat {
         unsafe { self.ffi.minisat_eliminate(self.ptr, turn_off_elim) }
     }
 
+    // Budget
+
+    pub fn set_conf_budget(&self, x: i32) {
+        unsafe { self.ffi.minisat_set_conf_budget(self.ptr, x) }
+    }
+    pub fn set_prop_budget(&self, x: i32) {
+        unsafe { self.ffi.minisat_set_prop_budget(self.ptr, x) }
+    }
+    pub fn no_budget(&self) {
+        unsafe { self.ffi.minisat_no_budget(self.ptr) }
+    }
+
     // Interrupt
 
     pub fn interrupt(&self) {
@@ -184,22 +196,10 @@ impl MiniSat {
     pub fn num_restarts(&self) -> i32 {
         unsafe { self.ffi.minisat_num_restarts(self.ptr) }
     }
-
-    // Extra methods
-
-    // TODO:
-    //
-    // int             minisat_conflict_len    (minisat_solver *s);
-    // minisat_Lit     minisat_conflict_nthLit (minisat_solver *s, int i);
-    //
-    // void            minisat_set_conf_budget (minisat_solver* s, int x);
-    // void            minisat_set_prop_budget (minisat_solver* s, int x);
-    // void            minisat_no_budget       (minisat_solver* s);
 }
 
 /// Additional methods.
 impl MiniSat {
-    //noinspection RsSelfConvention
     fn lbool(&self, lbool: bindings::minisat_lbool) -> LBool {
         LBool::from_c(self.ffi, lbool)
     }
