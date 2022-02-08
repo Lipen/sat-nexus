@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 minisat-sys = { path = "../minisat-sys" }
-snafu = "0.6.10"
 itertools = "0.10.1"
 tap = "1.0.1"
 
