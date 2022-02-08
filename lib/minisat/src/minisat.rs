@@ -1,5 +1,7 @@
 use std::fmt;
 
+use tap::Pipe;
+
 use super::ffi::*;
 use super::types::*;
 
@@ -90,10 +92,10 @@ impl MiniSat {
         unsafe { self.ffi.minisat_isEliminated(self.ptr, var.into()) }
     }
     pub fn value_var(&self, var: Var) -> LBool {
-        self.lbool(unsafe { self.ffi.minisat_value_Var(self.ptr, var.into()) })
+        unsafe { self.ffi.minisat_value_Var(self.ptr, var.into()) }.pipe(|x| self.lbool(x))
     }
     pub fn value_lit(&self, lit: Lit) -> LBool {
-        self.lbool(unsafe { self.ffi.minisat_value_Lit(self.ptr, lit.into()) })
+        unsafe { self.ffi.minisat_value_Lit(self.ptr, lit.into()) }.pipe(|x| self.lbool(x))
     }
 
     // Add clause
@@ -141,16 +143,16 @@ impl MiniSat {
         unsafe { self.ffi.minisat_solve_commit(self.ptr) }
     }
     pub fn solve_limited_commit(&self) -> LBool {
-        self.lbool(unsafe { self.ffi.minisat_limited_solve_commit(self.ptr) })
+        unsafe { self.ffi.minisat_limited_solve_commit(self.ptr) }.pipe(|x| self.lbool(x))
     }
 
     // Model
 
     pub fn model_value_var(&self, var: Var) -> LBool {
-        self.lbool(unsafe { self.ffi.minisat_modelValue_Var(self.ptr, var.into()) })
+        unsafe { self.ffi.minisat_modelValue_Var(self.ptr, var.into()) }.pipe(|x| self.lbool(x))
     }
     pub fn model_value_lit(&self, lit: Lit) -> LBool {
-        self.lbool(unsafe { self.ffi.minisat_modelValue_Lit(self.ptr, lit.into()) })
+        unsafe { self.ffi.minisat_modelValue_Lit(self.ptr, lit.into()) }.pipe(|x| self.lbool(x))
     }
 
     // Statistics
