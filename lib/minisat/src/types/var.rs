@@ -5,7 +5,13 @@ pub struct Var(minisat_Var);
 
 impl Var {
     pub fn new(var: minisat_Var) -> Self {
-        // debug_assert!(var.into() >= 0);
+        debug_assert!(var.0 >= 0);
+        Var(var)
+    }
+}
+
+impl From<minisat_Var> for Var {
+    fn from(var: minisat_Var) -> Self {
         Var(var)
     }
 }

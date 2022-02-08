@@ -66,10 +66,10 @@ impl MiniSat {
     // New var/lit
 
     pub fn new_var(&self) -> Var {
-        Var::new(unsafe { self.ffi.minisat_newVar(self.ptr) })
+        unsafe { self.ffi.minisat_newVar(self.ptr) }.into()
     }
     pub fn new_lit(&self) -> Lit {
-        Lit::new(unsafe { self.ffi.minisat_newLit(self.ptr) })
+        unsafe { self.ffi.minisat_newLit(self.ptr) }.into()
     }
 
     // Customize variables

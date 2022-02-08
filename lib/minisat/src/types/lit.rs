@@ -16,7 +16,7 @@ impl Lit {
     }
 
     pub fn var(self) -> Var {
-        Var::new(minisat_Var(self.0 .0 >> 1))
+        minisat_Var(self.0 .0 >> 1).into()
     }
 
     pub fn sign(self) -> i32 {
@@ -24,7 +24,13 @@ impl Lit {
     }
 
     pub fn negate(self) -> Self {
-        Lit::new(minisat_Lit(self.0 .0 ^ 1))
+        minisat_Lit(self.0 .0 ^ 1).into()
+    }
+}
+
+impl From<minisat_Lit> for Lit {
+    fn from(lit: minisat_Lit) -> Self {
+        Lit(lit)
     }
 }
 
