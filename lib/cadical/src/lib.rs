@@ -1,12 +1,12 @@
 pub use api::*;
-pub use solver::*;
+pub use cadical::*;
 
 pub mod ffi {
     pub use cadical_sys::*;
 }
 
 mod api;
-mod solver;
+mod cadical;
 
 #[cfg(test)]
 mod tests;

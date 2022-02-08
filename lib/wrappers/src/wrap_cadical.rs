@@ -5,24 +5,24 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use cadical::CadicalSolver;
+use cadical::Cadical;
 use sat_nexus_core::context::Context;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-pub struct WrappedCadicalSolver {
-    inner: CadicalSolver,
+pub struct WrappedCadical {
+    inner: Cadical,
     context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
 }
 
-impl WrappedCadicalSolver {
+impl WrappedCadical {
     pub fn new() -> Self {
-        Self::new_custom(CadicalSolver::new())
+        Self::new_custom(Cadical::new())
     }
 
-    pub fn new_custom(inner: CadicalSolver) -> Self {
+    pub fn new_custom(inner: Cadical) -> Self {
         Self {
             inner,
             context: Rc::new(RefCell::new(Context::new())),
@@ -32,25 +32,25 @@ impl WrappedCadicalSolver {
     }
 }
 
-impl Default for WrappedCadicalSolver {
+impl Default for WrappedCadical {
     fn default() -> Self {
-        WrappedCadicalSolver::new()
+        WrappedCadical::new()
     }
 }
 
-impl From<CadicalSolver> for WrappedCadicalSolver {
-    fn from(inner: CadicalSolver) -> Self {
-        WrappedCadicalSolver::new_custom(inner)
+impl From<Cadical> for WrappedCadical {
+    fn from(inner: Cadical) -> Self {
+        WrappedCadical::new_custom(inner)
     }
 }
 
-impl fmt::Display for WrappedCadicalSolver {
+impl fmt::Display for WrappedCadical {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
-impl Solver for WrappedCadicalSolver {
+impl Solver for WrappedCadical {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_wrap_solver() -> color_eyre::Result<()> {
-        let mut solver = WrappedCadicalSolver::new();
+        let mut solver = WrappedCadical::new();
         assert!(solver.signature().contains("cadical"));
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]

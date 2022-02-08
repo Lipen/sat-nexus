@@ -1,10 +1,10 @@
-use solver::CadicalSolver;
+use cadical::Cadical;
 
 use super::*;
 
 #[test]
 fn test_cadical_solver() -> color_eyre::Result<()> {
-    let solver = CadicalSolver::new();
+    let solver = Cadical::new();
     assert!(solver.signature().starts_with("cadical"));
 
     // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]

@@ -1,12 +1,12 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::cadical::CadicalSolver;
+use sat_nexus::cadical::Cadical;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    let solver = CadicalSolver::new();
+    let solver = Cadical::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);
 

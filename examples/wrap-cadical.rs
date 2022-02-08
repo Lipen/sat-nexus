@@ -1,13 +1,13 @@
 use color_eyre::eyre::Result;
 
 use sat_nexus::core::solver::Solver;
-use sat_nexus::wrappers::cadical::WrappedCadicalSolver;
+use sat_nexus::wrappers::cadical::WrappedCadical;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    let mut solver = WrappedCadicalSolver::new();
+    let mut solver = WrappedCadical::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);
 

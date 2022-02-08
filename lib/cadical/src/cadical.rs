@@ -4,41 +4,41 @@ use std::fmt;
 use super::api::*;
 use super::ffi::*;
 
-pub struct CadicalSolver {
+pub struct Cadical {
     ffi: &'static CCadicalFFI,
     ptr: CCadicalPtr,
 }
 
-impl CadicalSolver {
+impl Cadical {
     pub fn new() -> Self {
         Self::new_custom(CCadicalFFI::instance())
     }
 
     pub fn new_custom(ffi: &'static CCadicalFFI) -> Self {
-        CadicalSolver { ffi, ptr: ffi.init() }
+        Cadical { ffi, ptr: ffi.init() }
     }
 }
 
-impl Default for CadicalSolver {
+impl Default for Cadical {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Drop for CadicalSolver {
+impl Drop for Cadical {
     fn drop(&mut self) {
         self.release()
     }
 }
 
-impl fmt::Display for CadicalSolver {
+impl fmt::Display for Cadical {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.signature())
     }
 }
 
 /// Cadical interface.
-impl CadicalSolver {
+impl Cadical {
     pub fn signature(&self) -> &'static str {
         self.ffi.signature()
     }
@@ -209,7 +209,7 @@ impl CadicalSolver {
 }
 
 /// Additional methods.
-impl CadicalSolver {
+impl Cadical {
     pub fn reset(&mut self) {
         self.release();
         self.ptr = self.ffi.init();
