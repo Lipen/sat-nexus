@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::cadical::solver::CadicalSolver;
+use sat_nexus::cadical::CadicalSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
