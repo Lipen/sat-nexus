@@ -1,7 +1,8 @@
-use std::convert::TryFrom;
 use std::fmt;
 
 use snafu::Snafu;
+
+use super::Var;
 
 /// A literal of the IPASIR implementing solver.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -99,69 +100,4 @@ pub enum Sign {
     Pos,
     /// Negative polarity.
     Neg,
-}
-
-/// A variable of the IPASIR implementing solver.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct Var(pub(crate) u32);
-
-impl Var {
-    fn lit(&self) -> Lit {
-        unsafe { Lit::new_unchecked(self.0 as i32) }
-    }
-}
-
-impl From<Lit> for Var {
-    fn from(lit: Lit) -> Self {
-        lit.var()
-    }
-}
-
-/// A clause from the IPASIR solver.
-///
-/// Note: last literal is 0.
-pub struct Clause<'a> {
-    /// The zero-ended literals.
-    lits: &'a [Lit],
-}
-
-impl<'a> Clause<'a> {
-    /// Returns the length of the clause.
-    pub fn len(&self) -> usize {
-        self.lits.len()
-    }
-
-    /// Returns `true` if the clause is empty.
-    ///
-    /// # Note
-    ///
-    /// Normally a clause should never be empty.
-    pub fn is_empty(&self) -> bool {
-        self.lits.len() == 0
-    }
-
-    /// Returns an iterator over the literals of the clause.
-    pub fn iter(&self) -> impl Iterator<Item = &Lit> {
-        self.lits.iter()
-    }
-}
-
-impl<'a> From<&'a [Lit]> for Clause<'a> {
-    fn from(lits: &'a [Lit]) -> Self {
-        debug_assert!(!lits.is_empty());
-        debug_assert_eq!(lits.last(), Some(&Lit(0)));
-        Self { lits }
-    }
-}
-
-impl<'a, Idx> std::ops::Index<Idx> for Clause<'a>
-where
-    Idx: std::slice::SliceIndex<[Lit]>,
-{
-    type Output = <[Lit] as std::ops::Index<Idx>>::Output;
-
-    fn index(&self, index: Idx) -> &Self::Output {
-        &self.lits[index]
-    }
 }

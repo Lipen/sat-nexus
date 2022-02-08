@@ -1,9 +1,9 @@
 use std::convert::TryInto;
 use std::fmt;
 
-use super::api::*;
-use super::ffi::*;
-use super::types::*;
+use crate::ffi::*;
+use crate::types::*;
+use crate::Ipasir;
 
 pub struct IpasirSolver {
     ffi: &'static IpasirFFI,

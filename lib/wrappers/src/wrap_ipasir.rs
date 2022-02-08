@@ -5,8 +5,8 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use ipasir::solver::IpasirSolver;
 use ipasir::Ipasir;
+use ipasir::IpasirSolver;
 use sat_nexus_core::context::Context;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};

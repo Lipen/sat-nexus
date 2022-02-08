@@ -1,7 +1,5 @@
 use std::convert::TryInto;
 
-use solver::IpasirSolver;
-
 use super::*;
 
 #[test]

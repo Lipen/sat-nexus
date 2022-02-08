@@ -1,12 +1,15 @@
 //! Reimplementation of <https://github.com/Robbepop/ipasir-rs>
 
-pub use api::*;
-pub use types::*;
+pub use self::ipasir::*;
+pub use self::solver::*;
+pub use self::types::*;
 
-pub mod ffi;
-pub mod solver;
+pub mod ffi {
+    pub use ipasir_sys::*;
+}
 
-mod api;
+mod ipasir;
+mod solver;
 mod types;
 
 #[cfg(test)]

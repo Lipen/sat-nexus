@@ -2,8 +2,8 @@ use std::convert::TryInto;
 
 use color_eyre::eyre::Result;
 
-use sat_nexus::ipasir::solver::IpasirSolver;
-use sat_nexus::ipasir::Ipasir;
+use ipasir::Ipasir;
+use sat_nexus::ipasir::IpasirSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
