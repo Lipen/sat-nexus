@@ -90,10 +90,10 @@ impl MiniSat {
         unsafe { self.ffi.minisat_isEliminated(self.ptr, var.into()) }
     }
     pub fn value_var(&self, var: Var) -> LBool {
-        LBool::from_c(self.ffi, unsafe { self.ffi.minisat_value_Var(self.ptr, var.into()) })
+        self.lbool(unsafe { self.ffi.minisat_value_Var(self.ptr, var.into()) })
     }
     pub fn value_lit(&self, lit: Lit) -> LBool {
-        LBool::from_c(self.ffi, unsafe { self.ffi.minisat_value_Lit(self.ptr, lit.into()) })
+        self.lbool(unsafe { self.ffi.minisat_value_Lit(self.ptr, lit.into()) })
     }
 
     // Add clause
@@ -141,20 +141,16 @@ impl MiniSat {
         unsafe { self.ffi.minisat_solve_commit(self.ptr) }
     }
     pub fn solve_limited_commit(&self) -> LBool {
-        LBool::from_c(self.ffi, unsafe { self.ffi.minisat_limited_solve_commit(self.ptr) })
+        self.lbool(unsafe { self.ffi.minisat_limited_solve_commit(self.ptr) })
     }
 
     // Model
 
     pub fn model_value_var(&self, var: Var) -> LBool {
-        LBool::from_c(self.ffi, unsafe {
-            self.ffi.minisat_modelValue_Var(self.ptr, var.into())
-        })
+        self.lbool(unsafe { self.ffi.minisat_modelValue_Var(self.ptr, var.into()) })
     }
     pub fn model_value_lit(&self, lit: Lit) -> LBool {
-        LBool::from_c(self.ffi, unsafe {
-            self.ffi.minisat_modelValue_Lit(self.ptr, lit.into())
-        })
+        self.lbool(unsafe { self.ffi.minisat_modelValue_Lit(self.ptr, lit.into()) })
     }
 
     // Statistics
@@ -201,6 +197,11 @@ impl MiniSat {
 
 /// Additional methods.
 impl MiniSat {
+    //noinspection RsSelfConvention
+    fn lbool(&self, lbool: bindings::minisat_lbool) -> LBool {
+        LBool::from_c(self.ffi, lbool)
+    }
+
     pub fn reset(&mut self) {
         self.release();
         self.ptr = self.ffi.init();
