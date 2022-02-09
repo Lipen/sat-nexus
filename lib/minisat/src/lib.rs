@@ -1,5 +1,5 @@
-pub use minisat::*;
-pub use types::*;
+pub use self::minisat::*;
+pub use self::types::*;
 
 pub mod ffi {
     pub use minisat_sys::*;
@@ -8,5 +8,5 @@ pub mod ffi {
 mod minisat;
 mod types;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;

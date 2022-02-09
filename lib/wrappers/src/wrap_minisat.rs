@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
+use easy_ext::ext;
 use itertools::Itertools;
 
 use minisat::{LBool, MiniSat};
@@ -72,7 +73,7 @@ impl Solver for WrappedMiniSat {
     }
 
     fn new_var(&mut self) -> Lit {
-        from_ms_lit(self.inner.new_lit())
+        self.inner.new_lit().to_lit()
     }
 
     fn add_clause<I, L>(&mut self, lits: I)
@@ -80,7 +81,7 @@ impl Solver for WrappedMiniSat {
         I: IntoIterator<Item = L>,
         L: Into<Lit>,
     {
-        let lits = lits.into_iter().map_into::<Lit>().map(to_ms_lit);
+        let lits = lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit);
         self.inner.add_clause(lits);
     }
 
@@ -88,7 +89,7 @@ impl Solver for WrappedMiniSat {
     where
         L: Into<Lit>,
     {
-        self.assumptions.push(to_ms_lit(lit.into()));
+        self.assumptions.push(lit.into().to_ms_lit());
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -104,7 +105,7 @@ impl Solver for WrappedMiniSat {
     where
         L: Into<Lit>,
     {
-        match self.inner.model_value_lit(to_ms_lit(lit.into())) {
+        match self.inner.model_value_lit(lit.into().to_ms_lit()) {
             LBool::True => LitValue::True,
             LBool::False => LitValue::False,
             LBool::Undef => panic!("model_value_lit returned Undef"),
@@ -112,21 +113,27 @@ impl Solver for WrappedMiniSat {
     }
 }
 
-fn to_ms_lit(lit: Lit) -> minisat::Lit {
-    let lit: i32 = lit.into();
-    let var = lit.abs() - 1; // 0-based variable index
-    let sign = if lit > 0 { 1 } else { 0 }; // 0 if negative, 1 if positive
-    minisat::Lit::from(2 * var + sign)
+#[ext]
+impl Lit {
+    fn to_ms_lit(self) -> minisat::Lit {
+        let lit: i32 = self.into();
+        let var = lit.abs() - 1; // 0-based variable index
+        let sign = if lit > 0 { 1 } else { 0 }; // 0 if negative, 1 if positive
+        minisat::Lit::from(2 * var + sign)
+    }
 }
 
-fn from_ms_lit(lit: minisat::Lit) -> Lit {
-    let lit: i32 = lit.into();
-    let var = (lit >> 1) + 1; // 1-based variable index
-    let sign = lit & 1; // 0 if negative, 1 if positive
-    if sign > 0 {
-        Lit::new(var)
-    } else {
-        Lit::new(-var)
+#[ext]
+impl minisat::Lit {
+    fn to_lit(self) -> Lit {
+        let lit: i32 = self.into();
+        let var = (lit >> 1) + 1; // 1-based variable index
+        let sign = lit & 1; // 0 if negative, 1 if positive
+        if sign > 0 {
+            Lit::new(var)
+        } else {
+            Lit::new(-var)
+        }
     }
 }
 
@@ -135,9 +142,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wrap_solver() -> color_eyre::Result<()> {
+    fn test_wrap_minisat() -> color_eyre::Result<()> {
         let mut solver = WrappedMiniSat::new();
-        assert!(solver.signature().contains("cadical"));
+        assert!(solver.signature().contains("minisat"));
+
+        solver.new_var();
+        solver.new_var();
+        solver.new_var();
+        solver.new_var();
+        assert_eq!(4, solver.num_vars());
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
         solver.add_clause([1, 2]);

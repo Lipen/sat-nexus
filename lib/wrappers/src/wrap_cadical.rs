@@ -122,7 +122,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wrap_solver() -> color_eyre::Result<()> {
+    fn test_wrap_cadical() -> color_eyre::Result<()> {
         let mut solver = WrappedCadical::new();
         assert!(solver.signature().contains("cadical"));
 

@@ -1,5 +1,3 @@
-use cadical::Cadical;
-
 use super::*;
 
 #[test]

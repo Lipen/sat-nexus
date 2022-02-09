@@ -11,6 +11,7 @@ ipasir = { path = "../ipasir" }
 minisat = { path = "../minisat" }
 snafu = "0.6.10"
 itertools = "0.10.1"
+easy-ext = "1.0.0"
 
 [dev-dependencies]
 color-eyre = "0.5.11"

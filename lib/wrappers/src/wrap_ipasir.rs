@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
+use easy_ext::ext;
 use itertools::Itertools;
 
 use ipasir::Ipasir;
@@ -10,16 +11,6 @@ use ipasir::IpasirSolver;
 use sat_nexus_core::context::Context;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
-
-trait Ext {
-    fn to_ipasir(self) -> ipasir::Lit;
-}
-
-impl Ext for Lit {
-    fn to_ipasir(self) -> ipasir::Lit {
-        unsafe { ipasir::Lit::new_unchecked(self.into()) }
-    }
-}
 
 pub struct WrappedIpasirSolver<S>
 where
@@ -134,12 +125,19 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
     }
 }
 
+#[ext]
+impl Lit {
+    fn to_ipasir(self) -> ipasir::Lit {
+        unsafe { ipasir::Lit::new_unchecked(self.into()) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_wrap_solver() -> color_eyre::Result<()> {
+    fn test_wrap_ipasir() -> color_eyre::Result<()> {
         let mut solver = WrappedIpasirSolver::new_cadical();
         assert!(solver.signature().contains("cadical"));
 
