@@ -14,6 +14,7 @@ fn generate_bindings_dynamic() {
         .blocklist_type("minisat_bool") // manually aliases to Rust's `bool`
         .blocklist_item("minisat_l_.*") // unnecessary `extern const`s
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .layout_tests(false)
         .generate()
         .expect("Could not create bindings!")
         .write_to_file(out_path.join("bindings-minisat.rs"))

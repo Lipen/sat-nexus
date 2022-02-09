@@ -11,6 +11,7 @@ fn generate_bindings_dynamic() {
         .header("headers/ipasir.h")
         .dynamic_library_name("ipasir")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .layout_tests(false)
         .generate()
         .expect("Could not create bindings!")
         .write_to_file(out_path.join("bindings-ipasir.rs"))

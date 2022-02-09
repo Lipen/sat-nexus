@@ -11,6 +11,7 @@ fn generate_bindings_dynamic() {
         .header("headers/ccadical.h")
         .dynamic_library_name("ccadical")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .layout_tests(false)
         .generate()
         .expect("Could not create bindings!")
         .write_to_file(out_path.join("bindings-ccadical.rs"))
