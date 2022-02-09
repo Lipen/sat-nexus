@@ -1,8 +1,8 @@
 use std::ffi::CString;
 use std::fmt;
 
-use super::api::*;
 use super::ffi::*;
+use super::types::*;
 
 pub struct Cadical {
     ffi: &'static CCadicalFFI,
