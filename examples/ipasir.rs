@@ -2,8 +2,7 @@ use std::convert::TryInto;
 
 use color_eyre::eyre::Result;
 
-use ipasir::Ipasir;
-use sat_nexus::ipasir::IpasirSolver;
+use sat_nexus::ipasir::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -18,15 +17,17 @@ fn main() -> Result<()> {
     solver.try_add_clause(&[-3, -4])?;
     let response = solver.solve()?;
     println!("Solver returned: {:?}", response);
+    assert!(matches!(response, SolveResponse::Sat));
 
     solver.assume(1.try_into()?);
     solver.assume(2.try_into()?);
     let response = solver.solve()?;
     println!("Solver returned: {:?}", response);
+    assert!(matches!(response, SolveResponse::Unsat));
 
-    // solver.assume(0.try_into()?);
     let response = solver.solve()?;
     println!("Solver returned: {:?}", response);
+    assert!(matches!(response, SolveResponse::Sat));
 
     Ok(())
 }

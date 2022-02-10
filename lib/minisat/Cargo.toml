@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 minisat-sys = { path = "../minisat-sys" }
 itertools = "0.10.1"
-tap = "1.0.1"
+easy-ext = "1"
 
 [dev-dependencies]
 color-eyre = "0.5.11"

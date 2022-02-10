@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::minisat::MiniSat;
+use sat_nexus::minisat::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -25,6 +25,7 @@ fn main() -> Result<()> {
     // Solving without assumptions => SAT
     let response = solver.solve();
     println!("Solver returned: {}", response);
+    assert!(response);
 
     // Solving with assumptions => UNSAT
     let response = solver.solve_under_assumptions([lit1, lit2]);

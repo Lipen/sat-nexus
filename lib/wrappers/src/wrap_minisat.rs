@@ -118,7 +118,7 @@ impl Lit {
     fn to_ms_lit(self) -> minisat::Lit {
         let lit: i32 = self.into();
         let var = lit.abs() - 1; // 0-based variable index
-        let sign = if lit > 0 { 1 } else { 0 }; // 0 if negative, 1 if positive
+        let sign = if lit > 0 { 0 } else { 1 }; // 0 if positive, 1 if negative
         minisat::Lit::from(2 * var + sign)
     }
 }

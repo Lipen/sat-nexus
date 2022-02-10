@@ -3,8 +3,6 @@ use std::ops;
 
 use crate::ffi::bindings::minisat_Lit;
 
-use super::Var;
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Lit(minisat_Lit);
 
@@ -14,10 +12,12 @@ impl Lit {
         Lit(x)
     }
 
-    pub fn var(self) -> Var {
-        (self.0 >> 1).into()
+    /// Returns 0-based variable index.
+    pub fn var(self) -> i32 {
+        self.0 >> 1
     }
 
+    /// Returns 0 if literal is positive, 1 if negative.
     pub fn sign(self) -> i32 {
         self.0 & 1
     }

@@ -1,6 +1,7 @@
 use std::fmt;
 
-use tap::Pipe;
+use easy_ext::ext;
+use itertools::Itertools;
 
 use super::ffi::*;
 use super::types::*;
@@ -92,10 +93,10 @@ impl MiniSat {
         unsafe { self.ffi.minisat_isEliminated(self.ptr, var.into()) }
     }
     pub fn value_var(&self, var: Var) -> LBool {
-        unsafe { self.ffi.minisat_value_Var(self.ptr, var.into()) }.pipe(|x| self.lbool(x))
+        unsafe { self.ffi.minisat_value_Var(self.ptr, var.into()).lbool(self.ffi) }
     }
     pub fn value_lit(&self, lit: Lit) -> LBool {
-        unsafe { self.ffi.minisat_value_Lit(self.ptr, lit.into()) }.pipe(|x| self.lbool(x))
+        unsafe { self.ffi.minisat_value_Lit(self.ptr, lit.into()).lbool(self.ffi) }
     }
 
     // Add clause
@@ -155,16 +156,16 @@ impl MiniSat {
         unsafe { self.ffi.minisat_solve_commit(self.ptr) }
     }
     pub fn solve_limited_commit(&self) -> LBool {
-        unsafe { self.ffi.minisat_limited_solve_commit(self.ptr) }.pipe(|x| self.lbool(x))
+        unsafe { self.ffi.minisat_limited_solve_commit(self.ptr).lbool(self.ffi) }
     }
 
     // Model
 
     pub fn model_value_var(&self, var: Var) -> LBool {
-        unsafe { self.ffi.minisat_modelValue_Var(self.ptr, var.into()) }.pipe(|x| self.lbool(x))
+        unsafe { self.ffi.minisat_modelValue_Var(self.ptr, var.into()).lbool(self.ffi) }
     }
     pub fn model_value_lit(&self, lit: Lit) -> LBool {
-        unsafe { self.ffi.minisat_modelValue_Lit(self.ptr, lit.into()) }.pipe(|x| self.lbool(x))
+        unsafe { self.ffi.minisat_modelValue_Lit(self.ptr, lit.into()).lbool(self.ffi) }
     }
 
     // Statistics
@@ -198,21 +199,24 @@ impl MiniSat {
     }
 }
 
+#[ext]
+impl bindings::minisat_lbool {
+    fn lbool(self, ffi: &MiniSatFFI) -> LBool {
+        LBool::from_c(ffi, self)
+    }
+}
+
 /// Additional methods.
 impl MiniSat {
-    fn lbool(&self, lbool: bindings::minisat_lbool) -> LBool {
-        LBool::from_c(self.ffi, lbool)
-    }
-
     pub fn reset(&mut self) {
         self.release();
         self.ptr = self.ffi.init();
     }
 
     pub fn set_polarity_lit(&self, lit: Lit, pol: LBool) {
-        let var = lit.var();
+        let var = Var::new(lit.var());
         let pol = match pol {
-            LBool::Undef => pol,
+            LBool::Undef => LBool::Undef,
             _ => {
                 if lit.sign() > 0 {
                     pol.flip()
@@ -230,8 +234,16 @@ impl MiniSat {
         L: Into<Lit>,
     {
         self.add_clause_begin();
-        for lit in lits.into_iter() {
-            self.add_clause_add_lit(lit.into());
+        let mut max = 0;
+        for lit in lits.into_iter().map_into::<Lit>() {
+            let var = lit.var() + 1; // 1-based variable index
+            max = max.max(var);
+            self.add_clause_add_lit(lit);
+        }
+        // Allocate new variables if necessary
+        // for _ in (self.num_vars() + 1)..=max {
+        for _ in self.num_vars()..max {
+            self.new_var();
         }
         self.add_clause_commit()
     }
