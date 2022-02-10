@@ -112,7 +112,7 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
         }
     }
 
-    fn val<L>(&self, lit: L) -> LitValue
+    fn value<L>(&self, lit: L) -> LitValue
     where
         L: Into<Lit>,
     {

@@ -39,7 +39,7 @@ fn main() -> Result<()> {
     assert!(matches!(response, SolveResponse::Sat));
 
     for i in 1..=5 {
-        println!("solver.val({}) = {:?}", i, solver.val(i));
+        println!("solver.val({}) = {:?}", i, solver.value(i));
     }
 
     Ok(())

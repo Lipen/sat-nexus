@@ -90,7 +90,7 @@ impl Solver for MockSolver {
         SolveResponse::Sat
     }
 
-    fn val<L>(&self, _lit: L) -> LitValue
+    fn value<L>(&self, _lit: L) -> LitValue
     where
         L: Into<Lit>,
     {

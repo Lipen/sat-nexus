@@ -21,7 +21,7 @@ impl Eval for Lit {
     where
         S: Solver,
     {
-        solver.val(self)
+        solver.value(self)
     }
 }
 

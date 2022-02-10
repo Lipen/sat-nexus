@@ -131,7 +131,7 @@ pub trait Solver {
 
     fn solve(&mut self) -> SolveResponse;
 
-    fn val<L>(&self, lit: L) -> LitValue
+    fn value<L>(&self, lit: L) -> LitValue
     where
         L: Into<Lit>;
 

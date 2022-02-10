@@ -24,7 +24,9 @@ fn test_totalizer() {
 
     let mut num_solutions = 0;
     solver
-        .all_sat_essential(lits.clone(), |solver| lits.iter().map(|&x| solver.val(x)).collect_vec())
+        .all_sat_essential(lits.clone(), |solver| {
+            lits.iter().map(|&x| solver.value(x)).collect_vec()
+        })
         .for_each(|solution| {
             num_solutions += 1;
             println!(

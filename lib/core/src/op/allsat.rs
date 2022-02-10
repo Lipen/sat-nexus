@@ -29,7 +29,7 @@ pub trait AllSat: Solver {
     fn build_refutation(&self, essential: &[Lit]) -> Vec<Lit> {
         essential
             .iter()
-            .map(|&x| if self.val(x).bool() { -x } else { x })
+            .map(|&x| if self.value(x).bool() { -x } else { x })
             .collect_vec()
     }
 }

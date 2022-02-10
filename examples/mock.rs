@@ -36,7 +36,7 @@ fn main() -> Result<()> {
     println!("Solver returned: {:?}", response);
 
     for i in 1..=5 {
-        println!("solver.val({}) = {:?}", i, solver.val(i));
+        println!("solver.val({}) = {:?}", i, solver.value(i));
     }
 
     Ok(())

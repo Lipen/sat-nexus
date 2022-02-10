@@ -101,7 +101,7 @@ impl Solver for WrappedMiniSat {
         }
     }
 
-    fn val<L>(&self, lit: L) -> LitValue
+    fn value<L>(&self, lit: L) -> LitValue
     where
         L: Into<Lit>,
     {
