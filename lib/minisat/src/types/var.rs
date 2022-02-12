@@ -1,4 +1,4 @@
-use crate::ffi::bindings::minisat_Var;
+use crate::ffi::minisat_Var;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Var(minisat_Var);

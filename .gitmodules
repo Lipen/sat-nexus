@@ -1,0 +1,9 @@
+[submodule "lib/minisat-sys/vendor/minisat"]
+	path = lib/minisat-sys/vendor/minisat
+	url = https://github.com/msoos/minisat
+[submodule "lib/minisat-sys/vendor/minisat-c-bindings"]
+	path = lib/minisat-sys/vendor/minisat-c-bindings
+	url = https://github.com/niklasso/minisat-c-bindings
+[submodule "lib/cadical-sys/vendor/cadical"]
+	path = lib/cadical-sys/vendor/cadical
+	url = https://github.com/arminbiere/cadical

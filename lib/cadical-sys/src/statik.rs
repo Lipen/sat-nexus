@@ -5,5 +5,5 @@
 #![allow(deref_nullptr)] // see https://github.com/rust-lang/rust-bindgen/issues/1651
 #![allow(clippy::style)]
 
-include!(concat!(env!("OUT_DIR"), "/bindings-ccadical.rs"));
-// include!("../_bindings-ccadical.rs");
+include!(concat!(env!("OUT_DIR"), "/bindings-ccadical-static.rs"));
+// include!("../_bindings-ccadical-static.rs");

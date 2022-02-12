@@ -82,7 +82,7 @@ impl Solver for MockSolver {
     where
         L: Into<Lit>,
     {
-        todo!()
+        // TODO
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -94,7 +94,8 @@ impl Solver for MockSolver {
     where
         L: Into<Lit>,
     {
-        todo!()
+        // TODO
+        LitValue::False
     }
 }
 

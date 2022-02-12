@@ -1,5 +1,4 @@
-use crate::ffi::bindings::minisat_lbool;
-use crate::ffi::MiniSatFFI;
+use crate::ffi::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum LBool {
@@ -27,23 +26,23 @@ impl LBool {
 }
 
 impl LBool {
-    pub(crate) fn from_c(ffi: &MiniSatFFI, lbool: minisat_lbool) -> Self {
-        if lbool == *ffi.minisat_l_true() {
+    pub(crate) unsafe fn from_c(lbool: minisat_lbool) -> Self {
+        if lbool == minisat_l_True {
             LBool::True
-        } else if lbool == *ffi.minisat_l_false() {
+        } else if lbool == minisat_l_False {
             LBool::False
-        } else if lbool == *ffi.minisat_l_undef() {
+        } else if lbool == minisat_l_Undef {
             LBool::Undef
         } else {
             panic!("Bad lbool '{:?}'", lbool)
         }
     }
 
-    pub(crate) fn to_c(self, ffi: &MiniSatFFI) -> minisat_lbool {
+    pub(crate) unsafe fn to_c(self) -> minisat_lbool {
         match self {
-            LBool::True => *ffi.minisat_l_true(),
-            LBool::False => *ffi.minisat_l_false(),
-            LBool::Undef => *ffi.minisat_l_undef(),
+            LBool::True => minisat_l_True,
+            LBool::False => minisat_l_False,
+            LBool::Undef => minisat_l_Undef,
         }
     }
 }
