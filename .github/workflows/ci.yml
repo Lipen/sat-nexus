@@ -44,7 +44,7 @@ jobs:
           curl -OL https://raw.githubusercontent.com/Lipen/kotlin-satlib/27bf8cbc4354a03c17987d3cf308047801d7e334/jni/patches/cadical-shared.patch
           git apply --verbose cadical-shared.patch
           ./configure -fPIC
-          make -C build -j8 libcadical.so
+          make -j8 shared
           sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
           sudo ldconfig -n /usr/local/lib
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
