@@ -44,15 +44,14 @@ jobs:
           command: build
 
       - name: Build Cadical shared library
-        working-directory: sys/cadical-sys
         run: |
-          git clone --depth=1 --branch=rel-1.4.1 https://github.com/arminbiere/cadical
-          cd cadical
-          git apply --verbose ../cadical-shared.patch
+          git clone --depth=1 --branch=rel-1.5.2 https://github.com/arminbiere/cadical cadical-git
+          cd cadical-git
+          curl -OL https://raw.githubusercontent.com/Lipen/kotlin-satlib/27bf8cbc4354a03c17987d3cf308047801d7e334/jni/patches/cadical-shared.patch
+          git apply --verbose cadical-shared.patch
           ./configure -fPIC
-          cd build
-          make -j8 libcadical.so
-          sudo install -m 644 libcadical.so -Dt /usr/local/lib
+          make -C build -j8 libcadical.so
+          sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
           sudo ldconfig -n /usr/local/lib
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
 
