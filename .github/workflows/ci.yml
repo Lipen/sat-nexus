@@ -16,7 +16,8 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
           submodules: recursive
 
@@ -27,10 +28,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - uses: Swatinem/rust-cache@v1
+      - name: Set up cache
+        uses: Swatinem/rust-cache@v1
 
       - name: Build
-        run: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
 
       - name: Build Cadical shared library
         run: |
@@ -45,13 +50,17 @@ jobs:
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
 
       - name: Test
-        run: cargo test --all
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --all
 
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Set up Rust stable
         uses: actions-rs/toolchain@v1
@@ -61,16 +70,21 @@ jobs:
           override: true
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1
+      - name: Set up cache
+        uses: Swatinem/rust-cache@v1
 
       - name: Run rustfmt
-        run: cargo fmt --all -- --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
           submodules: recursive
 
@@ -82,7 +96,11 @@ jobs:
           override: true
           components: clippy
 
-      - uses: Swatinem/rust-cache@v1
+      - name: Set up cache
+        uses: Swatinem/rust-cache@v1
 
       - name: Run clippy
-        run: clippy --all --tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all --tests
