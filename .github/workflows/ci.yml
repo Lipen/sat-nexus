@@ -13,6 +13,7 @@ env:
 
 jobs:
   tests:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -29,9 +30,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: cargo build
 
       - name: Build Cadical shared library
         run: |
@@ -46,9 +45,7 @@ jobs:
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test --all
+        run: cargo test --all
 
   fmt:
     name: Rustfmt
@@ -66,11 +63,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Run rustfmt
+        run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
@@ -90,8 +84,5 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy --all --tests
-          # args: -- -D warnings
+      - name: Run clippy
+        run: clippy --all --tests
