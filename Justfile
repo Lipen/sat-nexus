@@ -5,8 +5,8 @@ _default:
 
 # Run clippy
 check:
-	cargo clippy -- -D warnings
+	cargo clippy --workspace --all-targets
 
 # Run all tests
 test:
-	cargo test --all
+	cargo test --workspace
