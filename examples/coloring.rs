@@ -31,7 +31,7 @@ where
 {
     assert!(num_vertices > 0, "Number of vertices must be positive");
     assert!(num_colors > 0, "Number of colors must be positive");
-    assert!(edges.len() > 0, "Number of edges must be positive");
+    assert!(!edges.is_empty(), "No edges");
 
     println!("=> Declaring variables...");
 
