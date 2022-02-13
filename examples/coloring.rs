@@ -12,6 +12,19 @@ use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);
 
+impl Edge {
+    fn normalize(self) -> Edge {
+        let Edge(a, b) = self;
+        if a <= b {
+            Edge(a, b)
+        } else {
+            Edge(b, a)
+        }
+    }
+}
+
+type ColorArray = ArrayD<DomainVar<usize>>;
+
 fn declare_variables<S>(solver: &mut S, num_vertices: usize, num_colors: usize, edges: &[Edge])
 where
     S: Solver,
@@ -22,12 +35,7 @@ where
 
     println!("=> Declaring variables...");
 
-    let edges = edges
-        .iter()
-        .map(|&Edge(a, b)| if a <= b { Edge(a, b) } else { Edge(b, a) })
-        .unique()
-        .sorted()
-        .collect_vec();
+    let edges = edges.iter().map(|&e| e.normalize()).unique().sorted().collect_vec();
 
     println!("num_vertices = {}", num_vertices);
     println!("num_colors = {}", num_colors);
@@ -40,7 +48,7 @@ where
     context.insert_named("num_colors", num_colors);
     context.insert_named("edges", edges.clone());
 
-    let color = solver.new_domain_var_array_dyn([num_vertices], |_| 1..=num_colors);
+    let color: ColorArray = solver.new_domain_var_array_dyn([num_vertices], |_| 1..=num_colors);
     context.insert_named("color", color);
 }
 
@@ -56,7 +64,7 @@ where
     let num_vertices = *context.extract_named::<usize, _>("num_vertices");
     let num_colors = *context.extract_named::<usize, _>("num_colors");
     let edges = context.extract_named::<Vec<Edge>, _>("edges");
-    let color = context.extract_named::<ArrayD<DomainVar<usize>>, _>("color");
+    let color = context.extract_named::<ColorArray, _>("color");
 
     println!("num_vertices = {}", num_vertices);
     println!("num_colors = {}", num_colors);
