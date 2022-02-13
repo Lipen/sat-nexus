@@ -60,18 +60,16 @@ pub trait Solver {
 
     fn new_var(&mut self) -> Lit;
 
-    fn new_var_array<D, Sh>(&mut self, shape: Sh) -> Array<Lit, D>
+    fn new_var_array<S>(&mut self, shape: S) -> Array<Lit, S::Dim>
     where
-        D: Dimension,
-        Sh: ShapeBuilder<Dim = D>,
+        S: ShapeBuilder,
     {
         Array::from_shape_simple_fn(shape, || self.new_var())
     }
 
-    fn new_var_array_dyn<D, Sh>(&mut self, shape: Sh) -> ArrayD<Lit>
+    fn new_var_array_dyn<S>(&mut self, shape: S) -> ArrayD<Lit>
     where
-        D: Dimension,
-        Sh: ShapeBuilder<Dim = D>,
+        S: ShapeBuilder,
     {
         self.new_var_array(shape).into_dyn()
     }
@@ -80,40 +78,38 @@ pub trait Solver {
         (0..len).map(|_| self.new_var()).collect()
     }
 
-    fn new_domain_var<T, I>(&mut self, domain: I) -> DomainVar<T>
+    fn new_domain_var<I>(&mut self, domain: I) -> DomainVar<I::Item>
     where
-        T: Hash + Eq + Copy,
-        I: IntoIterator<Item = T>,
+        I: IntoIterator,
+        I::Item: Hash + Eq + Copy,
     {
         DomainVar::new_onehot(self, domain)
     }
 
-    fn new_domain_var_array<T, I, D, Sh, F>(&mut self, shape: Sh, mut f_domain: F) -> Array<DomainVar<T>, D>
+    fn new_domain_var_array<S, I, F>(&mut self, shape: S, mut f_domain: F) -> Array<DomainVar<I::Item>, S::Dim>
     where
-        T: Hash + Eq + Copy,
-        I: IntoIterator<Item = T>,
-        D: Dimension,
-        Sh: ShapeBuilder<Dim = D>,
-        F: FnMut(D::Pattern) -> I,
+        S: ShapeBuilder,
+        I: IntoIterator,
+        I::Item: Hash + Eq + Copy,
+        F: FnMut(<S::Dim as Dimension>::Pattern) -> I,
     {
         Array::from_shape_fn(shape, |pat| self.new_domain_var(f_domain(pat)))
     }
 
-    fn new_domain_var_array_dyn<T, I, D, Sh, F>(&mut self, shape: Sh, f_domain: F) -> ArrayD<DomainVar<T>>
+    fn new_domain_var_array_dyn<S, I, F>(&mut self, shape: S, f_domain: F) -> ArrayD<DomainVar<I::Item>>
     where
-        T: Hash + Eq + Copy,
-        I: IntoIterator<Item = T>,
-        D: Dimension,
-        Sh: ShapeBuilder<Dim = D>,
-        F: FnMut(D::Pattern) -> I,
+        I: IntoIterator,
+        I::Item: Hash + Eq + Copy,
+        S: ShapeBuilder,
+        F: FnMut(<S::Dim as Dimension>::Pattern) -> I,
     {
         self.new_domain_var_array(shape, f_domain).into_dyn()
     }
 
-    fn add_clause<I, L>(&mut self, lits: I)
+    fn add_clause<I>(&mut self, lits: I)
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>;
+        I: IntoIterator,
+        I::Item: Into<Lit>;
 
     fn add_unit<L>(&mut self, lit: L)
     where

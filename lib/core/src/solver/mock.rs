@@ -69,10 +69,10 @@ impl Solver for MockSolver {
         Lit::from(self.nvars)
     }
 
-    fn add_clause<I, L>(&mut self, lits: I)
+    fn add_clause<I>(&mut self, lits: I)
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         self.nclauses += 1;
         self.clauses.push(lits.into_iter().map_into::<Lit>().collect());

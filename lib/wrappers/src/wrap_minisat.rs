@@ -76,10 +76,10 @@ impl Solver for WrappedMiniSat {
         self.inner.new_lit().to_lit()
     }
 
-    fn add_clause<I, L>(&mut self, lits: I)
+    fn add_clause<I>(&mut self, lits: I)
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         let lits = lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit);
         self.inner.add_clause(lits);

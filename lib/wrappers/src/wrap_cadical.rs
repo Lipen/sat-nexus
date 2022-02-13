@@ -78,10 +78,10 @@ impl Solver for WrappedCadical {
         Lit::new(self.nvars as i32)
     }
 
-    fn add_clause<I, L>(&mut self, lits: I)
+    fn add_clause<I>(&mut self, lits: I)
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         self.nclauses += 1;
         self.inner.add_clause(lits.into_iter().map_into::<Lit>());

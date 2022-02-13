@@ -16,11 +16,11 @@ pub trait AllSat: Solver {
         self.all_sat_essential(essential, f)
     }
 
-    fn all_sat_essential<I, L, T, F>(&mut self, essential: I, f: F) -> AllSolutionsIter<Self, F>
+    fn all_sat_essential<I, T, F>(&mut self, essential: I, f: F) -> AllSolutionsIter<Self, F>
     where
         Self: Sized,
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
         F: FnMut(&mut Self) -> T,
     {
         AllSolutionsIter::new(self, f, essential)
@@ -48,10 +48,10 @@ impl<'s, S, F> AllSolutionsIter<'s, S, F>
 where
     S: Solver,
 {
-    fn new<I, L>(solver: &'s mut S, callback: F, essential: I) -> Self
+    fn new<I>(solver: &'s mut S, callback: F, essential: I) -> Self
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         let essential = essential.into_iter().map_into::<Lit>().collect_vec();
         Self {
