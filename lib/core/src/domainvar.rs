@@ -22,7 +22,7 @@ where
 {
     pub fn new<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: Solver,
+        S: Solver + ?Sized,
         I: IntoIterator<Item = T>,
     {
         let domain = domain.into_iter().collect_vec();
@@ -33,7 +33,7 @@ where
 
     pub fn new_onehot<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: Solver,
+        S: Solver + ?Sized,
         I: IntoIterator<Item = T>,
     {
         let var = Self::new(solver, domain);
@@ -66,7 +66,7 @@ where
 
     pub fn eval<S>(&self, solver: &S) -> T
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         // There must be exactly 1 literal which is True in the model.
         debug_assert_eq!(

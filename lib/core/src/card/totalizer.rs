@@ -28,7 +28,7 @@ impl Totalizer {
 
     pub fn declare<S>(solver: &mut S, input_vars: &[Lit]) -> Self
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         let mut queue = VecDeque::new();
 
@@ -86,7 +86,7 @@ impl Totalizer {
 
     pub fn declare_upper_bound_less_than<S>(&mut self, solver: &mut S, new_ub: usize)
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         if let Some(cur_ub) = self.declared_upper_bound {
             assert!(
@@ -102,21 +102,21 @@ impl Totalizer {
 
     pub fn declare_upper_bound_less_than_or_equal<S>(&mut self, solver: &mut S, new_ub: usize)
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         self.declare_upper_bound_less_than(solver, new_ub + 1);
     }
 
     pub fn declare_lower_bound_greater_than<S>(&mut self, solver: &mut S, new_lb: usize)
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         self.declare_lower_bound_greater_than_or_equal(solver, new_lb + 1);
     }
 
     pub fn declare_lower_bound_greater_than_or_equal<S>(&mut self, solver: &mut S, new_lb: usize)
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         if let Some(cur_lb) = self.declared_lower_bound {
             assert!(
@@ -132,7 +132,7 @@ impl Totalizer {
 
     fn declare_comparator_less_than<S>(&mut self, solver: &mut S, ub: usize)
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         assert!(ub <= self.output_vars.len());
 
@@ -145,7 +145,7 @@ impl Totalizer {
 
     fn declare_comparator_greater_than_or_equal<S>(&mut self, solver: &mut S, lb: usize)
     where
-        S: Solver,
+        S: Solver + ?Sized,
     {
         assert!(lb >= 1);
 

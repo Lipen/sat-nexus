@@ -82,7 +82,6 @@ pub trait Solver {
 
     fn new_domain_var<T, I>(&mut self, domain: I) -> DomainVar<T>
     where
-        Self: Sized,
         T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
     {
@@ -91,7 +90,6 @@ pub trait Solver {
 
     fn new_domain_var_array<T, I, D, Sh, F>(&mut self, shape: Sh, mut f_domain: F) -> Array<DomainVar<T>, D>
     where
-        Self: Sized,
         T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
         D: Dimension,
@@ -103,7 +101,6 @@ pub trait Solver {
 
     fn new_domain_var_array_dyn<T, I, D, Sh, F>(&mut self, shape: Sh, f_domain: F) -> ArrayD<DomainVar<T>>
     where
-        Self: Sized,
         T: Hash + Eq + Copy,
         I: IntoIterator<Item = T>,
         D: Dimension,
@@ -139,7 +136,6 @@ pub trait Solver {
 
     fn eval<E>(&self, value: &E) -> E::Output
     where
-        Self: Sized,
         E: Eval,
     {
         value.eval(self)
