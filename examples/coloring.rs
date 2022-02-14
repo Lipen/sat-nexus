@@ -6,7 +6,7 @@ use ndarray::ArrayD;
 
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::op::Ops;
-use sat_nexus::core::solver::{LitValue, SolveResponse, Solver};
+use sat_nexus::core::solver::{LitValue, SolveResponse, Solver, SolverExt};
 use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]

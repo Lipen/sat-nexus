@@ -3,7 +3,7 @@ use itertools::Itertools;
 use sat_nexus::core::card::Cardinality;
 use sat_nexus::core::op::allsat::AllSat;
 use sat_nexus::core::op::Ops;
-use sat_nexus::core::solver::Solver;
+use sat_nexus::core::solver::{Solver, SolverExt};
 use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 #[test]
