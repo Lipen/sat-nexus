@@ -1,19 +1,15 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 
 use easy_ext::ext;
 use itertools::Itertools;
 
 use minisat::{LBool, MiniSat};
-use sat_nexus_core::context::Context;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 pub struct WrappedMiniSat {
     inner: MiniSat,
-    context: Rc<RefCell<Context>>,
     assumptions: Vec<minisat::Lit>,
 }
 
@@ -25,7 +21,6 @@ impl WrappedMiniSat {
     pub fn new_custom(inner: MiniSat) -> Self {
         Self {
             inner,
-            context: Rc::new(RefCell::new(Context::new())),
             assumptions: Vec::new(),
         }
     }
@@ -59,10 +54,6 @@ impl Solver for WrappedMiniSat {
     }
     fn release(&mut self) {
         self.inner.release();
-    }
-
-    fn context(&self) -> Rc<RefCell<Context>> {
-        Rc::clone(&self.context)
     }
 
     fn num_vars(&self) -> usize {

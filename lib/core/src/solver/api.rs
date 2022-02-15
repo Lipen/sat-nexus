@@ -1,11 +1,8 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::hash::Hash;
-use std::rc::Rc;
 
 use ndarray::{Array, ArrayD, Dimension, ShapeBuilder};
 
-use crate::context::Context;
 use crate::domainvar::DomainVar;
 use crate::eval::Eval;
 use crate::lit::Lit;
@@ -17,8 +14,6 @@ pub trait Solver {
 
     fn reset(&mut self);
     fn release(&mut self);
-
-    fn context(&self) -> Rc<RefCell<Context>>;
 
     fn num_vars(&self) -> usize;
     fn num_clauses(&self) -> usize;

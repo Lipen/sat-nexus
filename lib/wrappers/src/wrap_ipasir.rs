@@ -1,14 +1,11 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 
 use easy_ext::ext;
 use itertools::Itertools;
 
 use ipasir::Ipasir;
 use ipasir::IpasirSolver;
-use sat_nexus_core::context::Context;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
@@ -17,7 +14,6 @@ where
     S: Ipasir,
 {
     inner: S,
-    context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
 }
@@ -26,7 +22,6 @@ impl WrappedIpasirSolver<IpasirSolver> {
     pub fn new(inner: IpasirSolver) -> Self {
         Self {
             inner,
-            context: Rc::new(RefCell::new(Context::new())),
             nvars: 0,
             nclauses: 0,
         }
@@ -65,10 +60,6 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
     }
     fn release(&mut self) {
         self.inner.release();
-    }
-
-    fn context(&self) -> Rc<RefCell<Context>> {
-        Rc::clone(&self.context)
     }
 
     fn num_vars(&self) -> usize {

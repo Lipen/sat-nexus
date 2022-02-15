@@ -1,18 +1,14 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 
 use itertools::Itertools;
 
 use cadical::Cadical;
-use sat_nexus_core::context::Context;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 pub struct WrappedCadical {
     inner: Cadical,
-    context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
 }
@@ -25,7 +21,6 @@ impl WrappedCadical {
     pub fn new_custom(inner: Cadical) -> Self {
         Self {
             inner,
-            context: Rc::new(RefCell::new(Context::new())),
             nvars: 0,
             nclauses: 0,
         }
@@ -60,10 +55,6 @@ impl Solver for WrappedCadical {
     }
     fn release(&mut self) {
         self.inner.release();
-    }
-
-    fn context(&self) -> Rc<RefCell<Context>> {
-        Rc::clone(&self.context)
     }
 
     fn num_vars(&self) -> usize {

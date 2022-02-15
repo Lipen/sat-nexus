@@ -4,6 +4,7 @@ use color_eyre::eyre::Result;
 use itertools::Itertools;
 use ndarray::ArrayD;
 
+use sat_nexus::core::context::Context;
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::op::Ops;
 use sat_nexus::core::solver::{LitValue, SolveResponse, Solver, SolverExt};
@@ -25,7 +26,7 @@ impl Edge {
 
 type ColorArray = ArrayD<DomainVar<usize>>;
 
-fn declare_variables<S>(solver: &mut S, num_vertices: usize, num_colors: usize, edges: &[Edge])
+fn declare_variables<S>(solver: &mut S, context: &mut Context, num_vertices: usize, num_colors: usize, edges: &[Edge])
 where
     S: Solver,
 {
@@ -41,9 +42,6 @@ where
     println!("num_colors = {}", num_colors);
     println!("edges = {:?}", edges);
 
-    let shared_context = solver.context();
-    let mut context = shared_context.borrow_mut();
-
     context.insert_named("num_vertices", num_vertices);
     context.insert_named("num_colors", num_colors);
     context.insert_named("edges", edges.clone());
@@ -52,14 +50,11 @@ where
     context.insert_named("color", color);
 }
 
-fn declare_constraints<S>(solver: &mut S)
+fn declare_constraints<S>(solver: &mut S, context: &mut Context)
 where
     S: Solver,
 {
     println!("=> Declaring constraints...");
-
-    let shared_context = solver.context();
-    let context = shared_context.borrow();
 
     let num_vertices = *context.extract_named::<usize, _>("num_vertices");
     let num_colors = *context.extract_named::<usize, _>("num_colors");
@@ -110,8 +105,11 @@ fn main() -> Result<()> {
     let mut solver = WrappedIpasirSolver::new_cadical();
     println!("solver = {}", solver);
 
-    declare_variables(&mut solver, num_vertices, num_colors, &edges);
-    declare_constraints(&mut solver);
+    let mut context = Context::new();
+    println!("context = {:?}", context);
+
+    declare_variables(&mut solver, &mut context, num_vertices, num_colors, &edges);
+    declare_constraints(&mut solver, &mut context);
 
     println!(
         "=> Declared {} variables and {} clauses",
@@ -124,9 +122,6 @@ fn main() -> Result<()> {
     println!("=> Solver returned: {:?}", response);
 
     if matches!(response, SolveResponse::Sat) {
-        let shared_context = solver.context();
-        let context = shared_context.borrow();
-
         let color = context.extract_named::<ArrayD<DomainVar<usize>>, _>("color");
 
         assert!(matches!(solver.eval(&color[[1 - 1]].eq(1)), LitValue::True));

@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use crate::lit::Lit;
 use crate::op::encodings::Encodings;
-use crate::solver::{LitValue, Solver, SolverExt};
+use crate::solver::{LitValue, Solver};
 
 #[derive(Debug)]
 pub struct DomainVar<T> {

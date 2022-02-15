@@ -1,6 +1,7 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::core::solver::*;
+use sat_nexus::core::context::Context;
+use sat_nexus::core::solver::Solver;
 use sat_nexus::wrappers::minisat::WrappedMiniSat;
 
 fn main() -> Result<()> {
@@ -8,11 +9,10 @@ fn main() -> Result<()> {
     println!("Hello, world!");
 
     let mut solver = WrappedMiniSat::new();
+    let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);
 
-    let shared_context = solver.context();
-    let mut context = shared_context.borrow_mut();
     let value: i32 = 4;
     println!("value = {:?}", value);
     context.insert(value);

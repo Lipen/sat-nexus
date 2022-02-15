@@ -1,18 +1,14 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::context::Context;
 use crate::lit::Lit;
 
 use super::{LitValue, SolveResponse, Solver};
 
 #[derive(Debug)]
 pub struct MockSolver {
-    context: Rc<RefCell<Context>>,
     nvars: usize,
     nclauses: usize,
     clauses: Vec<Vec<Lit>>,
@@ -21,7 +17,6 @@ pub struct MockSolver {
 impl MockSolver {
     pub fn new() -> Self {
         Self {
-            context: Rc::new(RefCell::new(Context::new())),
             nvars: 0,
             nclauses: 0,
             clauses: Vec::new(),
@@ -51,10 +46,6 @@ impl Solver for MockSolver {
     }
     fn release(&mut self) {
         /* do nothing */
-    }
-
-    fn context(&self) -> Rc<RefCell<Context>> {
-        Rc::clone(&self.context)
     }
 
     fn num_vars(&self) -> usize {

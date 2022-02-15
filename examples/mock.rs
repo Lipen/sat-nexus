@@ -1,5 +1,6 @@
 use color_eyre::eyre::Result;
 
+use sat_nexus::core::context::Context;
 use sat_nexus::core::solver::mock::MockSolver;
 use sat_nexus::core::solver::Solver;
 
@@ -8,11 +9,10 @@ fn main() -> Result<()> {
     println!("Hello, world!");
 
     let mut solver = MockSolver::new();
+    let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);
 
-    let shared_context = solver.context();
-    let mut context = shared_context.borrow_mut();
     let value: i32 = 4;
     println!("value = {:?}", value);
     context.insert(value);
