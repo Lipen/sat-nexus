@@ -17,3 +17,4 @@ once_cell = { version = "1.8.0", optional = true }
 [build-dependencies]
 bindgen = "0.59.2"
 cc = { version = "1.0", features = ["parallel"] }
+glob = "0.3"
