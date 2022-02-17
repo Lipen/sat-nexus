@@ -2,7 +2,7 @@ pub use self::minisat::*;
 pub use self::types::*;
 
 pub mod ffi {
-    pub use minisat_sys::bindings::*;
+    pub use minisat_sys::statik::bindings::*;
 }
 
 mod minisat;
