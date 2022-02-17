@@ -1,7 +1,5 @@
 use std::borrow::Cow;
-use std::hash::Hash;
 
-use crate::eval::Eval;
 use crate::lit::Lit;
 
 use super::types::*;

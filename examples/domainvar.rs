@@ -3,8 +3,7 @@ use ndarray::ArrayD;
 
 use sat_nexus::core::context::Context;
 use sat_nexus::core::domainvar::DomainVar;
-use sat_nexus::core::solver::Solver;
-use sat_nexus::core::solver::SolverExt;
+use sat_nexus::core::solver::*;
 use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 fn main() -> Result<()> {
@@ -18,14 +17,8 @@ fn main() -> Result<()> {
     let num_trans = 3;
     let myvar = solver.new_domain_var_array_dyn([num_states, num_trans], |_| 0..=num_states);
     println!("myvar (Debug):\n{:?}", myvar);
-
     context.insert(myvar);
 
-    drop(context);
-    // drop(shared_context);
-
-    // let shared_context = solver.context();
-    let context = shared_context.borrow();
     let myvar = context.extract::<ArrayD<DomainVar<usize>>>();
     println!("myvar:\n{}", myvar);
 

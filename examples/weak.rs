@@ -4,7 +4,7 @@ use std::rc::{Rc, Weak};
 use color_eyre::eyre::Result;
 
 use sat_nexus::core::lit::Lit;
-use sat_nexus::core::solver::Solver;
+use sat_nexus::core::solver::*;
 use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 struct Store<S> {

@@ -1,7 +1,7 @@
 use color_eyre::eyre::Result;
 
 use sat_nexus::core::context::Context;
-use sat_nexus::core::solver::Solver;
+use sat_nexus::core::solver::*;
 use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
 
 fn main() -> Result<()> {
