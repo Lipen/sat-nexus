@@ -3,7 +3,6 @@ name = "cadical-sys"
 version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2018"
-links = "cadical"
 
 [features]
 default = []
