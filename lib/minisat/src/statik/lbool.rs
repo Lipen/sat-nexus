@@ -1,4 +1,4 @@
-use crate::ffi::*;
+use super::ffi::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum LBool {

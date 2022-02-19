@@ -2,8 +2,10 @@ use std::fmt;
 
 use itertools::Itertools;
 
-use crate::ffi::*;
-use crate::types::*;
+use super::ffi::*;
+use super::lbool::*;
+use super::lit::*;
+use super::var::*;
 
 pub struct MiniSat {
     ptr: *mut minisat_solver,

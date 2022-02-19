@@ -2,14 +2,14 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use cadical::Cadical;
 use cadical_sys::statik;
-use minisat::MiniSat;
+use minisat::statik::MiniSat;
 
 fn ms_solve(minisat: &MiniSat) {
     minisat.solve();
 }
 
 fn cadical_solve(cadical: &Cadical) {
-    cadical.solve();
+    cadical.solve().unwrap();
 }
 
 fn ccadical_solve(ptr: *mut statik::CCaDiCaL) {

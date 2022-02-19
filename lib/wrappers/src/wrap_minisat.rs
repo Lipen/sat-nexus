@@ -4,13 +4,14 @@ use std::fmt;
 use easy_ext::ext;
 use itertools::Itertools;
 
-use minisat::{LBool, MiniSat};
+use minisat::statik::Lit as minisatLit;
+use minisat::statik::{LBool, MiniSat};
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 pub struct WrappedMiniSat {
     inner: MiniSat,
-    assumptions: Vec<minisat::Lit>,
+    assumptions: Vec<minisatLit>,
 }
 
 impl WrappedMiniSat {
@@ -106,16 +107,16 @@ impl Solver for WrappedMiniSat {
 
 #[ext]
 impl Lit {
-    fn to_ms_lit(self) -> minisat::Lit {
+    fn to_ms_lit(self) -> minisatLit {
         let lit: i32 = self.into();
         let var = lit.abs() - 1; // 0-based variable index
         let sign = if lit > 0 { 0 } else { 1 }; // 0 if positive, 1 if negative
-        minisat::Lit::from(2 * var + sign)
+        minisatLit::from(2 * var + sign)
     }
 }
 
 #[ext]
-impl minisat::Lit {
+impl minisatLit {
     fn to_lit(self) -> Lit {
         let lit: i32 = self.into();
         let var = (lit >> 1) + 1; // 1-based variable index

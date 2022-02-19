@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops;
 
-use crate::ffi::minisat_Lit;
+use super::ffi::minisat_Lit;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Lit(minisat_Lit);

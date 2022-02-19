@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::minisat::ffi::*;
+use sat_nexus::minisat::statik::ffi::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;

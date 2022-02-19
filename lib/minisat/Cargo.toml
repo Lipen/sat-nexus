@@ -4,8 +4,14 @@ version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
 
+[features]
+default = []
+static = ["minisat-sys/static"]
+dynamic = ["minisat-sys/dynamic", "easy-ext"]
+
 [dependencies]
-minisat-sys = { path = "../minisat-sys", features = ["static"] }
+minisat-sys = { path = "../minisat-sys", optional = true }
+easy-ext = { version = "1.0.0", optional = true }
 itertools = "0.10.1"
 
 [dev-dependencies]

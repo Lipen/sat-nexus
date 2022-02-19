@@ -1,12 +1,5 @@
-pub use self::minisat::*;
-pub use self::types::*;
+#[cfg(feature = "dynamic")]
+pub mod dynamic;
 
-pub mod ffi {
-    pub use minisat_sys::statik::bindings::*;
-}
-
-mod minisat;
-mod types;
-
-#[cfg(test)]
-mod tests;
+#[cfg(feature = "static")]
+pub mod statik;
