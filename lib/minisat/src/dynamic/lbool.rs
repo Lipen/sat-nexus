@@ -28,11 +28,11 @@ impl LBool {
 
 impl LBool {
     pub(crate) fn from_c(ffi: &MiniSatFFI, lbool: minisat_lbool) -> Self {
-        if lbool == *ffi.minisat_l_true() {
+        if lbool == ffi.minisat_l_true() {
             LBool::True
-        } else if lbool == *ffi.minisat_l_false() {
+        } else if lbool == ffi.minisat_l_false() {
             LBool::False
-        } else if lbool == *ffi.minisat_l_undef() {
+        } else if lbool == ffi.minisat_l_undef() {
             LBool::Undef
         } else {
             panic!("Bad lbool '{:?}'", lbool)
@@ -41,9 +41,9 @@ impl LBool {
 
     pub(crate) fn to_c(self, ffi: &MiniSatFFI) -> minisat_lbool {
         match self {
-            LBool::True => *ffi.minisat_l_true(),
-            LBool::False => *ffi.minisat_l_false(),
-            LBool::Undef => *ffi.minisat_l_undef(),
+            LBool::True => ffi.minisat_l_true(),
+            LBool::False => ffi.minisat_l_false(),
+            LBool::Undef => ffi.minisat_l_undef(),
         }
     }
 }

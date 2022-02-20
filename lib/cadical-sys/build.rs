@@ -1,17 +1,51 @@
-use std::env;
-use std::path::PathBuf;
-
 fn main() {
-    if cfg!(feature = "static") {
-        build_static_lib();
-        generate_bindings_static();
+    #[cfg(feature = "dynamic")]
+    {
+        generate_bindings_dynamic();
     }
 
-    if cfg!(feature = "dynamic") {
-        generate_bindings_dynamic();
+    #[cfg(feature = "static")]
+    {
+        generate_bindings_static();
+        build_static_lib();
     }
 }
 
+#[cfg(feature = "dynamic")]
+fn generate_bindings_dynamic() {
+    println!("cargo:warning=Generating Cadical dynamic bindings...");
+    // Note: to generate these bindings manually, use the following command:
+    //   bindgen vendor/cadical/src/ccadical.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical  --allowlist-function ccadical_.*
+    let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    bindgen::builder()
+        .header("vendor/cadical/src/ccadical.h")
+        .dynamic_library_name("ccadical")
+        .allowlist_function("ccadical_.*")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .layout_tests(false)
+        .generate()
+        .expect("Could not create bindings!")
+        .write_to_file(out_path.join("bindings-ccadical-dynamic.rs"))
+        .expect("Could not write bindings!");
+}
+
+#[cfg(feature = "static")]
+fn generate_bindings_static() {
+    println!("cargo:warning=Generating Cadical static bindings...");
+    // Note: to generate these bindings manually, use the following command:
+    //   bindgen vendor/cadical/src/ccadical.h -o _bindings-ccadical-static.rs --allowlist-function ccadical_.*
+    let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    bindgen::builder()
+        .header("vendor/cadical/src/ccadical.h")
+        .allowlist_function("ccadical_.*")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .generate()
+        .expect("Could not create bindings!")
+        .write_to_file(out_path.join("bindings-ccadical-static.rs"))
+        .expect("Could not write bindings!");
+}
+
+#[cfg(feature = "static")]
 fn build_static_lib() {
     println!("cargo:warning=Building Cadical static library...");
     let files = glob::glob("vendor/cadical/src/*.cpp")
@@ -34,36 +68,4 @@ fn build_static_lib() {
     if cfg!(windows) {
         println!("cargo:rustc-link-lib=psapi");
     }
-}
-
-fn generate_bindings_static() {
-    println!("cargo:warning=Generating Cadical static bindings...");
-    // Note: to generate these bindings manually, use the following command:
-    //   bindgen vendor/cadical/src/ccadical.h -o _bindings-ccadical-static.rs --allowlist-function ccadical_.*
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindgen::builder()
-        .header("vendor/cadical/src/ccadical.h")
-        .allowlist_function("ccadical_.*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        .generate()
-        .expect("Could not create bindings!")
-        .write_to_file(out_path.join("bindings-ccadical-static.rs"))
-        .expect("Could not write bindings!");
-}
-
-fn generate_bindings_dynamic() {
-    println!("cargo:warning=Generating Cadical dynamic bindings...");
-    // Note: to generate these bindings manually, use the following command:
-    //   bindgen vendor/cadical/src/ccadical.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical  --allowlist-function ccadical_.*
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindgen::builder()
-        .header("vendor/cadical/src/ccadical.h")
-        .dynamic_library_name("ccadical")
-        .allowlist_function("ccadical_.*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        .layout_tests(false)
-        .generate()
-        .expect("Could not create bindings!")
-        .write_to_file(out_path.join("bindings-ccadical-dynamic.rs"))
-        .expect("Could not write bindings!");
 }

@@ -16,10 +16,12 @@ sat-nexus-core = { path = "lib/core" }
 sat-nexus-wrappers = { path = "lib/wrappers" }
 ipasir = { path = "lib/ipasir" }
 cadical = { path = "lib/cadical" }
-minisat = { path = "lib/minisat" }
+minisat = { path = "lib/minisat", features = ["dynamic"] }
 
 [dev-dependencies]
 cadical-sys = { path = "lib/cadical-sys", features = ["dynamic", "static"] }
+minisat-sys = { path = "lib/minisat-sys", features = ["dynamic", "static"] }
+minisat = { path = "lib/minisat", features = ["dynamic", "static"] }
 color-eyre = "0.6.0"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.0.0"

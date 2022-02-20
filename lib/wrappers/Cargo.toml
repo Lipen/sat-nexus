@@ -6,9 +6,9 @@ edition = "2021"
 
 [dependencies]
 sat-nexus-core = { path = "../core" }
-cadical = { path = "../cadical" }
 ipasir = { path = "../ipasir" }
-minisat = { path = "../minisat", features = ["static"] }
+cadical = { path = "../cadical" }
+minisat = { path = "../minisat", features = ["dynamic"] }
 snafu = "0.6.10"
 itertools = "0.10.1"
 easy-ext = "1.0.0"

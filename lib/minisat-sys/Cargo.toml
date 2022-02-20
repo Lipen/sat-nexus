@@ -2,12 +2,12 @@
 name = "minisat-sys"
 version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [features]
 default = []
-static = []
 dynamic = ["libloading", "once_cell"]
+static = ["cc"]
 
 [dependencies]
 libloading = { version = "0.7.2", optional = true }
@@ -15,4 +15,4 @@ once_cell = { version = "1.8.0", optional = true }
 
 [build-dependencies]
 bindgen = "0.59.2"
-cc = { version = "1.0", features = ["parallel"] }
+cc = { version = "1.0", features = ["parallel"], optional = true }

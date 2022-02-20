@@ -6,8 +6,8 @@ edition = "2021"
 
 [features]
 default = []
-static = ["minisat-sys/static"]
 dynamic = ["minisat-sys/dynamic", "easy-ext"]
+static = ["minisat-sys/static"]
 
 [dependencies]
 minisat-sys = { path = "../minisat-sys", optional = true }

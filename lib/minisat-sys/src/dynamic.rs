@@ -45,29 +45,13 @@ impl MiniSatFFI {
 }
 
 impl MiniSatFFI {
-    pub fn minisat_l_true(&self) -> &'static bindings::minisat_lbool {
-        use once_cell::sync::OnceCell;
-        static INSTANCE: OnceCell<bindings::minisat_lbool> = OnceCell::new();
-        INSTANCE.get_or_init(|| unsafe { self.minisat_get_l_True() })
+    pub fn minisat_l_true(&self) -> bindings::minisat_lbool {
+        unsafe { self.minisat_get_l_True() }
     }
-    pub fn minisat_l_false(&self) -> &'static bindings::minisat_lbool {
-        use once_cell::sync::OnceCell;
-        static INSTANCE: OnceCell<bindings::minisat_lbool> = OnceCell::new();
-        INSTANCE.get_or_init(|| unsafe { self.minisat_get_l_False() })
+    pub fn minisat_l_false(&self) -> bindings::minisat_lbool {
+        unsafe { self.minisat_get_l_False() }
     }
-    pub fn minisat_l_undef(&self) -> &'static bindings::minisat_lbool {
-        use once_cell::sync::OnceCell;
-        static INSTANCE: OnceCell<bindings::minisat_lbool> = OnceCell::new();
-        INSTANCE.get_or_init(|| unsafe { self.minisat_get_l_Undef() })
+    pub fn minisat_l_undef(&self) -> bindings::minisat_lbool {
+        unsafe { self.minisat_get_l_Undef() }
     }
-
-    // pub fn minisat_l_true(&self) -> bindings::minisat_lbool {
-    //     unsafe { self.minisat_get_l_True() }
-    // }
-    // pub fn minisat_l_false(&self) -> bindings::minisat_lbool {
-    //     unsafe { self.minisat_get_l_False() }
-    // }
-    // pub fn minisat_l_undef(&self) -> bindings::minisat_lbool {
-    //     unsafe { self.minisat_get_l_Undef() }
-    // }
 }
