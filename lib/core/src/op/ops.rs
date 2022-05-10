@@ -288,6 +288,7 @@ pub trait Ops: Solver {
 }
 
 #[deprecated = "`IntoIterator for [T;N]` was stabilized in Rust 1.53"]
+#[allow(deprecated)]
 pub trait OpsArray: Ops {
     fn imply_and_array<const N: usize>(&mut self, lhs: Lit, rhs: [Lit; N]) {
         self.imply_and(lhs, array::IntoIter::new(rhs));
