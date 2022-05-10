@@ -76,7 +76,7 @@ where
 
     // [aux]
     // (color[1] = 1)
-    solver.add_clause([color[[1 - 1]].eq(1)])
+    solver.add_clause([color[[0]].eq(1)])
 }
 
 fn main() -> Result<()> {
@@ -125,7 +125,7 @@ fn main() -> Result<()> {
     if matches!(response, SolveResponse::Sat) {
         let color = context.extract_named::<ArrayD<DomainVar<usize>>, _>("color");
 
-        assert!(matches!(solver.eval(&color[[1 - 1]].eq(1)), LitValue::True));
+        assert!(matches!(solver.eval(&color[[0]].eq(1)), LitValue::True));
 
         println!("color = {}", solver.eval(color));
         for v in 1..=num_vertices {
