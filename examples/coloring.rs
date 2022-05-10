@@ -44,6 +44,7 @@ where
 
     context.insert_named("num_vertices", num_vertices);
     context.insert_named("num_colors", num_colors);
+    #[allow(clippy::redundant_clone)]
     context.insert_named("edges", edges.clone());
 
     let color: ColorArray = solver.new_domain_var_array_dyn([num_vertices], |_| 1..=num_colors);
