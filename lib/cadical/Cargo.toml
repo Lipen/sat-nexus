@@ -10,4 +10,4 @@ snafu = "0.6.10"
 itertools = "0.10.1"
 
 [dev-dependencies]
-color-eyre = "0.5.11"
+color-eyre = "0.6"

@@ -15,4 +15,4 @@ easy-ext = { version = "1.0.0", optional = true }
 itertools = "0.10.1"
 
 [dev-dependencies]
-color-eyre = "0.5.11"
+color-eyre = "0.6"
