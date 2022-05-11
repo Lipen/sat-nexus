@@ -2,10 +2,10 @@ use std::hash::Hash;
 
 use ndarray::{Array, ArrayD, Dimension, ShapeBuilder};
 
+use super::Solver;
 use crate::domainvar::DomainVar;
 use crate::eval::Eval;
 use crate::lit::Lit;
-use crate::solver::Solver;
 
 impl<S> SolverExt for S where S: Solver + ?Sized {}
 

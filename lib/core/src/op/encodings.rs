@@ -1,9 +1,8 @@
 use itertools::Itertools;
 
 use crate::lit::Lit;
+use crate::op::ops::Ops;
 use crate::solver::Solver;
-
-use super::Ops;
 
 impl<S> Encodings for S where S: Solver + ?Sized {}
 

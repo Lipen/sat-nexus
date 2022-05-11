@@ -2,8 +2,8 @@ pub use api::*;
 pub use extensions::*;
 pub use types::*;
 
-pub mod mock;
+mod extensions;
 
 mod api;
-mod extensions;
+pub mod mock;
 mod types;
