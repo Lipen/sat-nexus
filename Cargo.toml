@@ -22,7 +22,7 @@ minisat = { path = "lib/minisat", features = ["dynamic"] }
 cadical-sys = { path = "lib/cadical-sys", features = ["dynamic", "static"] }
 minisat-sys = { path = "lib/minisat-sys", features = ["dynamic", "static"] }
 minisat = { path = "lib/minisat", features = ["dynamic", "static"] }
-color-eyre = "0.6.0"
+color-eyre = "0.6"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.0.0"
 itertools = "0.10.3"
