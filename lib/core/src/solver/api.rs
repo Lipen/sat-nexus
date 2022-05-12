@@ -6,8 +6,10 @@ use crate::lit::Lit;
 use super::types::*;
 
 // Note: `Solver` trait is NOT object-safe, by design.
-// const _: Option<&dyn Solver> = None; // compiles when trait is object-safe
-// Note: if you need a generic `Solver` trait implementation,
+//
+// const _: Option<&dyn Solver> = None; // compiles only when trait is object-safe
+//
+// Note: if you need a generic `Solver` implementation,
 //   use `DelegatingSolver` which delegates to `DispatchingSolver`,
 //   which, in turn, implements object-safe `SimpleSolver` trait.
 
