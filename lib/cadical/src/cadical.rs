@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use crate::ffi::*;
 use crate::types::*;
@@ -31,8 +31,8 @@ impl Drop for Cadical {
     }
 }
 
-impl fmt::Display for Cadical {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Cadical {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.signature())
     }
 }

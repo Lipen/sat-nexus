@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
 use itertools::Itertools;
@@ -39,8 +39,8 @@ impl From<MiniSat> for WrappedMiniSat {
     }
 }
 
-impl fmt::Display for WrappedMiniSat {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for WrappedMiniSat {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "WrappedSolver({})", self.signature())
     }
 }
@@ -68,6 +68,13 @@ impl Solver for WrappedMiniSat {
         self.inner.new_lit().to_lit()
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.assumptions.push(lit.into().to_ms_lit());
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -75,13 +82,6 @@ impl Solver for WrappedMiniSat {
     {
         let lits = lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit);
         self.inner.add_clause(lits);
-    }
-
-    fn assume<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.assumptions.push(lit.into().to_ms_lit());
     }
 
     fn solve(&mut self) -> SolveResponse {

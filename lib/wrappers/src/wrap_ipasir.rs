@@ -74,6 +74,13 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
         Lit::new(self.nvars as i32)
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.inner.assume(lit.into().to_ipasir());
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -82,13 +89,6 @@ impl Solver for WrappedIpasirSolver<IpasirSolver> {
         self.nclauses += 1;
         let lits = lits.into_iter().map_into::<Lit>().map(|x| x.to_ipasir());
         self.inner.add_clause(lits);
-    }
-
-    fn assume<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.inner.assume(lit.into().to_ipasir());
     }
 
     fn solve(&mut self) -> SolveResponse {

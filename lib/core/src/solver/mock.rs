@@ -61,6 +61,13 @@ impl Solver for MockSolver {
         Lit::from(self.nvars)
     }
 
+    fn assume<L>(&mut self, _lit: L)
+    where
+        L: Into<Lit>,
+    {
+        // TODO
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -68,13 +75,6 @@ impl Solver for MockSolver {
     {
         self.nclauses += 1;
         self.clauses.push(lits.into_iter().map_into::<Lit>().collect());
-    }
-
-    fn assume<L>(&mut self, _lit: L)
-    where
-        L: Into<Lit>,
-    {
-        // TODO
     }
 
     fn solve(&mut self) -> SolveResponse {

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
 use itertools::Itertools;
@@ -39,8 +39,8 @@ impl Drop for MiniSat {
     }
 }
 
-impl fmt::Display for MiniSat {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for MiniSat {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.signature())
     }
 }

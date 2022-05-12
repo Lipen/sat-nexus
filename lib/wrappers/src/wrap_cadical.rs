@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use itertools::Itertools;
 
@@ -39,9 +39,9 @@ impl From<Cadical> for WrappedCadical {
     }
 }
 
-impl fmt::Display for WrappedCadical {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "WrappedSolver({})", self.signature())
+impl Display for WrappedCadical {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "WrappedSolver({})", self.inner)
     }
 }
 
@@ -69,6 +69,13 @@ impl Solver for WrappedCadical {
         Lit::new(self.nvars as i32)
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.inner.assume(lit.into().into());
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -76,13 +83,6 @@ impl Solver for WrappedCadical {
     {
         self.nclauses += 1;
         self.inner.add_clause(lits.into_iter().map_into::<Lit>());
-    }
-
-    fn assume<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.inner.assume(lit.into().into());
     }
 
     fn solve(&mut self) -> SolveResponse {

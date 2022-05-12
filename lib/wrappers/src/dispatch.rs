@@ -1,0 +1,108 @@
+use std::borrow::Cow;
+use std::fmt::{Display, Formatter};
+
+use strum::{EnumString, IntoStaticStr};
+
+use sat_nexus_core::lit::Lit;
+use sat_nexus_core::solver::{LitValue, SimpleSolver, SolveResponse, Solver};
+
+use crate::cadical::WrappedCadical;
+use crate::minisat::WrappedMiniSat;
+
+#[derive(EnumString, IntoStaticStr)]
+#[strum(ascii_case_insensitive)]
+pub enum DispatchingSolver {
+    MiniSat(WrappedMiniSat),
+    Cadical(WrappedCadical),
+}
+
+impl DispatchingSolver {
+    pub fn new_minisat() -> Self {
+        DispatchingSolver::MiniSat(WrappedMiniSat::new())
+    }
+    pub fn new_cadical() -> Self {
+        DispatchingSolver::Cadical(WrappedCadical::new())
+    }
+}
+
+impl Display for DispatchingSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let name: &'static str = self.into();
+        match self {
+            DispatchingSolver::MiniSat(inner) => write!(f, "DispatchingSolver::{}({})", name, inner),
+            DispatchingSolver::Cadical(inner) => write!(f, "DispatchingSolver::{}({})", name, inner),
+        }
+    }
+}
+
+impl SimpleSolver for DispatchingSolver {
+    fn signature(&self) -> Cow<str> {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.signature(),
+            DispatchingSolver::Cadical(inner) => inner.signature(),
+        }
+    }
+
+    fn reset(&mut self) {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.reset(),
+            DispatchingSolver::Cadical(inner) => inner.reset(),
+        }
+    }
+
+    fn release(&mut self) {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.release(),
+            DispatchingSolver::Cadical(inner) => inner.release(),
+        }
+    }
+
+    fn num_vars(&self) -> usize {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.num_vars(),
+            DispatchingSolver::Cadical(inner) => inner.num_vars(),
+        }
+    }
+
+    fn num_clauses(&self) -> usize {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.num_clauses(),
+            DispatchingSolver::Cadical(inner) => inner.num_clauses(),
+        }
+    }
+
+    fn new_var(&mut self) -> Lit {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.new_var(),
+            DispatchingSolver::Cadical(inner) => inner.new_var(),
+        }
+    }
+
+    fn assume(&mut self, lit: Lit) {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.assume(lit),
+            DispatchingSolver::Cadical(inner) => inner.assume(lit),
+        }
+    }
+
+    fn add_clause(&mut self, lits: &[Lit]) {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.add_clause(lits),
+            DispatchingSolver::Cadical(inner) => inner.add_clause(lits),
+        }
+    }
+
+    fn solve(&mut self) -> SolveResponse {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.solve(),
+            DispatchingSolver::Cadical(inner) => inner.solve(),
+        }
+    }
+
+    fn value(&self, lit: Lit) -> LitValue {
+        match self {
+            DispatchingSolver::MiniSat(inner) => inner.value(lit),
+            DispatchingSolver::Cadical(inner) => inner.value(lit),
+        }
+    }
+}

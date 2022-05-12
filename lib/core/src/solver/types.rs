@@ -7,6 +7,17 @@ pub enum SolveResponse {
     Unknown,
 }
 
+impl fmt::Display for SolveResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use SolveResponse::*;
+        match self {
+            Sat => write!(f, "SAT"),
+            Unsat => write!(f, "UNSAT"),
+            Unknown => write!(f, "UNKNOWN"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum LitValue {
     True,
