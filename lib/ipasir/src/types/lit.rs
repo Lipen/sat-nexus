@@ -79,7 +79,7 @@ impl TryFrom<i32> for Lit {
 
     fn try_from(val: i32) -> std::result::Result<Self, Self::Error> {
         if val == 0 || val == i32::MIN {
-            return InvalidLitValueContext { value: val }.fail();
+            return InvalidLitValueSnafu { value: val }.fail();
         }
         Ok(Self(val))
     }

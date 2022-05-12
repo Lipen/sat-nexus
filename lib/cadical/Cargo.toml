@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 cadical-sys = { path = "../cadical-sys", features = ["dynamic"] }
-snafu = "0.6.10"
+snafu = "0.7"
 itertools = "0.10.1"
 
 [dev-dependencies]
