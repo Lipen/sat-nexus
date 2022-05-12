@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
-use strum::{EnumString, IntoStaticStr};
+use strum::IntoStaticStr;
 
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SimpleSolver, SolveResponse, Solver};
@@ -9,7 +9,7 @@ use sat_nexus_core::solver::{LitValue, SimpleSolver, SolveResponse, Solver};
 use crate::cadical::WrappedCadical;
 use crate::minisat::WrappedMiniSat;
 
-#[derive(EnumString, IntoStaticStr)]
+#[derive(IntoStaticStr)]
 #[strum(ascii_case_insensitive)]
 pub enum DispatchingSolver {
     MiniSat(WrappedMiniSat),
@@ -22,6 +22,14 @@ impl DispatchingSolver {
     }
     pub fn new_cadical() -> Self {
         DispatchingSolver::Cadical(WrappedCadical::new())
+    }
+
+    pub fn by_name(name: &str) -> Self {
+        match name.to_ascii_lowercase().as_str() {
+            "minisat" => Self::new_minisat(),
+            "cadical" => Self::new_cadical(),
+            _ => panic!("Bad name '{}'", name),
+        }
     }
 }
 

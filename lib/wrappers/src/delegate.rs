@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
-use std::str::FromStr;
 
 use itertools::Itertools;
 
@@ -26,7 +25,7 @@ impl DelegatingSolver {
     }
 
     pub fn by_name(name: &str) -> Self {
-        Self::new(DispatchingSolver::from_str(name).unwrap_or_else(|e| panic!("Bad name '{}': {}", name, e)))
+        Self::new(DispatchingSolver::by_name(name))
     }
 }
 
