@@ -12,7 +12,7 @@ static = ["minisat-sys/static"]
 [dependencies]
 minisat-sys = { path = "../minisat-sys", optional = true }
 easy-ext = { version = "1.0.0", optional = true }
-itertools = "0.10.1"
+itertools = "0.10"
 
 [dev-dependencies]
 color-eyre = "0.6"
