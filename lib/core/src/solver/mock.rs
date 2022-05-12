@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use itertools::Itertools;
 
@@ -31,8 +31,8 @@ impl Default for MockSolver {
     }
 }
 
-impl fmt::Display for MockSolver {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for MockSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.signature())
     }
 }

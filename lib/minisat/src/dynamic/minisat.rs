@@ -8,6 +8,33 @@ use super::lbool::*;
 use super::lit::*;
 use super::var::*;
 
+/// MiniSat solver.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> color_eyre::eyre::Result<()> {
+/// use minisat::dynamic::{MiniSat, Lit, LBool};
+/// // Create solver
+/// let solver = MiniSat::new();
+/// // Initialize variables
+/// let a = solver.new_lit();
+/// let b = solver.new_lit();
+/// let c = solver.new_lit();
+/// // Add some clauses: (a or b) and (b or c) and (not a or c) and (not c)
+/// solver.add_clause([a, b]);
+/// solver.add_clause(vec![b, c]);
+/// solver.try_add_clause([-a, c])?;
+/// solver.add_clause([-c]);
+/// // Solve the SAT problem
+/// assert!(solver.solve());
+/// // Query the result
+/// assert_eq!(solver.model_value_lit(a), LBool::False);
+/// assert_eq!(solver.model_value_lit(b), LBool::True);
+/// assert_eq!(solver.model_value_lit(c), LBool::False);
+/// # Ok(())
+/// # }
+/// ```
 pub struct MiniSat {
     ffi: &'static MiniSatFFI,
     ptr: MiniSatPtr,

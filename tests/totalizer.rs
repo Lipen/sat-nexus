@@ -4,11 +4,11 @@ use sat_nexus::core::card::Cardinality;
 use sat_nexus::core::op::allsat::AllSat;
 use sat_nexus::core::op::ops::Ops;
 use sat_nexus::core::solver::{Solver, SolverExt};
-use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 #[test]
 fn test_totalizer() {
-    let mut solver = WrappedIpasirSolver::new_cadical();
+    let mut solver = IpasirSolver::new_cadical();
     let n = 8;
     let ub = 6;
     let lb = 2;

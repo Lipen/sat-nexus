@@ -4,7 +4,7 @@ use crate::lit::Lit;
 use crate::op::ops::Ops;
 use crate::solver::Solver;
 
-impl<S> Encodings for S where S: Solver + ?Sized {}
+impl<S> Encodings for S where S: Solver {}
 
 pub trait Encodings: Solver {
     fn encode_onehot(&mut self, lits: &[Lit]) {

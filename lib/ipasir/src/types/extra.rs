@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 /// Possible responses from a call to `ipasir_solve`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -32,8 +32,8 @@ impl LitValue {
     }
 }
 
-impl fmt::Display for LitValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for LitValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use LitValue::*;
         match self {
             DontCare => write!(f, "X"),

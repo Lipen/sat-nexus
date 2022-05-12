@@ -8,7 +8,7 @@ use crate::lit::Lit;
 
 use super::Solver;
 
-impl<S> SolverExt for S where S: Solver + ?Sized {}
+impl<S> SolverExt for S where S: Solver {}
 
 pub trait SolverExt: Solver {
     fn new_var_array<Sh>(&mut self, shape: Sh) -> Array<Lit, Sh::Dim>

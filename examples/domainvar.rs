@@ -4,13 +4,13 @@ use ndarray::ArrayD;
 use sat_nexus::core::context::Context;
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    let mut solver = WrappedIpasirSolver::new_cadical();
+    let mut solver = IpasirSolver::new_cadical();
     let mut context = Context::new();
 
     let num_states = 5;

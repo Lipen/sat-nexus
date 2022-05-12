@@ -5,7 +5,7 @@ use color_eyre::eyre::Result;
 
 use sat_nexus::core::lit::Lit;
 use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 struct Store<S> {
     weak: Weak<RefCell<S>>,
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    let solver = WrappedIpasirSolver::new_cadical();
+    let solver = IpasirSolver::new_cadical();
     let shared_solver = Rc::new(RefCell::new(solver));
     // let solver = shared_solver.borrow_mut();
 

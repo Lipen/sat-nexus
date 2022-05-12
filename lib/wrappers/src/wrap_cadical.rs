@@ -7,13 +7,13 @@ use cadical::Cadical;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-pub struct WrappedCadical {
+pub struct CadicalSolver {
     inner: Cadical,
     nvars: usize,
     nclauses: usize,
 }
 
-impl WrappedCadical {
+impl CadicalSolver {
     pub fn new() -> Self {
         Self::new_custom(Cadical::new())
     }
@@ -27,25 +27,25 @@ impl WrappedCadical {
     }
 }
 
-impl Default for WrappedCadical {
+impl Default for CadicalSolver {
     fn default() -> Self {
-        WrappedCadical::new()
+        CadicalSolver::new()
     }
 }
 
-impl From<Cadical> for WrappedCadical {
+impl From<Cadical> for CadicalSolver {
     fn from(inner: Cadical) -> Self {
-        WrappedCadical::new_custom(inner)
+        CadicalSolver::new_custom(inner)
     }
 }
 
-impl Display for WrappedCadical {
+impl Display for CadicalSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "WrappedSolver({})", self.inner)
+        write!(f, "CadicalSolver({})", self.inner)
     }
 }
 
-impl Solver for WrappedCadical {
+impl Solver for CadicalSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_wrap_cadical() -> color_eyre::Result<()> {
-        let mut solver = WrappedCadical::new();
+        let mut solver = CadicalSolver::new();
         assert!(solver.signature().contains("cadical"));
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]

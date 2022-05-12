@@ -8,7 +8,7 @@ use sat_nexus::core::context::Context;
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::op::ops::Ops;
 use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);
@@ -103,7 +103,7 @@ fn main() -> Result<()> {
         Edge(10, 6),
     ];
 
-    let mut solver = WrappedIpasirSolver::new_cadical();
+    let mut solver = IpasirSolver::new_cadical();
     println!("solver = {}", solver);
 
     let mut context = Context::new();

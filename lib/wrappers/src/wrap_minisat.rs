@@ -9,12 +9,12 @@ use minisat::dynamic::{LBool, MiniSat};
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-pub struct WrappedMiniSat {
+pub struct MiniSatSolver {
     inner: MiniSat,
     assumptions: Vec<MiniSatLit>,
 }
 
-impl WrappedMiniSat {
+impl MiniSatSolver {
     pub fn new() -> Self {
         Self::new_custom(MiniSat::new())
     }
@@ -27,25 +27,25 @@ impl WrappedMiniSat {
     }
 }
 
-impl Default for WrappedMiniSat {
+impl Default for MiniSatSolver {
     fn default() -> Self {
-        WrappedMiniSat::new()
+        MiniSatSolver::new()
     }
 }
 
-impl From<MiniSat> for WrappedMiniSat {
+impl From<MiniSat> for MiniSatSolver {
     fn from(inner: MiniSat) -> Self {
-        WrappedMiniSat::new_custom(inner)
+        MiniSatSolver::new_custom(inner)
     }
 }
 
-impl Display for WrappedMiniSat {
+impl Display for MiniSatSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "WrappedSolver({})", self.signature())
+        write!(f, "MiniSatSolver({})", self.signature())
     }
 }
 
-impl Solver for WrappedMiniSat {
+impl Solver for MiniSatSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_wrap_minisat() -> color_eyre::Result<()> {
-        let mut solver = WrappedMiniSat::new();
+        let mut solver = MiniSatSolver::new();
         assert!(solver.signature().contains("minisat"));
 
         solver.new_var();

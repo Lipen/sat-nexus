@@ -1,7 +1,7 @@
 use super::ffi::bindings::minisat_lbool;
 use super::ffi::MiniSatFFI;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LBool {
     True,  // = 1,
     False, // = 0,

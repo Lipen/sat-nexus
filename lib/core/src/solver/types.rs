@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SolveResponse {
@@ -7,8 +7,8 @@ pub enum SolveResponse {
     Unknown,
 }
 
-impl fmt::Display for SolveResponse {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for SolveResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use SolveResponse::*;
         match self {
             Sat => write!(f, "SAT"),
@@ -36,8 +36,8 @@ impl LitValue {
     }
 }
 
-impl fmt::Display for LitValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for LitValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use LitValue::*;
         match self {
             True => write!(f, "1"),

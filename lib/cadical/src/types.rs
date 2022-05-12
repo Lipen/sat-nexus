@@ -1,9 +1,9 @@
 use snafu::Snafu;
 
-pub type Result<T, E = CadicalSolverError> = std::result::Result<T, E>;
+pub type Result<T, E = CadicalError> = std::result::Result<T, E>;
 
 #[derive(Debug, Snafu)]
-pub enum CadicalSolverError {
+pub enum CadicalError {
     #[snafu(display("Literal must be non-zero"))]
     ZeroLiteral,
 

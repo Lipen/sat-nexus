@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::ops;
 
 use super::ffi::bindings::minisat_Lit;
@@ -40,8 +40,8 @@ impl From<Lit> for minisat_Lit {
     }
 }
 
-impl fmt::Display for Lit {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Lit {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }

@@ -1,6 +1,6 @@
 use std::any::type_name;
 use std::collections::HashMap;
-use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use itertools::Itertools;
@@ -22,7 +22,7 @@ where
 {
     pub fn new<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: Solver + ?Sized,
+        S: Solver,
         I: IntoIterator<Item = T>,
     {
         let domain = domain.into_iter().collect_vec();
@@ -33,7 +33,7 @@ where
 
     pub fn new_onehot<S, I>(solver: &mut S, domain: I) -> Self
     where
-        S: Solver + ?Sized,
+        S: Solver,
         I: IntoIterator<Item = T>,
     {
         let var = Self::new(solver, domain);
@@ -42,11 +42,11 @@ where
     }
 }
 
-impl<T> fmt::Display for DomainVar<T>
+impl<T> Display for DomainVar<T>
 where
-    T: fmt::Debug,
+    T: Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "DomainVar<{}>({:?})", type_name::<T>(), self.domain)
     }
 }
@@ -66,7 +66,7 @@ where
 
     pub fn eval<S>(&self, solver: &S) -> T
     where
-        S: Solver + ?Sized,
+        S: Solver,
     {
         // There must be exactly 1 literal which is True in the model.
         debug_assert_eq!(

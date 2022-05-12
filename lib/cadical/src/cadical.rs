@@ -4,6 +4,31 @@ use std::fmt::{Display, Formatter};
 use crate::ffi::*;
 use crate::types::*;
 
+/// Cadical solver.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> color_eyre::eyre::Result<()> {
+/// use cadical::{Cadical, SolveResponse};
+/// // Create solver
+/// use cadical::LitValue;
+/// let solver = Cadical::new();
+/// // Add some clauses: (a or b) and (b or c) and (not a or c) and (not c)
+/// solver.add_clause([1, 2]);
+/// solver.add_clause(vec![2, 3]);
+/// solver.try_add_clause([-1, 3])?;
+/// solver.add_clause([-3]);
+/// // Solve the SAT problem
+/// let response = solver.solve()?;
+/// assert_eq!(response, SolveResponse::Sat);
+/// // Query the result
+/// assert_eq!(solver.val(1)?, LitValue::False);
+/// assert_eq!(solver.val(2)?, LitValue::True);
+/// assert_eq!(solver.val(3)?, LitValue::False);
+/// # Ok(())
+/// # }
+/// ```
 pub struct Cadical {
     ffi: &'static CCadicalFFI,
     ptr: CCadicalPtr,
@@ -114,7 +139,7 @@ impl Cadical {
             0 => Ok(SimplifyResponse::Unknown),
             10 => Ok(SimplifyResponse::Sat),
             20 => Ok(SimplifyResponse::Unsat),
-            invalid => Err(CadicalSolverError::InvalidResponseSimplify { value: invalid }),
+            invalid => Err(CadicalError::InvalidResponseSimplify { value: invalid }),
         }
     }
 
@@ -124,7 +149,7 @@ impl Cadical {
             0 => Ok(SolveResponse::Interrupted),
             10 => Ok(SolveResponse::Sat),
             20 => Ok(SolveResponse::Unsat),
-            invalid => Err(CadicalSolverError::InvalidResponseSolve { value: invalid }),
+            invalid => Err(CadicalError::InvalidResponseSolve { value: invalid }),
         }
     }
 
@@ -140,7 +165,7 @@ impl Cadical {
         match unsafe { self.ffi.ccadical_val(self.ptr, lit) } {
             p if p == lit => Ok(LitValue::True),
             n if n == -lit => Ok(LitValue::False),
-            invalid => Err(CadicalSolverError::InvalidResponseVal { lit, value: invalid }),
+            invalid => Err(CadicalError::InvalidResponseVal { lit, value: invalid }),
         }
     }
 
@@ -153,7 +178,7 @@ impl Cadical {
         match unsafe { self.ffi.ccadical_failed(self.ptr, lit) } {
             0 => Ok(true),
             1 => Ok(false),
-            invalid => Err(CadicalSolverError::InvalidResponseFailed { lit, value: invalid }),
+            invalid => Err(CadicalError::InvalidResponseFailed { lit, value: invalid }),
         }
     }
 
@@ -181,7 +206,7 @@ impl Cadical {
             1 => Ok(FixedResponse::Implied),
             -1 => Ok(FixedResponse::Negation),
             0 => Ok(FixedResponse::Unclear),
-            invalid => Err(CadicalSolverError::InvalidResponseFixed { lit, value: invalid }),
+            invalid => Err(CadicalError::InvalidResponseFixed { lit, value: invalid }),
         }
     }
 
@@ -191,7 +216,7 @@ impl Cadical {
         match unsafe { self.ffi.ccadical_frozen(self.ptr, lit) } {
             0 => Ok(FrozenResponse::NotFrozen),
             1 => Ok(FrozenResponse::Frozen),
-            invalid => Err(CadicalSolverError::InvalidResponseFrozen { lit, value: invalid }),
+            invalid => Err(CadicalError::InvalidResponseFrozen { lit, value: invalid }),
         }
     }
 

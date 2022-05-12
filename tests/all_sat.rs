@@ -1,11 +1,11 @@
 use sat_nexus::core::lit::Lit;
 use sat_nexus::core::op::allsat::AllSat;
 use sat_nexus::core::solver::{Solver, SolverExt};
-use sat_nexus::wrappers::ipasir::WrappedIpasirSolver;
+use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 #[test]
 fn all_solutions_5vars() {
-    let mut solver = WrappedIpasirSolver::new_cadical();
+    let mut solver = IpasirSolver::new_cadical();
 
     let n = 5;
     let _lits = solver.new_var_vec(n);
@@ -21,7 +21,7 @@ fn all_solutions_5vars() {
 
 #[test]
 fn all_solutions_essential_3of5vars() {
-    let mut solver = WrappedIpasirSolver::new_cadical();
+    let mut solver = IpasirSolver::new_cadical();
 
     let n = 5;
     let lits = solver.new_var_vec(n);

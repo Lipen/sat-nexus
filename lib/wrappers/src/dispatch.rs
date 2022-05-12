@@ -6,22 +6,22 @@ use strum::IntoStaticStr;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SimpleSolver, SolveResponse, Solver};
 
-use crate::cadical::WrappedCadical;
-use crate::minisat::WrappedMiniSat;
+use crate::cadical::CadicalSolver;
+use crate::minisat::MiniSatSolver;
 
 #[derive(IntoStaticStr)]
 #[strum(ascii_case_insensitive)]
 pub enum DispatchingSolver {
-    MiniSat(WrappedMiniSat),
-    Cadical(WrappedCadical),
+    MiniSat(MiniSatSolver),
+    Cadical(CadicalSolver),
 }
 
 impl DispatchingSolver {
     pub fn new_minisat() -> Self {
-        DispatchingSolver::MiniSat(WrappedMiniSat::new())
+        DispatchingSolver::MiniSat(MiniSatSolver::new())
     }
     pub fn new_cadical() -> Self {
-        DispatchingSolver::Cadical(WrappedCadical::new())
+        DispatchingSolver::Cadical(CadicalSolver::new())
     }
 
     pub fn by_name(name: &str) -> Self {

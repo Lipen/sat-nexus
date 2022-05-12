@@ -1,25 +1,21 @@
 use std::borrow::Cow;
-use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
 use itertools::Itertools;
 
 use ipasir::Ipasir;
-use ipasir::IpasirSolver;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-pub struct WrappedIpasirSolver<S>
-where
-    S: Ipasir,
-{
-    inner: S,
+pub struct IpasirSolver {
+    inner: Ipasir,
     nvars: usize,
     nclauses: usize,
 }
 
-impl WrappedIpasirSolver<IpasirSolver> {
-    pub fn new(inner: IpasirSolver) -> Self {
+impl IpasirSolver {
+    pub fn new(inner: Ipasir) -> Self {
         Self {
             inner,
             nvars: 0,
@@ -28,29 +24,29 @@ impl WrappedIpasirSolver<IpasirSolver> {
     }
 
     pub fn new_cadical() -> Self {
-        Self::new(IpasirSolver::new_cadical())
+        Self::new(Ipasir::new_cadical())
     }
     pub fn new_minisat() -> Self {
-        Self::new(IpasirSolver::new_minisat())
+        Self::new(Ipasir::new_minisat())
     }
     pub fn new_glucose() -> Self {
-        Self::new(IpasirSolver::new_glucose())
+        Self::new(Ipasir::new_glucose())
     }
 }
 
-impl From<IpasirSolver> for WrappedIpasirSolver<IpasirSolver> {
-    fn from(inner: IpasirSolver) -> Self {
-        WrappedIpasirSolver::new(inner)
+impl From<Ipasir> for IpasirSolver {
+    fn from(inner: Ipasir) -> Self {
+        IpasirSolver::new(inner)
     }
 }
 
-impl fmt::Display for WrappedIpasirSolver<IpasirSolver> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for IpasirSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "WrappedSolver({})", self.signature())
     }
 }
 
-impl Solver for WrappedIpasirSolver<IpasirSolver> {
+impl Solver for IpasirSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -129,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_wrap_ipasir() -> color_eyre::Result<()> {
-        let mut solver = WrappedIpasirSolver::new_cadical();
+        let mut solver = IpasirSolver::new_cadical();
         assert!(solver.signature().contains("cadical"));
 
         // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]

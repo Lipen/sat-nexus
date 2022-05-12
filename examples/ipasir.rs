@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     println!("Hello, world!");
 
-    let solver = IpasirSolver::new_cadical();
+    let solver = Ipasir::new_cadical();
     println!("Solver signature: {}", solver.signature());
 
     solver.try_add_clause(&[1, 2])?;

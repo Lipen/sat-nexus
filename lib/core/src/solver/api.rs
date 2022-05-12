@@ -7,6 +7,9 @@ use super::types::*;
 
 // Note: `Solver` trait is NOT object-safe, by design.
 // const _: Option<&dyn Solver> = None; // compiles when trait is object-safe
+// Note: if you need a generic `Solver` trait implementation,
+//   use `DelegatingSolver` which delegates to `DispatchingSolver`,
+//   which, in turn, implements object-safe `SimpleSolver` trait.
 
 pub trait Solver: Sized + Display {
     fn signature(&self) -> Cow<str>;

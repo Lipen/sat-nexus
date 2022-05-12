@@ -3,12 +3,11 @@ use itertools::Itertools;
 use crate::lit::Lit;
 use crate::solver::{SolveResponse, Solver};
 
-impl<S> AllSat for S where S: Solver + ?Sized {}
+impl<S> AllSat for S where S: Solver {}
 
 pub trait AllSat: Solver {
     fn all_sat<T, F>(&mut self, f: F) -> AllSolutionsIter<Self, F>
     where
-        Self: Sized,
         F: FnMut(&mut Self) -> T,
     {
         // If no essential vars were passed, then *all* variables are essential!
@@ -18,7 +17,6 @@ pub trait AllSat: Solver {
 
     fn all_sat_essential<I, T, F>(&mut self, essential: I, f: F) -> AllSolutionsIter<Self, F>
     where
-        Self: Sized,
         I: IntoIterator,
         I::Item: Into<Lit>,
         F: FnMut(&mut Self) -> T,

@@ -11,7 +11,7 @@ pub trait Eval {
 
     fn eval<S>(&self, solver: &S) -> Self::Output
     where
-        S: Solver + ?Sized;
+        S: Solver;
 }
 
 impl Eval for Lit {
@@ -19,7 +19,7 @@ impl Eval for Lit {
 
     fn eval<S>(&self, solver: &S) -> Self::Output
     where
-        S: Solver + ?Sized,
+        S: Solver,
     {
         solver.value(self)
     }
@@ -33,7 +33,7 @@ where
 
     fn eval<S>(&self, solver: &S) -> Self::Output
     where
-        S: Solver + ?Sized,
+        S: Solver,
     {
         DomainVar::eval(self, solver)
     }
@@ -48,7 +48,7 @@ where
 
     fn eval<S>(&self, solver: &S) -> Self::Output
     where
-        S: Solver + ?Sized,
+        S: Solver,
     {
         self.map(|v| v.eval(solver))
     }

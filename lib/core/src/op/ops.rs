@@ -3,7 +3,7 @@ use std::array;
 use crate::lit::Lit;
 use crate::solver::Solver;
 
-impl<S> Ops for S where S: Solver + ?Sized {}
+impl<S> Ops for S where S: Solver {}
 
 pub trait Ops: Solver {
     #[deprecated = "old stuff"]
