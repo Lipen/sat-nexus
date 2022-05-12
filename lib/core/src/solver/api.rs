@@ -5,14 +5,22 @@ use crate::lit::Lit;
 
 use super::types::*;
 
-// Note: `Solver` trait is NOT object-safe, by design.
-//
-// const _: Option<&dyn Solver> = None; // compiles only when trait is object-safe
-//
-// Note: if you need a generic `Solver` implementation,
-//   use `DelegatingSolver` which delegates to `DispatchingSolver`,
-//   which, in turn, implements object-safe `SimpleSolver` trait.
-
+/// Generic SAT-solver interface.
+///
+/// ---
+///
+/// **Note:** `Solver` trait is NOT object-safe, by design.
+///
+/// ```compile_fail
+/// # use sat_nexus_core::solver::Solver;
+/// // should not compile since `Solver` is not object-safe
+/// let _: Option<&dyn Solver> = None;
+/// ```
+///
+/// If you need a generic `Solver` implementation,
+/// use `DelegatingSolver` which delegates to `DispatchingSolver`,
+/// which, in turn, implements object-safe `SimpleSolver` trait.
+///
 pub trait Solver: Sized + Display {
     fn signature(&self) -> Cow<str>;
 
