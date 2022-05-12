@@ -8,7 +8,6 @@ use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let mut solver = IpasirSolver::new_cadical();
     let mut context = Context::new();

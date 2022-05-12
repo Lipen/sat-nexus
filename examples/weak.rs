@@ -24,7 +24,6 @@ where
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let solver = IpasirSolver::new_cadical();
     let shared_solver = Rc::new(RefCell::new(solver));

@@ -1,13 +1,14 @@
 use color_eyre::eyre::Result;
 
 use sat_nexus::core::context::Context;
-use sat_nexus::core::solver::mock::MockSolver;
+use sat_nexus::core::solver::delegate::DelegateSolver;
 use sat_nexus::core::solver::*;
+use sat_nexus::wrappers::wrap_ipasir_simple::IpasirSimpleSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut solver = MockSolver::new();
+    let mut solver = DelegateSolver::new(IpasirSimpleSolver::new_cadical());
     let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);
@@ -19,20 +20,23 @@ fn main() -> Result<()> {
     println!("extracted = {:?}", extracted);
 
     solver.add_clause([1, 2]);
-    solver.add_clause(&[3, 4]);
-    solver.add_clause(vec![-1, -2]);
-    solver.add_clause(&vec![-3, -4]);
-    solver.add_unit(5);
+    solver.add_clause(vec![3, 4]);
+    solver.add_clause([-1, -2]);
+    solver.add_clause(vec![-3, -4]);
+    solver.add_clause(&[5, -5]);
     let response = solver.solve();
     println!("Solver returned: {:?}", response);
+    assert!(matches!(response, SolveResponse::Sat));
 
     solver.assume(1);
     solver.assume(2);
     let response = solver.solve();
     println!("Solver returned: {:?}", response);
+    assert!(matches!(response, SolveResponse::Unsat));
 
     let response = solver.solve();
     println!("Solver returned: {:?}", response);
+    assert!(matches!(response, SolveResponse::Sat));
 
     for i in 1..=5 {
         println!("solver.val({}) = {:?}", i, solver.value(i));

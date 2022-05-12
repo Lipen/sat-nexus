@@ -4,7 +4,6 @@ use sat_nexus::cadical::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let solver = Cadical::new();
     println!("Solver signature: {}", solver.signature());

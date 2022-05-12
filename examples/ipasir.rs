@@ -6,7 +6,6 @@ use sat_nexus::ipasir::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let solver = Ipasir::new_cadical();
     println!("Solver signature: {}", solver.signature());

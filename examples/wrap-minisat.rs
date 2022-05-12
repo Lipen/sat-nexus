@@ -6,7 +6,6 @@ use sat_nexus::wrappers::minisat::MiniSatSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let mut solver = MiniSatSolver::new();
     let mut context = Context::new();

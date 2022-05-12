@@ -4,7 +4,6 @@ use sat_nexus::minisat::statik::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let solver = MiniSat::new();
     println!("Solver signature: {}", solver.signature());

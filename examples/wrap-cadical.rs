@@ -6,7 +6,6 @@ use sat_nexus::wrappers::cadical::CadicalSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    println!("Hello, world!");
 
     let mut solver = CadicalSolver::new();
     let mut context = Context::new();
