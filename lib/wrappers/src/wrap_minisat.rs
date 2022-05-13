@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
-use itertools::Itertools;
 
 use minisat::dynamic::Lit as MiniSatLit;
 use minisat::dynamic::{LBool, MiniSat};
@@ -73,9 +72,7 @@ impl Solver for MiniSatSolver {
     }
 
     fn add_clause_(&mut self, lits: &[Lit]) {
-        // FIXME
-        let lits = lits.iter().map_into::<Lit>().map(Lit::to_ms_lit);
-        self.inner.add_clause(lits);
+        self.inner.add_clause(lits.iter().copied().map(Lit::to_ms_lit));
     }
 
     fn solve(&mut self) -> SolveResponse {
