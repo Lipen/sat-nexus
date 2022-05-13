@@ -41,8 +41,7 @@ impl From<MiniSat> for MiniSatSolver {
 
 impl Display for MiniSatSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO: change to MiniSatSolver after global refactoring
-        write!(f, "MiniSatSimpleSolver({})", self.signature())
+        write!(f, "{}({})", tynm::type_name::<Self>(), self.signature())
     }
 }
 

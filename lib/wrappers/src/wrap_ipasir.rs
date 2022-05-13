@@ -41,7 +41,7 @@ impl From<Ipasir> for IpasirSolver {
 
 impl Display for IpasirSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "IpasirSolver({})", self.signature())
+        write!(f, "{}({})", tynm::type_name::<Self>(), self.signature())
     }
 }
 

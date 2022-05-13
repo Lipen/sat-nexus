@@ -46,7 +46,7 @@ where
     T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DomainVar<{}>({:?})", tynm::type_name::<T>(), self.domain)
+        write!(f, "{}({:?})", tynm::type_name::<Self>(), self.domain)
     }
 }
 

@@ -31,13 +31,13 @@ impl Default for MockSolver {
 
 impl Display for MockSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.signature())
+        write!(f, "{}({})", tynm::type_name::<Self>(), self.signature())
     }
 }
 
 impl Solver for MockSolver {
     fn signature(&self) -> Cow<str> {
-        "MockSolver".into()
+        "mock".into()
     }
 
     fn reset(&mut self) {

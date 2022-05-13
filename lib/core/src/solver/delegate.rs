@@ -22,7 +22,7 @@ impl From<Box<dyn Solver>> for DelegateSolver {
 
 impl Display for DelegateSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DelegateSolver({})", self.inner)
+        write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
     }
 }
 

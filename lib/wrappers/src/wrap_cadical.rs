@@ -39,7 +39,7 @@ impl From<Cadical> for CadicalSolver {
 
 impl Display for CadicalSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "CadicalSolver({})", self.inner)
+        write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
     }
 }
 
