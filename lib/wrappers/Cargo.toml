@@ -12,6 +12,7 @@ minisat = { path = "../minisat", features = ["dynamic"] }
 itertools = "0.10"
 easy-ext = "1.0.0"
 strum = { version = "0.24", features = ["derive"] }
+tynm = "0.1.6"
 
 [dev-dependencies]
 color-eyre = "0.6"
