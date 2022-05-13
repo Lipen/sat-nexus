@@ -59,3 +59,49 @@ pub trait Solver: Display {
         self.value_(lit.into())
     }
 }
+
+impl<S> Solver for Box<S>
+where
+    S: Solver + ?Sized,
+{
+    fn signature(&self) -> Cow<str> {
+        // equivalent: Solver::signature(&**self)
+        (**self).signature()
+    }
+
+    fn reset(&mut self) {
+        (**self).reset()
+    }
+
+    fn release(&mut self) {
+        (**self).release()
+    }
+
+    fn num_vars(&self) -> usize {
+        (**self).num_vars()
+    }
+
+    fn num_clauses(&self) -> usize {
+        (**self).num_clauses()
+    }
+
+    fn new_var(&mut self) -> Lit {
+        (**self).new_var()
+    }
+
+    fn assume_(&mut self, lit: Lit) {
+        (**self).assume_(lit)
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        (**self).add_clause_(lits)
+    }
+
+    fn solve(&mut self) -> SolveResponse {
+        (**self).solve()
+    }
+
+    fn value_(&self, lit: Lit) -> LitValue {
+        (**self).value_(lit)
+    }
+}
