@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
+use itertools::Itertools;
+
 use crate::lit::Lit;
 
 use super::types::*;
@@ -63,9 +65,24 @@ impl Solver for MockSolver {
         // TODO
     }
 
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        Self: Sized,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.nclauses += 1;
+        self.clauses.push(lits.into_iter().map_into::<Lit>().collect_vec());
+    }
+
     fn add_clause_(&mut self, lits: &[Lit]) {
         self.nclauses += 1;
         self.clauses.push(lits.to_vec());
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.nclauses += 1;
+        self.clauses.push(lits.collect_vec());
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -86,7 +103,7 @@ mod tests {
     #[test]
     fn test_wrap_solver() -> color_eyre::Result<()> {
         let mut solver = MockSolver::new();
-        assert_eq!(solver.signature(), "MockSolver");
+        assert_eq!(solver.signature(), "mock");
 
         let a = solver.new_var();
         let b = solver.new_var();

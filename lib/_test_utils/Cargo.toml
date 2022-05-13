@@ -1,0 +1,11 @@
+[package]
+name = "sat-nexus-test-utils"
+version = "0.1.0"
+edition = "2021"
+
+# This crate is for local usage only!
+publish = false
+
+[dependencies]
+sat-nexus = { path = "../.." }
+color-eyre = "0.6"

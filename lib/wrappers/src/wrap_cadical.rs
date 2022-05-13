@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
+use itertools::Itertools;
+
 use cadical::Cadical;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
@@ -71,9 +73,23 @@ impl Solver for CadicalSolver {
         self.inner.assume(lit.into());
     }
 
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.nclauses += 1;
+        self.inner.add_clause(lits.into_iter().map_into::<Lit>());
+    }
+
     fn add_clause_(&mut self, lits: &[Lit]) {
         self.nclauses += 1;
         self.inner.add_clause(lits.iter().copied());
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.nclauses += 1;
+        self.inner.add_clause(lits)
     }
 
     fn solve(&mut self) -> SolveResponse {

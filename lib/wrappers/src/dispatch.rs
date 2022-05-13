@@ -136,6 +136,14 @@ impl Solver for DispatchingSolver {
         }
     }
 
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.add_clause__(lits),
+            DispatchingSolver::MiniSat(inner) => inner.add_clause__(lits),
+            DispatchingSolver::Cadical(inner) => inner.add_clause__(lits),
+        }
+    }
+
     fn solve(&mut self) -> SolveResponse {
         match self {
             DispatchingSolver::Delegate(inner) => inner.solve(),

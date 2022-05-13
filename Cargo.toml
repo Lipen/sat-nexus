@@ -6,6 +6,7 @@ edition = "2021"
 
 [workspace]
 members = [
+    "lib/_test_utils",
     "lib/ipasir-sys",
     "lib/minisat-sys",
     "lib/cadical-sys",
@@ -19,6 +20,7 @@ cadical = { path = "lib/cadical" }
 minisat = { path = "lib/minisat", features = ["dynamic"] }
 
 [dev-dependencies]
+sat-nexus-test-utils = { path = "lib/_test_utils" }
 cadical-sys = { path = "lib/cadical-sys", features = ["dynamic", "static"] }
 minisat-sys = { path = "lib/minisat-sys", features = ["dynamic", "static"] }
 minisat = { path = "lib/minisat", features = ["dynamic", "static"] }

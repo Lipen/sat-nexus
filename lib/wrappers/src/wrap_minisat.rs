@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
+use itertools::Itertools;
 
 use minisat::dynamic::Lit as MiniSatLit;
 use minisat::dynamic::{LBool, MiniSat};
@@ -71,8 +72,21 @@ impl Solver for MiniSatSolver {
         self.assumptions.push(lit.to_ms_lit());
     }
 
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.inner
+            .add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit));
+    }
+
     fn add_clause_(&mut self, lits: &[Lit]) {
         self.inner.add_clause(lits.iter().copied().map(Lit::to_ms_lit));
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.inner.add_clause(lits.map(Lit::to_ms_lit));
     }
 
     fn solve(&mut self) -> SolveResponse {

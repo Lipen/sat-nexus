@@ -36,7 +36,7 @@ impl Solver for DelegateSolver {
     }
 
     fn release(&mut self) {
-        self.inner.release();
+        self.inner.release()
     }
 
     fn num_vars(&self) -> usize {
@@ -52,11 +52,15 @@ impl Solver for DelegateSolver {
     }
 
     fn assume_(&mut self, lit: Lit) {
-        self.inner.assume_(lit);
+        self.inner.assume_(lit)
     }
 
     fn add_clause_(&mut self, lits: &[Lit]) {
-        self.inner.add_clause_(lits);
+        self.inner.add_clause_(lits)
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.inner.add_clause__(lits)
     }
 
     fn solve(&mut self) -> SolveResponse {

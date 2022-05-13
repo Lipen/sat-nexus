@@ -2,6 +2,7 @@ use color_eyre::eyre::Result;
 
 use sat_nexus::minisat::statik::*;
 
+//noinspection DuplicatedCode
 fn main() -> Result<()> {
     color_eyre::install()?;
 

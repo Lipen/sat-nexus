@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
+use itertools::Itertools;
 
 use ipasir::Ipasir;
 use sat_nexus_core::lit::Lit;
@@ -73,9 +74,24 @@ impl Solver for IpasirSolver {
         self.inner.assume(lit.to_ipasir());
     }
 
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.nclauses += 1;
+        self.inner
+            .add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ipasir));
+    }
+
     fn add_clause_(&mut self, lits: &[Lit]) {
         self.nclauses += 1;
-        self.inner.add_clause(lits.iter().map(|x| x.to_ipasir()));
+        self.inner.add_clause(lits.iter().copied().map(Lit::to_ipasir));
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.nclauses += 1;
+        self.inner.add_clause(lits.map(Lit::to_ipasir));
     }
 
     fn solve(&mut self) -> SolveResponse {

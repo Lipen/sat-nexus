@@ -30,22 +30,26 @@ pub trait Solver: Display {
         self.assume_(lit.into());
     }
 
-    fn add_clause_(&mut self, lits: &[Lit]);
     fn add_clause<I>(&mut self, lits: I)
     where
         Self: Sized,
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
-        let lits = lits.into_iter().map_into::<Lit>().collect_vec();
-        self.add_clause_(&lits);
+        self.add_clause__(&mut lits.into_iter().map_into::<Lit>());
     }
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        self.add_clause__(&mut lits.iter().copied())
+    }
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>);
+
     fn add_unit<L>(&mut self, lit: L)
     where
         Self: Sized,
         L: Into<Lit>,
     {
-        self.add_clause([lit]);
+        // self.add_clause(std::iter::once(lit));
+        self.add_clause(&[lit.into()]);
     }
 
     fn solve(&mut self) -> SolveResponse;
@@ -95,6 +99,10 @@ where
 
     fn add_clause_(&mut self, lits: &[Lit]) {
         (**self).add_clause_(lits)
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        (**self).add_clause__(lits)
     }
 
     fn solve(&mut self) -> SolveResponse {
