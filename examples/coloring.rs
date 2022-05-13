@@ -113,11 +113,7 @@ fn main() -> Result<()> {
     declare_variables(&mut solver, &mut context, num_vertices, num_colors, &edges);
     declare_constraints(&mut solver, &mut context);
 
-    println!(
-        "=> Declared {} variables and {} clauses",
-        solver.num_vars(),
-        solver.num_clauses()
-    );
+    println!("=> Declared {} variables and {} clauses", solver.num_vars(), solver.num_clauses());
 
     println!("=> Solving...");
     let response = solver.solve();

@@ -14,9 +14,7 @@ pub struct Context {
 
 impl Context {
     pub fn new() -> Self {
-        Self {
-            storage: TypeMap::new(),
-        }
+        Self { storage: TypeMap::new() }
     }
 }
 
@@ -45,8 +43,7 @@ impl Context {
     }
 
     pub fn extract<T: 'static>(&self) -> &T {
-        self.get::<T>()
-            .unwrap_or_else(|| panic!("Could not extract {}", type_name::<T>()))
+        self.get::<T>().unwrap_or_else(|| panic!("Could not extract {}", type_name::<T>()))
     }
 
     pub fn insert_named<T: 'static, S>(&mut self, name: S, value: T) -> Option<T>

@@ -70,17 +70,10 @@ where
         // There must be exactly 1 literal which is True in the model.
         debug_assert_eq!(
             1,
-            self.lits
-                .iter()
-                .positions(|&l| matches!(solver.value(l), LitValue::True))
-                .count()
+            self.lits.iter().positions(|&l| matches!(solver.value(l), LitValue::True)).count()
         );
 
-        let index = self
-            .lits
-            .iter()
-            .position(|&l| matches!(solver.value(l), LitValue::True))
-            .unwrap();
+        let index = self.lits.iter().position(|&l| matches!(solver.value(l), LitValue::True)).unwrap();
         self.domain[index]
     }
 }

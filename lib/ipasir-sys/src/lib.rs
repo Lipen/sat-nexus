@@ -16,9 +16,7 @@ impl IpasirFFI {
     pub fn signature(&self) -> &'static str {
         let c_chars = unsafe { self.ipasir_signature() };
         let c_str = unsafe { std::ffi::CStr::from_ptr(c_chars) };
-        c_str
-            .to_str()
-            .expect("The IPASIR implementation returned invalid UTF-8.")
+        c_str.to_str().expect("The IPASIR implementation returned invalid UTF-8.")
     }
 }
 

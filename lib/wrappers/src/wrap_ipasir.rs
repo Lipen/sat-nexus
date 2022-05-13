@@ -80,8 +80,7 @@ impl Solver for IpasirSolver {
         I::Item: Into<Lit>,
     {
         self.nclauses += 1;
-        self.inner
-            .add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ipasir));
+        self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ipasir));
     }
 
     fn add_clause_(&mut self, lits: &[Lit]) {

@@ -25,9 +25,7 @@ fn my_benches(c: &mut Criterion) {
     group.bench_with_input("MiniSat solve", &minisat, |b, minisat| b.iter(|| ms_solve(minisat)));
 
     let cadical = Cadical::new();
-    group.bench_with_input("Cadical solve", &cadical, |b, cadical| {
-        b.iter(|| cadical_solve(cadical))
-    });
+    group.bench_with_input("Cadical solve", &cadical, |b, cadical| b.iter(|| cadical_solve(cadical)));
 
     let ptr = unsafe { statik::ccadical_init() };
     group.bench_with_input("CCaDiCaL solve", &ptr, |b, &ptr| b.iter(|| ccadical_solve(ptr)));

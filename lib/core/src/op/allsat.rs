@@ -25,10 +25,7 @@ pub trait AllSat: Solver + Sized {
     }
 
     fn build_refutation(&self, essential: &[Lit]) -> Vec<Lit> {
-        essential
-            .iter()
-            .map(|&x| if self.value(x).bool() { -x } else { x })
-            .collect_vec()
+        essential.iter().map(|&x| if self.value(x).bool() { -x } else { x }).collect_vec()
     }
 }
 

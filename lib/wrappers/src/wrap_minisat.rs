@@ -77,8 +77,7 @@ impl Solver for MiniSatSolver {
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
-        self.inner
-            .add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit));
+        self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit));
     }
 
     fn add_clause_(&mut self, lits: &[Lit]) {
