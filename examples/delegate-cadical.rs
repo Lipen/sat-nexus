@@ -3,12 +3,12 @@ use color_eyre::eyre::Result;
 use sat_nexus::core::context::Context;
 use sat_nexus::core::solver::delegate::DelegateSolver;
 use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::wrap_cadical_simple::CadicalSimpleSolver;
+use sat_nexus::wrappers::cadical::CadicalSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut solver = DelegateSolver::new(CadicalSimpleSolver::new());
+    let mut solver = DelegateSolver::new(CadicalSolver::new());
     let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);

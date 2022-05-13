@@ -1,8 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
-use itertools::Itertools;
-
 use crate::lit::Lit;
 
 use super::types::*;
@@ -61,20 +59,13 @@ impl Solver for MockSolver {
         Lit::from(self.nvars)
     }
 
-    fn assume<L>(&mut self, _lit: L)
-    where
-        L: Into<Lit>,
-    {
+    fn assume_(&mut self, _lit: Lit) {
         // TODO
     }
 
-    fn add_clause<I>(&mut self, lits: I)
-    where
-        I: IntoIterator,
-        I::Item: Into<Lit>,
-    {
+    fn add_clause_(&mut self, lits: &[Lit]) {
         self.nclauses += 1;
-        self.clauses.push(lits.into_iter().map_into::<Lit>().collect());
+        self.clauses.push(lits.to_vec());
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -82,10 +73,7 @@ impl Solver for MockSolver {
         SolveResponse::Sat
     }
 
-    fn value<L>(&self, _lit: L) -> LitValue
-    where
-        L: Into<Lit>,
-    {
+    fn value_(&self, _lit: Lit) -> LitValue {
         // TODO
         LitValue::False
     }
@@ -100,18 +88,18 @@ mod tests {
         let mut solver = MockSolver::new();
         assert_eq!(solver.signature(), "MockSolver");
 
-        for i in 1..=4 {
-            let var = solver.new_var();
-            assert_eq!(var.get(), i)
-        }
+        let a = solver.new_var();
+        let b = solver.new_var();
+        let c = solver.new_var();
+        let d = solver.new_var();
         assert_eq!(solver.nvars, 4);
 
-        solver.add_clause([1, 2]);
-        solver.add_clause(&[3, 4]);
-        solver.add_clause(vec![-1, -2]);
-        solver.add_clause(&vec![-3, -4]);
-        solver.add_unit(1);
-        solver.add_unit(&-3);
+        solver.add_clause_(&[a, b]);
+        solver.add_clause_(&[c, d]);
+        solver.add_clause_(&[-a, -b]);
+        solver.add_clause_(&[-c, -d]);
+        solver.add_clause_(&[a]);
+        solver.add_clause_(&[-c]);
         assert_eq!(solver.nclauses, 6);
 
         Ok(())

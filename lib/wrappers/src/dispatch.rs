@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use strum::IntoStaticStr;
 
 use sat_nexus_core::lit::Lit;
-use sat_nexus_core::solver::{LitValue, SimpleSolver, SolveResponse, Solver};
+use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 use crate::cadical::CadicalSolver;
 use crate::minisat::MiniSatSolver;
@@ -43,7 +43,7 @@ impl Display for DispatchingSolver {
     }
 }
 
-impl SimpleSolver for DispatchingSolver {
+impl Solver for DispatchingSolver {
     fn signature(&self) -> Cow<str> {
         match self {
             DispatchingSolver::MiniSat(inner) => inner.signature(),
@@ -86,17 +86,17 @@ impl SimpleSolver for DispatchingSolver {
         }
     }
 
-    fn assume(&mut self, lit: Lit) {
+    fn assume_(&mut self, lit: Lit) {
         match self {
-            DispatchingSolver::MiniSat(inner) => inner.assume(lit),
-            DispatchingSolver::Cadical(inner) => inner.assume(lit),
+            DispatchingSolver::MiniSat(inner) => inner.assume_(lit),
+            DispatchingSolver::Cadical(inner) => inner.assume_(lit),
         }
     }
 
-    fn add_clause(&mut self, lits: &[Lit]) {
+    fn add_clause_(&mut self, lits: &[Lit]) {
         match self {
-            DispatchingSolver::MiniSat(inner) => inner.add_clause(lits),
-            DispatchingSolver::Cadical(inner) => inner.add_clause(lits),
+            DispatchingSolver::MiniSat(inner) => inner.add_clause_(lits),
+            DispatchingSolver::Cadical(inner) => inner.add_clause_(lits),
         }
     }
 
@@ -107,10 +107,10 @@ impl SimpleSolver for DispatchingSolver {
         }
     }
 
-    fn value(&self, lit: Lit) -> LitValue {
+    fn value_(&self, lit: Lit) -> LitValue {
         match self {
-            DispatchingSolver::MiniSat(inner) => inner.value(lit),
-            DispatchingSolver::Cadical(inner) => inner.value(lit),
+            DispatchingSolver::MiniSat(inner) => inner.value_(lit),
+            DispatchingSolver::Cadical(inner) => inner.value_(lit),
         }
     }
 }

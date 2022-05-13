@@ -1,13 +1,14 @@
 use color_eyre::eyre::Result;
 
 use sat_nexus::core::context::Context;
+use sat_nexus::core::solver::delegate::DelegateSolver;
 use sat_nexus::core::solver::mock::MockSolver;
 use sat_nexus::core::solver::*;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut solver = MockSolver::new();
+    let mut solver = DelegateSolver::new(MockSolver::new());
     let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);

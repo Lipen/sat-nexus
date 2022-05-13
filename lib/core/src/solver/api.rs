@@ -1,27 +1,16 @@
 use std::borrow::Cow;
 use std::fmt::Display;
 
+use itertools::Itertools;
+
 use crate::lit::Lit;
 
 use super::types::*;
 
-/// Generic SAT-solver interface.
-///
-/// ---
-///
-/// **Note:** `Solver` trait is NOT object-safe, by design.
-///
-/// ```compile_fail
-/// # use sat_nexus_core::solver::Solver;
-/// // should not compile since `Solver` is not object-safe
-/// let _: Option<&dyn Solver> = None;
-/// ```
-///
-/// If you need a generic `Solver` implementation,
-/// use `DelegatingSolver` which delegates to `DispatchingSolver`,
-/// which, in turn, implements object-safe `SimpleSolver` trait.
-///
-pub trait Solver: Sized + Display {
+// `Solver` trait is object-safe.
+const _: Option<&dyn Solver> = None;
+
+pub trait Solver: Display {
     fn signature(&self) -> Cow<str>;
 
     fn reset(&mut self);
@@ -32,17 +21,28 @@ pub trait Solver: Sized + Display {
 
     fn new_var(&mut self) -> Lit;
 
+    fn assume_(&mut self, lit: Lit);
     fn assume<L>(&mut self, lit: L)
     where
-        L: Into<Lit>;
+        Self: Sized,
+        L: Into<Lit>,
+    {
+        self.assume_(lit.into());
+    }
 
+    fn add_clause_(&mut self, lits: &[Lit]);
     fn add_clause<I>(&mut self, lits: I)
     where
+        Self: Sized,
         I: IntoIterator,
-        I::Item: Into<Lit>;
-
+        I::Item: Into<Lit>,
+    {
+        let lits = lits.into_iter().map_into::<Lit>().collect_vec();
+        self.add_clause_(&lits);
+    }
     fn add_unit<L>(&mut self, lit: L)
     where
+        Self: Sized,
         L: Into<Lit>,
     {
         self.add_clause([lit]);
@@ -50,9 +50,12 @@ pub trait Solver: Sized + Display {
 
     fn solve(&mut self) -> SolveResponse;
 
+    fn value_(&self, lit: Lit) -> LitValue;
     fn value<L>(&self, lit: L) -> LitValue
     where
-        L: Into<Lit>;
-
-    // TODO: model
+        Self: Sized,
+        L: Into<Lit>,
+    {
+        self.value_(lit.into())
+    }
 }

@@ -3,12 +3,12 @@ use color_eyre::eyre::Result;
 use sat_nexus::core::context::Context;
 use sat_nexus::core::solver::delegate::DelegateSolver;
 use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::wrap_minisat_simple::MiniSatSimpleSolver;
+use sat_nexus::wrappers::minisat::MiniSatSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut solver = DelegateSolver::new(MiniSatSimpleSolver::new());
+    let mut solver = DelegateSolver::new(MiniSatSolver::new());
     let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);

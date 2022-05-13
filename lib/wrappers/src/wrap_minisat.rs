@@ -41,7 +41,8 @@ impl From<MiniSat> for MiniSatSolver {
 
 impl Display for MiniSatSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "MiniSatSolver({})", self.signature())
+        // TODO: change to MiniSatSolver after global refactoring
+        write!(f, "MiniSatSimpleSolver({})", self.signature())
     }
 }
 
@@ -68,19 +69,13 @@ impl Solver for MiniSatSolver {
         self.inner.new_lit().to_lit()
     }
 
-    fn assume<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.assumptions.push(lit.into().to_ms_lit());
+    fn assume_(&mut self, lit: Lit) {
+        self.assumptions.push(lit.to_ms_lit());
     }
 
-    fn add_clause<I>(&mut self, lits: I)
-    where
-        I: IntoIterator,
-        I::Item: Into<Lit>,
-    {
-        let lits = lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit);
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        // FIXME
+        let lits = lits.iter().map_into::<Lit>().map(Lit::to_ms_lit);
         self.inner.add_clause(lits);
     }
 
@@ -93,11 +88,8 @@ impl Solver for MiniSatSolver {
         }
     }
 
-    fn value<L>(&self, lit: L) -> LitValue
-    where
-        L: Into<Lit>,
-    {
-        match self.inner.model_value_lit(lit.into().to_ms_lit()) {
+    fn value_(&self, lit: Lit) -> LitValue {
+        match self.inner.model_value_lit(lit.to_ms_lit()) {
             LBool::True => LitValue::True,
             LBool::False => LitValue::False,
             LBool::Undef => panic!("model_value_lit returned Undef"),
@@ -138,25 +130,26 @@ mod tests {
         let mut solver = MiniSatSolver::new();
         assert!(solver.signature().contains("minisat"));
 
-        solver.new_var();
-        solver.new_var();
-        solver.new_var();
-        solver.new_var();
-        assert_eq!(4, solver.num_vars());
+        // Initializing variables
+        let a = solver.new_var();
+        let b = solver.new_var();
+        let c = solver.new_var();
+        let d = solver.new_var();
+        assert_eq!(solver.num_vars(), 4);
 
-        // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
-        solver.add_clause([1, 2]);
-        solver.add_clause(&[3, 4]);
-        solver.add_clause(vec![-1, -2]);
-        solver.add_clause(&vec![-3, -4]);
+        // Adding [(a or b) and (c or d) and not(a and b) and not(c and d)]
+        solver.add_clause_(&[a, b]);
+        solver.add_clause_(&[c, d]);
+        solver.add_clause_(&[-a, -b]);
+        solver.add_clause_(&[-c, -d]);
 
         // Problem is satisfiable
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Sat);
 
-        // Assuming both 1 and 2 to be true
-        solver.assume(1);
-        solver.assume(&2);
+        // Assuming both a and b to be true
+        solver.assume_(a);
+        solver.assume_(b);
         // Problem is unsatisfiable under assumptions
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Unsat);

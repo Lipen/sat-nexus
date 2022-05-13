@@ -1,27 +1,22 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
-use itertools::Itertools;
-
 use crate::lit::Lit;
-use crate::solver::{LitValue, SimpleSolver, SolveResponse};
+use crate::solver::{LitValue, SolveResponse, Solver};
 
 pub struct DelegateSolver {
-    inner: Box<dyn SimpleSolver>,
+    inner: Box<dyn Solver>,
 }
 
 impl DelegateSolver {
-    pub fn new(inner: impl SimpleSolver + 'static) -> Self {
+    pub fn new(inner: impl Solver + 'static) -> Self {
         Self { inner: Box::new(inner) }
     }
 }
 
-impl<S> From<S> for DelegateSolver
-where
-    S: SimpleSolver + 'static,
-{
-    fn from(s: S) -> Self {
-        DelegateSolver::new(s)
+impl From<Box<dyn Solver>> for DelegateSolver {
+    fn from(inner: Box<dyn Solver>) -> Self {
+        DelegateSolver { inner }
     }
 }
 
@@ -31,55 +26,44 @@ impl Display for DelegateSolver {
     }
 }
 
-impl DelegateSolver {
-    pub fn signature(&self) -> Cow<str> {
+impl Solver for DelegateSolver {
+    fn signature(&self) -> Cow<str> {
         self.inner.signature()
     }
 
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         self.inner.reset();
     }
 
-    pub fn release(&mut self) {
+    fn release(&mut self) {
         self.inner.release();
     }
 
-    pub fn num_vars(&self) -> usize {
+    fn num_vars(&self) -> usize {
         self.inner.num_vars()
     }
 
-    pub fn num_clauses(&self) -> usize {
+    fn num_clauses(&self) -> usize {
         self.inner.num_clauses()
     }
 
-    pub fn new_var(&mut self) -> Lit {
+    fn new_var(&mut self) -> Lit {
         self.inner.new_var()
     }
 
-    pub fn assume<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.inner.assume(lit.into());
+    fn assume_(&mut self, lit: Lit) {
+        self.inner.assume_(lit);
     }
 
-    pub fn add_clause<I>(&mut self, lits: I)
-    where
-        I: IntoIterator,
-        I::Item: Into<Lit>,
-    {
-        let lits = lits.into_iter().map_into().collect_vec();
-        self.inner.add_clause(&lits);
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        self.inner.add_clause_(lits);
     }
 
-    pub fn solve(&mut self) -> SolveResponse {
+    fn solve(&mut self) -> SolveResponse {
         self.inner.solve()
     }
 
-    pub fn value<L>(&self, lit: L) -> LitValue
-    where
-        L: Into<Lit>,
-    {
-        self.inner.value(lit.into())
+    fn value_(&self, lit: Lit) -> LitValue {
+        self.inner.value_(lit)
     }
 }

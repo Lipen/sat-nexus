@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
 use easy_ext::ext;
-use itertools::Itertools;
 
 use ipasir::Ipasir;
 use sat_nexus_core::lit::Lit;
@@ -70,21 +69,13 @@ impl Solver for IpasirSolver {
         Lit::new(self.nvars as i32)
     }
 
-    fn assume<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.inner.assume(lit.into().to_ipasir());
+    fn assume_(&mut self, lit: Lit) {
+        self.inner.assume(lit.to_ipasir());
     }
 
-    fn add_clause<I>(&mut self, lits: I)
-    where
-        I: IntoIterator,
-        I::Item: Into<Lit>,
-    {
+    fn add_clause_(&mut self, lits: &[Lit]) {
         self.nclauses += 1;
-        let lits = lits.into_iter().map_into::<Lit>().map(|x| x.to_ipasir());
-        self.inner.add_clause(lits);
+        self.inner.add_clause(lits.iter().map(|x| x.to_ipasir()));
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -99,11 +90,8 @@ impl Solver for IpasirSolver {
         }
     }
 
-    fn value<L>(&self, lit: L) -> LitValue
-    where
-        L: Into<Lit>,
-    {
-        match self.inner.val(lit.into().to_ipasir()) {
+    fn value_(&self, lit: Lit) -> LitValue {
+        match self.inner.val(lit.to_ipasir()) {
             Ok(ipasir::LitValue::True) => LitValue::True,
             Ok(ipasir::LitValue::False) => LitValue::False,
             Ok(ipasir::LitValue::DontCare) => LitValue::DontCare,
@@ -128,19 +116,26 @@ mod tests {
         let mut solver = IpasirSolver::new_cadical();
         assert!(solver.signature().contains("cadical"));
 
-        // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
-        solver.add_clause([1, 2]);
-        solver.add_clause(&[3, 4]);
-        solver.add_clause(vec![-1, -2]);
-        solver.add_clause(&vec![-3, -4]);
+        // Initializing variables
+        let a = solver.new_var();
+        let b = solver.new_var();
+        let c = solver.new_var();
+        let d = solver.new_var();
+        assert_eq!(solver.num_vars(), 4);
+
+        // Adding [(a or b) and (c or d) and not(a and b) and not(c and d)]
+        solver.add_clause_(&[a, b]);
+        solver.add_clause_(&[c, d]);
+        solver.add_clause_(&[-a, -b]);
+        solver.add_clause_(&[-c, -d]);
 
         // Problem is satisfiable
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Sat);
 
-        // Assuming both 1 and 2 to be true
-        solver.assume(1);
-        solver.assume(&2);
+        // Assuming both a and b to be true
+        solver.assume_(a);
+        solver.assume_(b);
         // Problem is unsatisfiable under assumptions
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Unsat);
