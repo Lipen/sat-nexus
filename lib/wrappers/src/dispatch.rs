@@ -207,3 +207,70 @@ impl Solver for DispatchingSolver {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run_test(mut solver: DispatchingSolver) -> color_eyre::Result<()> {
+        // Initializing variables
+        let a = solver.new_var();
+        let b = solver.new_var();
+        let c = solver.new_var();
+        let d = solver.new_var();
+        assert_eq!(solver.num_vars(), 4);
+
+        // Adding [(a or b) and (c or d) and not(a and b) and not(c and d)]
+        solver.add_clause([a, b]);
+        solver.add_clause(&[c, d]);
+        solver.add_clause(vec![-a, -b]);
+        solver.add_clause(&vec![-c, -d]);
+
+        // Problem is satisfiable
+        let response = solver.solve();
+        assert_eq!(response, SolveResponse::Sat);
+
+        // Assuming both a and b to be true
+        solver.assume(a);
+        solver.assume(b);
+        // Problem is unsatisfiable under assumptions
+        let response = solver.solve();
+        assert_eq!(response, SolveResponse::Unsat);
+
+        // `solve` resets assumptions, so calling it again should produce SAT
+        let response = solver.solve();
+        assert_eq!(response, SolveResponse::Sat);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_dispatch_delegate_minisat() -> color_eyre::Result<()> {
+        let solver = DispatchingSolver::new_delegate(MiniSatSolver::new());
+        assert!(matches!(solver, DispatchingSolver::Delegate(_)));
+        assert!(solver.signature().contains("minisat"));
+        run_test(solver)
+    }
+    #[test]
+    fn test_dispatch_delegate_cadical() -> color_eyre::Result<()> {
+        let solver = DispatchingSolver::new_delegate(CadicalSolver::new());
+        assert!(matches!(solver, DispatchingSolver::Delegate(_)));
+        assert!(solver.signature().contains("cadical"));
+        run_test(solver)
+    }
+
+    #[test]
+    fn test_dispatch_minisat() -> color_eyre::Result<()> {
+        let solver = DispatchingSolver::new_minisat();
+        assert!(matches!(solver, DispatchingSolver::MiniSat(_)));
+        assert!(solver.signature().contains("minisat"));
+        run_test(solver)
+    }
+    #[test]
+    fn test_dispatch_cadical() -> color_eyre::Result<()> {
+        let solver = DispatchingSolver::new_cadical();
+        assert!(matches!(solver, DispatchingSolver::Cadical(_)));
+        assert!(solver.signature().contains("cadical"));
+        run_test(solver)
+    }
+}
