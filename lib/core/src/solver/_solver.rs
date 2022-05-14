@@ -19,7 +19,7 @@ pub trait BaseSolver {
 
 impl<S> BaseSolver for Box<S>
 where
-    S: BaseSolver + ?Sized,
+    S: BaseSolver,
 {
     fn assume_(&mut self, lit: Lit) {
         (**self).assume_(lit)
@@ -93,7 +93,7 @@ pub trait Solver: BaseSolver + Display {
 
 impl<S> Solver for Box<S>
 where
-    S: Solver + ?Sized,
+    S: Solver,
 {
     fn signature(&self) -> Cow<str> {
         // equivalent: Solver::signature(&**self)
