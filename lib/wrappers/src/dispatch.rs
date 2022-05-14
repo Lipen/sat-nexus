@@ -154,11 +154,56 @@ impl Solver for DispatchingSolver {
         }
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.assume(lit),
+            DispatchingSolver::MiniSat(inner) => inner.assume(lit),
+            DispatchingSolver::Cadical(inner) => inner.assume(lit),
+        }
+    }
+
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.add_clause(lits),
+            DispatchingSolver::MiniSat(inner) => inner.add_clause(lits),
+            DispatchingSolver::Cadical(inner) => inner.add_clause(lits),
+        }
+    }
+
+    fn add_unit<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.add_unit(lit),
+            DispatchingSolver::MiniSat(inner) => inner.add_unit(lit),
+            DispatchingSolver::Cadical(inner) => inner.add_unit(lit),
+        }
+    }
+
     fn solve(&mut self) -> SolveResponse {
         match self {
             DispatchingSolver::Delegate(inner) => inner.solve(),
             DispatchingSolver::MiniSat(inner) => inner.solve(),
             DispatchingSolver::Cadical(inner) => inner.solve(),
+        }
+    }
+
+    fn value<L>(&self, lit: L) -> LitValue
+    where
+        L: Into<Lit>,
+    {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.value(lit),
+            DispatchingSolver::MiniSat(inner) => inner.value(lit),
+            DispatchingSolver::Cadical(inner) => inner.value(lit),
         }
     }
 }
