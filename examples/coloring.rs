@@ -7,9 +7,10 @@ use ndarray::ArrayD;
 use sat_nexus::core::context::Context;
 use sat_nexus::core::domainvar::DomainVar;
 use sat_nexus::core::op::ops::Ops;
+use sat_nexus::core::solver::delegate::DelegateSolver;
+use sat_nexus::core::solver::ext::SolverExt;
 use sat_nexus::core::solver::*;
 use sat_nexus::wrappers::ipasir::IpasirSolver;
-use sat_nexus_core::solver::delegate::DelegateSolver;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);

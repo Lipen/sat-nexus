@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus_core::cnf::Cnf;
+use sat_nexus::core::cnf::Cnf;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
