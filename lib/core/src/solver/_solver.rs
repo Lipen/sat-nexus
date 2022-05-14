@@ -49,7 +49,7 @@ pub trait Solver: Display {
         L: Into<Lit>,
     {
         // self.add_clause(std::iter::once(lit));
-        self.add_clause(&[lit.into()]);
+        self.add_clause_(&[lit.into()]);
     }
 
     fn solve(&mut self) -> SolveResponse;
