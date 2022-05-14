@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
-use easy_ext::ext;
 use itertools::Itertools;
+use tap::Pipe;
 
 use minisat::dynamic::Lit as MiniSatLit;
 use minisat::dynamic::{LBool, MiniSat};
@@ -47,11 +47,11 @@ impl Display for MiniSatSolver {
 
 impl BaseSolver for MiniSatSolver {
     fn assume_(&mut self, lit: Lit) {
-        self.assumptions.push(lit.to_ms_lit());
+        self.assumptions.push(lit.pipe(to_ms));
     }
 
     fn value_(&self, lit: Lit) -> LitValue {
-        match self.inner.model_value_lit(lit.to_ms_lit()) {
+        match self.inner.model_value_lit(lit.pipe(to_ms)) {
             LBool::True => LitValue::True,
             LBool::False => LitValue::False,
             LBool::Undef => panic!("model_value_lit returned Undef"),
@@ -59,11 +59,11 @@ impl BaseSolver for MiniSatSolver {
     }
 
     fn add_clause_(&mut self, lits: &[Lit]) {
-        self.inner.add_clause(lits.iter().copied().map(Lit::to_ms_lit));
+        self.inner.add_clause(lits.iter().copied().map(to_ms));
     }
 
     fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.inner.add_clause(lits.map(Lit::to_ms_lit));
+        self.inner.add_clause(lits.map(to_ms));
     }
 }
 
@@ -87,7 +87,7 @@ impl Solver for MiniSatSolver {
     }
 
     fn new_var(&mut self) -> Lit {
-        self.inner.new_lit().to_lit()
+        self.inner.new_lit().pipe(from_ms)
     }
 
     fn add_clause<I>(&mut self, lits: I)
@@ -95,7 +95,7 @@ impl Solver for MiniSatSolver {
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
-        self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit));
+        self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(to_ms));
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -108,29 +108,21 @@ impl Solver for MiniSatSolver {
     }
 }
 
-// TODO: Replace [ext]s with bare top-level functions `lit_to_ms` and `lit_from_ms`.
-
-#[ext]
-impl Lit {
-    fn to_ms_lit(self) -> MiniSatLit {
-        let lit: i32 = self.into();
-        let var = lit.abs() - 1; // 0-based variable index
-        let sign = if lit > 0 { 0 } else { 1 }; // 0 if positive, 1 if negative
-        (2 * var + sign).into()
-    }
+fn to_ms(lit: Lit) -> MiniSatLit {
+    let lit: i32 = lit.into();
+    let var = lit.abs() - 1; // 0-based variable index
+    let sign = if lit > 0 { 0 } else { 1 }; // 0 if positive, 1 if negative
+    (2 * var + sign).into()
 }
 
-#[ext]
-impl MiniSatLit {
-    fn to_lit(self) -> Lit {
-        let lit: i32 = self.into();
-        let var = (lit >> 1) + 1; // 1-based variable index
-        let sign = lit & 1; // 0 if negative, 1 if positive
-        if sign > 0 {
-            Lit::new(var)
-        } else {
-            Lit::new(-var)
-        }
+fn from_ms(lit: MiniSatLit) -> Lit {
+    let lit: i32 = lit.into();
+    let var = (lit >> 1) + 1; // 1-based variable index
+    let sign = lit & 1; // 0 if negative, 1 if positive
+    if sign > 0 {
+        Lit::new(var)
+    } else {
+        Lit::new(-var)
     }
 }
 

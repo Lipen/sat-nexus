@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
-use easy_ext::ext;
 use itertools::Itertools;
+use tap::Pipe;
 
 use ipasir::Ipasir;
 use sat_nexus_core::lit::Lit;
@@ -48,11 +48,11 @@ impl Display for IpasirSolver {
 
 impl BaseSolver for IpasirSolver {
     fn assume_(&mut self, lit: Lit) {
-        self.inner.assume(lit.to_ipasir());
+        self.inner.assume(lit.pipe(to_ipasir));
     }
 
     fn value_(&self, lit: Lit) -> LitValue {
-        match self.inner.val(lit.to_ipasir()) {
+        match self.inner.val(lit.pipe(to_ipasir)) {
             Ok(ipasir::LitValue::True) => LitValue::True,
             Ok(ipasir::LitValue::False) => LitValue::False,
             Ok(ipasir::LitValue::DontCare) => LitValue::DontCare,
@@ -62,12 +62,12 @@ impl BaseSolver for IpasirSolver {
 
     fn add_clause_(&mut self, lits: &[Lit]) {
         self.nclauses += 1;
-        self.inner.add_clause(lits.iter().copied().map(Lit::to_ipasir));
+        self.inner.add_clause(lits.iter().copied().map(to_ipasir));
     }
 
     fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
         self.nclauses += 1;
-        self.inner.add_clause(lits.map(Lit::to_ipasir));
+        self.inner.add_clause(lits.map(to_ipasir));
     }
 }
 
@@ -101,7 +101,7 @@ impl Solver for IpasirSolver {
         I::Item: Into<Lit>,
     {
         self.nclauses += 1;
-        self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ipasir));
+        self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(to_ipasir));
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -117,11 +117,8 @@ impl Solver for IpasirSolver {
     }
 }
 
-#[ext]
-impl Lit {
-    fn to_ipasir(self) -> ipasir::Lit {
-        unsafe { ipasir::Lit::new_unchecked(self.into()) }
-    }
+fn to_ipasir(lit: Lit) -> ipasir::Lit {
+    unsafe { ipasir::Lit::new_unchecked(lit.into()) }
 }
 
 #[cfg(test)]
