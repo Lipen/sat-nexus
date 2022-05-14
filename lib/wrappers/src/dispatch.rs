@@ -5,7 +5,7 @@ use strum::IntoStaticStr;
 
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::delegate::DelegateSolver;
-use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
+use sat_nexus_core::solver::{BaseSolver, LitValue, SolveResponse, Solver};
 
 use crate::cadical::CadicalSolver;
 use crate::minisat::MiniSatSolver;
@@ -71,6 +71,40 @@ impl Display for DispatchingSolver {
     }
 }
 
+impl BaseSolver for DispatchingSolver {
+    fn assume_(&mut self, lit: Lit) {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.assume_(lit),
+            DispatchingSolver::MiniSat(inner) => inner.assume_(lit),
+            DispatchingSolver::Cadical(inner) => inner.assume_(lit),
+        }
+    }
+
+    fn value_(&self, lit: Lit) -> LitValue {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.value_(lit),
+            DispatchingSolver::MiniSat(inner) => inner.value_(lit),
+            DispatchingSolver::Cadical(inner) => inner.value_(lit),
+        }
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.add_clause_(lits),
+            DispatchingSolver::MiniSat(inner) => inner.add_clause_(lits),
+            DispatchingSolver::Cadical(inner) => inner.add_clause_(lits),
+        }
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        match self {
+            DispatchingSolver::Delegate(inner) => inner.add_clause__(lits),
+            DispatchingSolver::MiniSat(inner) => inner.add_clause__(lits),
+            DispatchingSolver::Cadical(inner) => inner.add_clause__(lits),
+        }
+    }
+}
+
 impl Solver for DispatchingSolver {
     fn signature(&self) -> Cow<str> {
         match self {
@@ -120,43 +154,11 @@ impl Solver for DispatchingSolver {
         }
     }
 
-    fn assume_(&mut self, lit: Lit) {
-        match self {
-            DispatchingSolver::Delegate(inner) => inner.assume_(lit),
-            DispatchingSolver::MiniSat(inner) => inner.assume_(lit),
-            DispatchingSolver::Cadical(inner) => inner.assume_(lit),
-        }
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        match self {
-            DispatchingSolver::Delegate(inner) => inner.add_clause_(lits),
-            DispatchingSolver::MiniSat(inner) => inner.add_clause_(lits),
-            DispatchingSolver::Cadical(inner) => inner.add_clause_(lits),
-        }
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        match self {
-            DispatchingSolver::Delegate(inner) => inner.add_clause__(lits),
-            DispatchingSolver::MiniSat(inner) => inner.add_clause__(lits),
-            DispatchingSolver::Cadical(inner) => inner.add_clause__(lits),
-        }
-    }
-
     fn solve(&mut self) -> SolveResponse {
         match self {
             DispatchingSolver::Delegate(inner) => inner.solve(),
             DispatchingSolver::MiniSat(inner) => inner.solve(),
             DispatchingSolver::Cadical(inner) => inner.solve(),
-        }
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        match self {
-            DispatchingSolver::Delegate(inner) => inner.value_(lit),
-            DispatchingSolver::MiniSat(inner) => inner.value_(lit),
-            DispatchingSolver::Cadical(inner) => inner.value_(lit),
         }
     }
 }

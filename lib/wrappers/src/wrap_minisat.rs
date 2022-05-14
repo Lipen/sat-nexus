@@ -7,7 +7,7 @@ use itertools::Itertools;
 use minisat::dynamic::Lit as MiniSatLit;
 use minisat::dynamic::{LBool, MiniSat};
 use sat_nexus_core::lit::Lit;
-use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
+use sat_nexus_core::solver::{BaseSolver, LitValue, SolveResponse, Solver};
 
 pub struct MiniSatSolver {
     inner: MiniSat,
@@ -45,6 +45,28 @@ impl Display for MiniSatSolver {
     }
 }
 
+impl BaseSolver for MiniSatSolver {
+    fn assume_(&mut self, lit: Lit) {
+        self.assumptions.push(lit.to_ms_lit());
+    }
+
+    fn value_(&self, lit: Lit) -> LitValue {
+        match self.inner.model_value_lit(lit.to_ms_lit()) {
+            LBool::True => LitValue::True,
+            LBool::False => LitValue::False,
+            LBool::Undef => panic!("model_value_lit returned Undef"),
+        }
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        self.inner.add_clause(lits.iter().copied().map(Lit::to_ms_lit));
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.inner.add_clause(lits.map(Lit::to_ms_lit));
+    }
+}
+
 impl Solver for MiniSatSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
@@ -68,24 +90,12 @@ impl Solver for MiniSatSolver {
         self.inner.new_lit().to_lit()
     }
 
-    fn assume_(&mut self, lit: Lit) {
-        self.assumptions.push(lit.to_ms_lit());
-    }
-
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
         self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ms_lit));
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.inner.add_clause(lits.iter().copied().map(Lit::to_ms_lit));
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.inner.add_clause(lits.map(Lit::to_ms_lit));
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -96,15 +106,9 @@ impl Solver for MiniSatSolver {
             false => SolveResponse::Unsat,
         }
     }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        match self.inner.model_value_lit(lit.to_ms_lit()) {
-            LBool::True => LitValue::True,
-            LBool::False => LitValue::False,
-            LBool::Undef => panic!("model_value_lit returned Undef"),
-        }
-    }
 }
+
+// TODO: Replace [ext]s with bare top-level functions `lit_to_ms` and `lit_from_ms`.
 
 #[ext]
 impl Lit {

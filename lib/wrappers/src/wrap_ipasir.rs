@@ -6,7 +6,7 @@ use itertools::Itertools;
 
 use ipasir::Ipasir;
 use sat_nexus_core::lit::Lit;
-use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
+use sat_nexus_core::solver::{BaseSolver, LitValue, SolveResponse, Solver};
 
 pub struct IpasirSolver {
     inner: Ipasir,
@@ -46,6 +46,31 @@ impl Display for IpasirSolver {
     }
 }
 
+impl BaseSolver for IpasirSolver {
+    fn assume_(&mut self, lit: Lit) {
+        self.inner.assume(lit.to_ipasir());
+    }
+
+    fn value_(&self, lit: Lit) -> LitValue {
+        match self.inner.val(lit.to_ipasir()) {
+            Ok(ipasir::LitValue::True) => LitValue::True,
+            Ok(ipasir::LitValue::False) => LitValue::False,
+            Ok(ipasir::LitValue::DontCare) => LitValue::DontCare,
+            Err(e) => panic!("Could not get literal value: {}", e),
+        }
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        self.nclauses += 1;
+        self.inner.add_clause(lits.iter().copied().map(Lit::to_ipasir));
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.nclauses += 1;
+        self.inner.add_clause(lits.map(Lit::to_ipasir));
+    }
+}
+
 impl Solver for IpasirSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
@@ -70,10 +95,6 @@ impl Solver for IpasirSolver {
         Lit::new(self.nvars as i32)
     }
 
-    fn assume_(&mut self, lit: Lit) {
-        self.inner.assume(lit.to_ipasir());
-    }
-
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -81,16 +102,6 @@ impl Solver for IpasirSolver {
     {
         self.nclauses += 1;
         self.inner.add_clause(lits.into_iter().map_into::<Lit>().map(Lit::to_ipasir));
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.nclauses += 1;
-        self.inner.add_clause(lits.iter().copied().map(Lit::to_ipasir));
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.nclauses += 1;
-        self.inner.add_clause(lits.map(Lit::to_ipasir));
     }
 
     fn solve(&mut self) -> SolveResponse {
@@ -102,15 +113,6 @@ impl Solver for IpasirSolver {
                 eprintln!("Could not solve: {}", e);
                 SolveResponse::Unknown
             }
-        }
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        match self.inner.val(lit.to_ipasir()) {
-            Ok(ipasir::LitValue::True) => LitValue::True,
-            Ok(ipasir::LitValue::False) => LitValue::False,
-            Ok(ipasir::LitValue::DontCare) => LitValue::DontCare,
-            Err(e) => panic!("Could not get literal value: {}", e),
         }
     }
 }

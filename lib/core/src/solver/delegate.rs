@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
 use crate::lit::Lit;
-use crate::solver::{LitValue, SolveResponse, Solver};
+use crate::solver::{BaseSolver, LitValue, SolveResponse, Solver};
 
 pub struct DelegateSolver {
     inner: Box<dyn Solver>,
@@ -23,6 +23,24 @@ impl From<Box<dyn Solver>> for DelegateSolver {
 impl Display for DelegateSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
+    }
+}
+
+impl BaseSolver for DelegateSolver {
+    fn assume_(&mut self, lit: Lit) {
+        self.inner.assume_(lit)
+    }
+
+    fn value_(&self, lit: Lit) -> LitValue {
+        self.inner.value_(lit)
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        self.inner.add_clause_(lits)
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.inner.add_clause__(lits)
     }
 }
 
@@ -51,23 +69,7 @@ impl Solver for DelegateSolver {
         self.inner.new_var()
     }
 
-    fn assume_(&mut self, lit: Lit) {
-        self.inner.assume_(lit)
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.inner.add_clause_(lits)
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.inner.add_clause__(lits)
-    }
-
     fn solve(&mut self) -> SolveResponse {
         self.inner.solve()
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        self.inner.value_(lit)
     }
 }

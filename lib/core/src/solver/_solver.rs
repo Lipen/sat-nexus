@@ -7,10 +7,43 @@ use crate::lit::Lit;
 
 use super::_types::*;
 
+// `BaseSolver` trait is object-safe.
+const _: Option<&dyn BaseSolver> = None;
+
+pub trait BaseSolver {
+    fn assume_(&mut self, lit: Lit);
+    fn value_(&self, lit: Lit) -> LitValue;
+    fn add_clause_(&mut self, lits: &[Lit]);
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>);
+}
+
+impl<S> BaseSolver for Box<S>
+where
+    S: BaseSolver + ?Sized,
+{
+    fn assume_(&mut self, lit: Lit) {
+        (**self).assume_(lit)
+    }
+
+    fn value_(&self, lit: Lit) -> LitValue {
+        (**self).value_(lit)
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        (**self).add_clause_(lits)
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        (**self).add_clause__(lits)
+    }
+}
+
+//===================================================================
+
 // `Solver` trait is object-safe.
 const _: Option<&dyn Solver> = None;
 
-pub trait Solver: Display {
+pub trait Solver: BaseSolver + Display {
     fn signature(&self) -> Cow<str>;
 
     fn reset(&mut self);
@@ -21,7 +54,6 @@ pub trait Solver: Display {
 
     fn new_var(&mut self) -> Lit;
 
-    fn assume_(&mut self, lit: Lit);
     fn assume<L>(&mut self, lit: L)
     where
         Self: Sized,
@@ -30,6 +62,7 @@ pub trait Solver: Display {
         self.assume_(lit.into());
     }
 
+    // Note: it is strongly recommended to implement this method and not rely on the default impl.
     fn add_clause<I>(&mut self, lits: I)
     where
         Self: Sized,
@@ -38,23 +71,17 @@ pub trait Solver: Display {
     {
         self.add_clause__(&mut lits.into_iter().map_into::<Lit>());
     }
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.add_clause__(&mut lits.iter().copied())
-    }
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>);
 
     fn add_unit<L>(&mut self, lit: L)
     where
         Self: Sized,
         L: Into<Lit>,
     {
-        // self.add_clause(std::iter::once(lit));
         self.add_clause_(&[lit.into()]);
     }
 
     fn solve(&mut self) -> SolveResponse;
 
-    fn value_(&self, lit: Lit) -> LitValue;
     fn value<L>(&self, lit: L) -> LitValue
     where
         Self: Sized,
@@ -93,23 +120,7 @@ where
         (**self).new_var()
     }
 
-    fn assume_(&mut self, lit: Lit) {
-        (**self).assume_(lit)
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        (**self).add_clause_(lits)
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        (**self).add_clause__(lits)
-    }
-
     fn solve(&mut self) -> SolveResponse {
         (**self).solve()
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        (**self).value_(lit)
     }
 }

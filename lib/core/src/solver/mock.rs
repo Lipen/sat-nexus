@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 use itertools::Itertools;
 
 use crate::lit::Lit;
+use crate::solver::BaseSolver;
 
 use super::Solver;
 use super::_types::*;
@@ -37,6 +38,27 @@ impl Display for MockSolver {
     }
 }
 
+impl BaseSolver for MockSolver {
+    fn assume_(&mut self, _lit: Lit) {
+        // TODO
+    }
+
+    fn value_(&self, _lit: Lit) -> LitValue {
+        // TODO
+        LitValue::False
+    }
+
+    fn add_clause_(&mut self, lits: &[Lit]) {
+        self.nclauses += 1;
+        self.clauses.push(lits.to_vec());
+    }
+
+    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
+        self.nclauses += 1;
+        self.clauses.push(lits.collect_vec());
+    }
+}
+
 impl Solver for MockSolver {
     fn signature(&self) -> Cow<str> {
         "mock".into()
@@ -61,10 +83,6 @@ impl Solver for MockSolver {
         Lit::from(self.nvars)
     }
 
-    fn assume_(&mut self, _lit: Lit) {
-        // TODO
-    }
-
     fn add_clause<I>(&mut self, lits: I)
     where
         Self: Sized,
@@ -75,24 +93,9 @@ impl Solver for MockSolver {
         self.clauses.push(lits.into_iter().map_into::<Lit>().collect_vec());
     }
 
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.nclauses += 1;
-        self.clauses.push(lits.to_vec());
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.nclauses += 1;
-        self.clauses.push(lits.collect_vec());
-    }
-
     fn solve(&mut self) -> SolveResponse {
         // TODO
         SolveResponse::Sat
-    }
-
-    fn value_(&self, _lit: Lit) -> LitValue {
-        // TODO
-        LitValue::False
     }
 }
 
