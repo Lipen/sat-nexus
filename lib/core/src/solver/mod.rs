@@ -1,9 +1,8 @@
-pub use api::*;
-pub use extensions::*;
-pub use types::*;
+pub use _solver::*;
+pub use _types::*;
 
-mod api;
+mod _solver;
+mod _types;
 pub mod delegate;
-mod extensions;
+pub mod ext;
 pub mod mock;
-mod types;

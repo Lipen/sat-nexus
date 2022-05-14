@@ -5,8 +5,8 @@ use itertools::Itertools;
 
 use crate::lit::Lit;
 
-use super::types::*;
 use super::Solver;
+use super::_types::*;
 
 #[derive(Debug)]
 pub struct MockSolver {

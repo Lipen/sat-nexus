@@ -1,5 +1,7 @@
+extern crate core;
+
 pub mod card;
-pub mod clause;
+pub mod cnf;
 pub mod context;
 pub mod domainvar;
 pub mod eval;

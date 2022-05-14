@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 use crate::lit::Lit;
 
-use super::types::*;
+use super::_types::*;
 
 // `Solver` trait is object-safe.
 const _: Option<&dyn Solver> = None;

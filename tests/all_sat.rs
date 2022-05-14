@@ -1,6 +1,7 @@
 use sat_nexus::core::lit::Lit;
 use sat_nexus::core::op::allsat::AllSat;
-use sat_nexus::core::solver::{Solver, SolverExt};
+use sat_nexus::core::solver::ext::SolverExt;
+use sat_nexus::core::solver::Solver;
 use sat_nexus::wrappers::ipasir::IpasirSolver;
 
 #[test]
