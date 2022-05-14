@@ -4,10 +4,9 @@ use std::fmt::{Display, Formatter};
 use itertools::Itertools;
 
 use crate::lit::Lit;
-use crate::solver::BaseSolver;
 
-use super::Solver;
 use super::_types::*;
+use super::{BaseSolver, Solver};
 
 #[derive(Debug)]
 pub struct MockSolver {
@@ -104,7 +103,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wrap_solver() -> color_eyre::Result<()> {
+    fn test_mock_solver() -> color_eyre::Result<()> {
         let mut solver = MockSolver::new();
         assert_eq!(solver.signature(), "mock");
 
@@ -114,12 +113,12 @@ mod tests {
         let d = solver.new_var();
         assert_eq!(solver.nvars, 4);
 
-        solver.add_clause_(&[a, b]);
-        solver.add_clause_(&[c, d]);
-        solver.add_clause_(&[-a, -b]);
-        solver.add_clause_(&[-c, -d]);
-        solver.add_clause_(&[a]);
-        solver.add_clause_(&[-c]);
+        solver.add_clause([a, b]);
+        solver.add_clause(&[c, d]);
+        solver.add_clause(vec![-a, -b]);
+        solver.add_clause(&vec![-c, -d]);
+        solver.add_unit(a);
+        solver.add_unit(-c);
         assert_eq!(solver.nclauses, 6);
 
         Ok(())

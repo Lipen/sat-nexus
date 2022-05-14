@@ -141,18 +141,18 @@ mod tests {
         assert_eq!(solver.num_vars(), 4);
 
         // Adding [(a or b) and (c or d) and not(a and b) and not(c and d)]
-        solver.add_clause_(&[a, b]);
-        solver.add_clause_(&[c, d]);
-        solver.add_clause_(&[-a, -b]);
-        solver.add_clause_(&[-c, -d]);
+        solver.add_clause([a, b]);
+        solver.add_clause(&[c, d]);
+        solver.add_clause(vec![-a, -b]);
+        solver.add_clause(&vec![-c, -d]);
 
         // Problem is satisfiable
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Sat);
 
         // Assuming both a and b to be true
-        solver.assume_(a);
-        solver.assume_(b);
+        solver.assume(a);
+        solver.assume(b);
         // Problem is unsatisfiable under assumptions
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Unsat);
