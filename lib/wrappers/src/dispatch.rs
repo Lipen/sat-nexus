@@ -21,16 +21,16 @@ pub enum DispatchSolver {
 
 impl DispatchSolver {
     pub fn new_delegate(solver: impl SimpleSolver + 'static) -> Self {
-        DispatchSolver::Delegate(DelegateSolver::new(solver))
+        Self::from(DelegateSolver::new(solver))
     }
     pub fn new_delegate_wrap(solver: impl Solver + 'static) -> Self {
-        DispatchSolver::Delegate(DelegateSolver::wrap(solver))
+        Self::from(DelegateSolver::wrap(solver))
     }
     pub fn new_minisat() -> Self {
-        DispatchSolver::MiniSat(MiniSatSolver::new())
+        Self::from(MiniSatSolver::new())
     }
     pub fn new_cadical() -> Self {
-        DispatchSolver::Cadical(CadicalSolver::new())
+        Self::from(CadicalSolver::new())
     }
 
     pub fn by_name(name: &str) -> Self {
