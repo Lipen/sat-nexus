@@ -1,13 +1,12 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus_core::solver::delegate::DelegateSolver;
 use sat_nexus_test_utils::run_test_1;
-use sat_nexus_wrappers::cadical::CadicalSolver;
+use sat_nexus_wrappers::ipasir::IpasirSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let solver = DelegateSolver::wrap(CadicalSolver::new());
+    let solver = IpasirSolver::new_cadical();
     run_test_1(solver)?;
 
     Ok(())

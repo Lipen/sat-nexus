@@ -7,7 +7,7 @@ use tap::Pipe;
 use minisat::dynamic::Lit as MiniSatLit;
 use minisat::dynamic::{LBool, MiniSat};
 use sat_nexus_core::lit::Lit;
-use sat_nexus_core::solver::{BaseSolver, LitValue, SolveResponse, Solver};
+use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 pub struct MiniSatSolver {
     inner: MiniSat,
@@ -45,28 +45,6 @@ impl Display for MiniSatSolver {
     }
 }
 
-impl BaseSolver for MiniSatSolver {
-    fn assume_(&mut self, lit: Lit) {
-        self.assumptions.push(lit.pipe(to_ms));
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        match self.inner.model_value_lit(lit.pipe(to_ms)) {
-            LBool::True => LitValue::True,
-            LBool::False => LitValue::False,
-            LBool::Undef => panic!("model_value_lit returned Undef"),
-        }
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.inner.add_clause(lits.iter().copied().map(to_ms));
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.inner.add_clause(lits.map(to_ms));
-    }
-}
-
 impl Solver for MiniSatSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
@@ -90,6 +68,13 @@ impl Solver for MiniSatSolver {
         self.inner.new_lit().pipe(from_ms)
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.assumptions.push(lit.into().pipe(to_ms));
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -104,6 +89,17 @@ impl Solver for MiniSatSolver {
         match self.inner.solve_under_assumptions(self.assumptions.drain(..)) {
             true => SolveResponse::Sat,
             false => SolveResponse::Unsat,
+        }
+    }
+
+    fn value<L>(&self, lit: L) -> LitValue
+    where
+        L: Into<Lit>,
+    {
+        match self.inner.model_value_lit(lit.into().pipe(to_ms)) {
+            LBool::True => LitValue::True,
+            LBool::False => LitValue::False,
+            LBool::Undef => panic!("model_value_lit returned Undef"),
         }
     }
 }

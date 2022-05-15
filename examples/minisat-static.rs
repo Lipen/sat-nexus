@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::minisat::statik::*;
+use minisat::statik::*;
 
 //noinspection DuplicatedCode
 fn main() -> Result<()> {

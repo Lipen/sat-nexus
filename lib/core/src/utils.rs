@@ -16,3 +16,17 @@ pub fn bootstrap_solver_from_cnf(solver: &mut impl Solver, cnf: &Cnf) {
         solver.add_clause(&clause.lits)
     }
 }
+
+pub fn type_name_of<T: ?Sized>(_val: &T) -> String {
+    tynm::type_name::<T>()
+}
+
+pub trait TypeName {
+    fn type_name(&self) -> String;
+}
+
+impl<T: ?Sized> TypeName for T {
+    fn type_name(&self) -> String {
+        type_name_of(self)
+    }
+}

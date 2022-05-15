@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 
-use sat_nexus::minisat::dynamic::*;
+use minisat::dynamic::*;
 
 //noinspection DuplicatedCode
 fn main() -> Result<()> {

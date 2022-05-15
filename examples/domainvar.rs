@@ -1,17 +1,16 @@
 use color_eyre::eyre::Result;
 use ndarray::ArrayD;
 
-use sat_nexus::core::context::Context;
-use sat_nexus::core::domainvar::DomainVar;
-use sat_nexus::core::solver::delegate::DelegateSolver;
-use sat_nexus::core::solver::ext::SolverExt;
-use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::ipasir::IpasirSolver;
+use sat_nexus_core::context::Context;
+use sat_nexus_core::domainvar::DomainVar;
+use sat_nexus_core::solver::ext::SolverExt;
+use sat_nexus_core::solver::*;
+use sat_nexus_wrappers::cadical::CadicalSolver;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut solver = DelegateSolver::new(IpasirSolver::new_cadical());
+    let mut solver = CadicalSolver::new();
     let mut context = Context::new();
 
     let num_states = 5;

@@ -7,7 +7,7 @@ use sat_nexus_wrappers::dispatch::DispatchSolver;
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let solver = DispatchSolver::new_delegate(CadicalSolver::new());
+    let solver = DispatchSolver::new_delegate_wrap(CadicalSolver::new());
     run_test_1(solver)?;
 
     Ok(())

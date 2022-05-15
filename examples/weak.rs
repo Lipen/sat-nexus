@@ -3,9 +3,9 @@ use std::rc::{Rc, Weak};
 
 use color_eyre::eyre::Result;
 
-use sat_nexus::core::lit::Lit;
-use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::ipasir::IpasirSolver;
+use sat_nexus_core::lit::Lit;
+use sat_nexus_core::solver::*;
+use sat_nexus_wrappers::ipasir::IpasirSolver;
 
 struct Store<S> {
     weak: Weak<RefCell<S>>,

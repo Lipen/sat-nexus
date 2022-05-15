@@ -5,7 +5,8 @@ use strum::IntoStaticStr;
 
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::delegate::DelegateSolver;
-use sat_nexus_core::solver::{BaseSolver, LitValue, SolveResponse, Solver};
+use sat_nexus_core::solver::simple::SimpleSolver;
+use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 use crate::cadical::CadicalSolver;
 use crate::minisat::MiniSatSolver;
@@ -19,8 +20,11 @@ pub enum DispatchSolver {
 }
 
 impl DispatchSolver {
-    pub fn new_delegate(solver: impl Solver + 'static) -> Self {
+    pub fn new_delegate(solver: impl SimpleSolver + 'static) -> Self {
         DispatchSolver::Delegate(DelegateSolver::new(solver))
+    }
+    pub fn new_delegate_wrap(solver: impl Solver + 'static) -> Self {
+        DispatchSolver::Delegate(DelegateSolver::wrap(solver))
     }
     pub fn new_minisat() -> Self {
         DispatchSolver::MiniSat(MiniSatSolver::new())
@@ -67,40 +71,6 @@ impl Display for DispatchSolver {
             DispatchSolver::Cadical(inner) => {
                 write!(f, "{}::{}({})", tynm::type_name::<Self>(), name, inner)
             }
-        }
-    }
-}
-
-impl BaseSolver for DispatchSolver {
-    fn assume_(&mut self, lit: Lit) {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.assume_(lit),
-            DispatchSolver::MiniSat(inner) => inner.assume_(lit),
-            DispatchSolver::Cadical(inner) => inner.assume_(lit),
-        }
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.value_(lit),
-            DispatchSolver::MiniSat(inner) => inner.value_(lit),
-            DispatchSolver::Cadical(inner) => inner.value_(lit),
-        }
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.add_clause_(lits),
-            DispatchSolver::MiniSat(inner) => inner.add_clause_(lits),
-            DispatchSolver::Cadical(inner) => inner.add_clause_(lits),
-        }
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.add_clause__(lits),
-            DispatchSolver::MiniSat(inner) => inner.add_clause__(lits),
-            DispatchSolver::Cadical(inner) => inner.add_clause__(lits),
         }
     }
 }
@@ -246,14 +216,14 @@ mod tests {
 
     #[test]
     fn test_dispatch_delegate_minisat() -> color_eyre::Result<()> {
-        let solver = DispatchSolver::new_delegate(MiniSatSolver::new());
+        let solver = DispatchSolver::new_delegate_wrap(MiniSatSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("minisat"));
         run_test(solver)
     }
     #[test]
     fn test_dispatch_delegate_cadical() -> color_eyre::Result<()> {
-        let solver = DispatchSolver::new_delegate(CadicalSolver::new());
+        let solver = DispatchSolver::new_delegate_wrap(CadicalSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("cadical"));
         run_test(solver)

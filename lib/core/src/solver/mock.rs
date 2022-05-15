@@ -5,8 +5,8 @@ use itertools::Itertools;
 
 use crate::lit::Lit;
 
-use super::_types::*;
-use super::{BaseSolver, Solver};
+use super::types::*;
+use super::Solver;
 
 #[derive(Debug)]
 pub struct MockSolver {
@@ -37,27 +37,6 @@ impl Display for MockSolver {
     }
 }
 
-impl BaseSolver for MockSolver {
-    fn assume_(&mut self, _lit: Lit) {
-        // TODO
-    }
-
-    fn value_(&self, _lit: Lit) -> LitValue {
-        // TODO
-        LitValue::False
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.nclauses += 1;
-        self.clauses.push(lits.to_vec());
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.nclauses += 1;
-        self.clauses.push(lits.collect_vec());
-    }
-}
-
 impl Solver for MockSolver {
     fn signature(&self) -> Cow<str> {
         "mock".into()
@@ -82,19 +61,41 @@ impl Solver for MockSolver {
         Lit::from(self.nvars)
     }
 
+    fn assume<L>(&mut self, _lit: L)
+    where
+        L: Into<Lit>,
+    {
+        // TODO
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
-        Self: Sized,
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
         self.nclauses += 1;
-        self.clauses.push(lits.into_iter().map_into::<Lit>().collect_vec());
+        let lits = lits.into_iter().map_into::<Lit>().collect_vec();
+        self.clauses.push(lits);
+    }
+
+    fn add_unit<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.add_clause([lit])
     }
 
     fn solve(&mut self) -> SolveResponse {
         // TODO
         SolveResponse::Sat
+    }
+
+    fn value<L>(&self, _lit: L) -> LitValue
+    where
+        L: Into<Lit>,
+    {
+        // TODO
+        LitValue::False
     }
 }
 

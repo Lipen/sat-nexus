@@ -4,13 +4,12 @@ use color_eyre::eyre::Result;
 use itertools::Itertools;
 use ndarray::ArrayD;
 
-use sat_nexus::core::context::Context;
-use sat_nexus::core::domainvar::DomainVar;
-use sat_nexus::core::op::ops::Ops;
-use sat_nexus::core::solver::delegate::DelegateSolver;
-use sat_nexus::core::solver::ext::SolverExt;
-use sat_nexus::core::solver::*;
-use sat_nexus::wrappers::ipasir::IpasirSolver;
+use sat_nexus_core::context::Context;
+use sat_nexus_core::domainvar::DomainVar;
+use sat_nexus_core::op::ops::Ops;
+use sat_nexus_core::solver::ext::SolverExt;
+use sat_nexus_core::solver::*;
+use sat_nexus_wrappers::cadical::CadicalSolver;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);
@@ -105,7 +104,7 @@ fn main() -> Result<()> {
         Edge(10, 6),
     ];
 
-    let mut solver = DelegateSolver::new(IpasirSolver::new_cadical());
+    let mut solver = CadicalSolver::new();
     println!("solver = {}", solver);
 
     let mut context = Context::new();

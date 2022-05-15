@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 use cadical::Cadical;
 use sat_nexus_core::lit::Lit;
-use sat_nexus_core::solver::{BaseSolver, LitValue, SolveResponse, Solver};
+use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
 pub struct CadicalSolver {
     inner: Cadical,
@@ -45,31 +45,6 @@ impl Display for CadicalSolver {
     }
 }
 
-impl BaseSolver for CadicalSolver {
-    fn assume_(&mut self, lit: Lit) {
-        self.inner.assume(lit.into());
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        use cadical::LitValue as CadicalLitValue;
-        match self.inner.val(lit.into()) {
-            Ok(CadicalLitValue::True) => LitValue::True,
-            Ok(CadicalLitValue::False) => LitValue::False,
-            Err(e) => panic!("Could not get literal value: {}", e),
-        }
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.nclauses += 1;
-        self.inner.add_clause(lits.iter().copied());
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.nclauses += 1;
-        self.inner.add_clause(lits)
-    }
-}
-
 impl Solver for CadicalSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
@@ -94,6 +69,13 @@ impl Solver for CadicalSolver {
         Lit::new(self.nvars as i32)
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.inner.assume(lit.into().into());
+    }
+
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
@@ -110,6 +92,18 @@ impl Solver for CadicalSolver {
             Ok(CadicalSolveResponse::Unsat) => SolveResponse::Unsat,
             Ok(CadicalSolveResponse::Interrupted) => SolveResponse::Unknown,
             Err(e) => panic!("Could not solve: {}", e),
+        }
+    }
+
+    fn value<L>(&self, lit: L) -> LitValue
+    where
+        L: Into<Lit>,
+    {
+        use cadical::LitValue as CadicalLitValue;
+        match self.inner.val(lit.into().into()) {
+            Ok(CadicalLitValue::True) => LitValue::True,
+            Ok(CadicalLitValue::False) => LitValue::False,
+            Err(e) => panic!("Could not get literal value: {}", e),
         }
     }
 }

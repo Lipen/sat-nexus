@@ -1,21 +1,29 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
+use itertools::Itertools;
+
 use crate::lit::Lit;
-use crate::solver::{BaseSolver, LitValue, SolveResponse, Solver};
+use crate::solver::simple::SimpleSolver;
+use crate::solver::wrap::WrapSolver;
+use crate::solver::{LitValue, SolveResponse, Solver};
 
 pub struct DelegateSolver {
-    inner: Box<dyn Solver>,
+    inner: Box<dyn SimpleSolver>,
 }
 
 impl DelegateSolver {
-    pub fn new(inner: impl Solver + 'static) -> Self {
+    pub fn new(inner: impl SimpleSolver + 'static) -> Self {
         Self { inner: Box::new(inner) }
+    }
+
+    pub fn wrap(inner: impl Solver + 'static) -> Self {
+        Self::new(WrapSolver::new(inner))
     }
 }
 
-impl From<Box<dyn Solver>> for DelegateSolver {
-    fn from(inner: Box<dyn Solver>) -> Self {
+impl From<Box<dyn SimpleSolver>> for DelegateSolver {
+    fn from(inner: Box<dyn SimpleSolver>) -> Self {
         DelegateSolver { inner }
     }
 }
@@ -23,24 +31,6 @@ impl From<Box<dyn Solver>> for DelegateSolver {
 impl Display for DelegateSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
-    }
-}
-
-impl BaseSolver for DelegateSolver {
-    fn assume_(&mut self, lit: Lit) {
-        self.inner.assume_(lit)
-    }
-
-    fn value_(&self, lit: Lit) -> LitValue {
-        self.inner.value_(lit)
-    }
-
-    fn add_clause_(&mut self, lits: &[Lit]) {
-        self.inner.add_clause_(lits)
-    }
-
-    fn add_clause__(&mut self, lits: &mut dyn Iterator<Item = Lit>) {
-        self.inner.add_clause__(lits)
     }
 }
 
@@ -69,7 +59,29 @@ impl Solver for DelegateSolver {
         self.inner.new_var()
     }
 
+    fn assume<L>(&mut self, lit: L)
+    where
+        L: Into<Lit>,
+    {
+        self.inner.assume(lit.into())
+    }
+
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.inner.add_clause__(&mut lits.into_iter().map_into::<Lit>())
+    }
+
     fn solve(&mut self) -> SolveResponse {
         self.inner.solve()
+    }
+
+    fn value<L>(&self, lit: L) -> LitValue
+    where
+        L: Into<Lit>,
+    {
+        self.inner.value(lit.into())
     }
 }
