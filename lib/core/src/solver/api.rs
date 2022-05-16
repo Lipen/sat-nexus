@@ -1,11 +1,10 @@
 use std::borrow::Cow;
-use std::fmt::Display;
 
 use crate::lit::Lit;
 
 use super::types::*;
 
-pub trait Solver: Sized + Display {
+pub trait Solver: Sized {
     fn signature(&self) -> Cow<str>;
 
     fn reset(&mut self);

@@ -1,7 +1,11 @@
 use sat_nexus::core::context::Context;
 use sat_nexus::core::solver::*;
+use std::fmt::Display;
 
-pub fn run_test_1(mut solver: impl Solver) -> color_eyre::Result<()> {
+pub fn run_test_1<S>(mut solver: S) -> color_eyre::Result<()>
+where
+    S: Solver + Display,
+{
     let mut context = Context::new();
     println!("Solver signature: {}", solver.signature());
     println!("solver = {}", solver);

@@ -25,7 +25,7 @@ where
 
 impl<S> Display for WrapSolver<S>
 where
-    S: Solver,
+    S: Solver + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
