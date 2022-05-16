@@ -80,3 +80,12 @@ where
         self.inner.value(lit)
     }
 }
+
+impl<S> From<S> for Box<dyn SimpleSolver>
+where
+    S: Solver + 'static,
+{
+    fn from(inner: S) -> Self {
+        Box::new(WrapSolver::new(inner))
+    }
+}
