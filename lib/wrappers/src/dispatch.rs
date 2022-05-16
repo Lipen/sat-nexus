@@ -19,6 +19,16 @@ pub enum DispatchSolver {
     Cadical(CadicalSolver),
 }
 
+macro_rules! dispatch {
+    ($value:expr, $pattern:pat => $result:expr) => {
+        match $value {
+            DispatchSolver::Delegate($pattern) => $result,
+            DispatchSolver::MiniSat($pattern) => $result,
+            DispatchSolver::Cadical($pattern) => $result,
+        }
+    };
+}
+
 impl DispatchSolver {
     pub fn new_delegate(solver: impl SimpleSolver + 'static) -> Self {
         Self::from(DelegateSolver::new(solver))
@@ -61,78 +71,48 @@ impl From<CadicalSolver> for DispatchSolver {
 impl Display for DispatchSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let name: &'static str = self.into();
-        match self {
-            DispatchSolver::Delegate(inner) => {
-                write!(f, "{}::{}({})", tynm::type_name::<Self>(), name, inner)
-            }
-            DispatchSolver::MiniSat(inner) => {
-                write!(f, "{}::{}({})", tynm::type_name::<Self>(), name, inner)
-            }
-            DispatchSolver::Cadical(inner) => {
-                write!(f, "{}::{}({})", tynm::type_name::<Self>(), name, inner)
-            }
+        dispatch! { self, inner =>
+            write!(f, "{}::{}({})", tynm::type_name::<Self>(), name, inner)
         }
     }
 }
 
+macro_rules! dispatch_delegate {
+    ($value:ident, $name:ident($($args:tt)*)) => {
+        dispatch!($value, inner => inner.$name($($args)*))
+    };
+}
+
 impl Solver for DispatchSolver {
     fn signature(&self) -> Cow<str> {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.signature(),
-            DispatchSolver::MiniSat(inner) => inner.signature(),
-            DispatchSolver::Cadical(inner) => inner.signature(),
-        }
+        dispatch_delegate!(self, signature())
     }
 
     fn reset(&mut self) {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.reset(),
-            DispatchSolver::MiniSat(inner) => inner.reset(),
-            DispatchSolver::Cadical(inner) => inner.reset(),
-        }
+        dispatch_delegate!(self, reset())
     }
 
     fn release(&mut self) {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.release(),
-            DispatchSolver::MiniSat(inner) => inner.release(),
-            DispatchSolver::Cadical(inner) => inner.release(),
-        }
+        dispatch_delegate!(self, release())
     }
 
     fn num_vars(&self) -> usize {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.num_vars(),
-            DispatchSolver::MiniSat(inner) => inner.num_vars(),
-            DispatchSolver::Cadical(inner) => inner.num_vars(),
-        }
+        dispatch_delegate!(self, num_vars())
     }
 
     fn num_clauses(&self) -> usize {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.num_clauses(),
-            DispatchSolver::MiniSat(inner) => inner.num_clauses(),
-            DispatchSolver::Cadical(inner) => inner.num_clauses(),
-        }
+        dispatch_delegate!(self, num_clauses())
     }
 
     fn new_var(&mut self) -> Lit {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.new_var(),
-            DispatchSolver::MiniSat(inner) => inner.new_var(),
-            DispatchSolver::Cadical(inner) => inner.new_var(),
-        }
+        dispatch_delegate!(self, new_var())
     }
 
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
     {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.assume(lit),
-            DispatchSolver::MiniSat(inner) => inner.assume(lit),
-            DispatchSolver::Cadical(inner) => inner.assume(lit),
-        }
+        dispatch_delegate!(self, assume(lit))
     }
 
     fn add_clause<I>(&mut self, lits: I)
@@ -140,41 +120,25 @@ impl Solver for DispatchSolver {
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.add_clause(lits),
-            DispatchSolver::MiniSat(inner) => inner.add_clause(lits),
-            DispatchSolver::Cadical(inner) => inner.add_clause(lits),
-        }
+        dispatch_delegate!(self, add_clause(lits))
     }
 
     fn add_unit<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
     {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.add_unit(lit),
-            DispatchSolver::MiniSat(inner) => inner.add_unit(lit),
-            DispatchSolver::Cadical(inner) => inner.add_unit(lit),
-        }
+        dispatch_delegate!(self, add_unit(lit))
     }
 
     fn solve(&mut self) -> SolveResponse {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.solve(),
-            DispatchSolver::MiniSat(inner) => inner.solve(),
-            DispatchSolver::Cadical(inner) => inner.solve(),
-        }
+        dispatch_delegate!(self, solve())
     }
 
     fn value<L>(&self, lit: L) -> LitValue
     where
         L: Into<Lit>,
     {
-        match self {
-            DispatchSolver::Delegate(inner) => inner.value(lit),
-            DispatchSolver::MiniSat(inner) => inner.value(lit),
-            DispatchSolver::Cadical(inner) => inner.value(lit),
-        }
+        dispatch_delegate!(self, value(lit))
     }
 }
 
