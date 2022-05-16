@@ -11,7 +11,7 @@ use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 use crate::cadical::CadicalSolver;
 use crate::minisat::MiniSatSolver;
 
-#[derive(IntoStaticStr)]
+#[derive(Debug, IntoStaticStr)]
 #[strum(ascii_case_insensitive)]
 pub enum DispatchSolver {
     Delegate(DelegateSolver),

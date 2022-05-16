@@ -8,6 +8,7 @@ use crate::solver::simple::SimpleSolver;
 use crate::solver::wrap::WrapSolver;
 use crate::solver::{LitValue, SolveResponse, Solver};
 
+#[derive(Debug)]
 pub struct DelegateSolver {
     inner: Box<dyn SimpleSolver>,
 }
@@ -30,7 +31,7 @@ impl From<Box<dyn SimpleSolver>> for DelegateSolver {
 
 impl Display for DelegateSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}({})", tynm::type_name::<Self>(), self.signature())
+        write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
     }
 }
 

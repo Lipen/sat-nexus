@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 use tap::Pipe;
@@ -37,6 +37,12 @@ impl IpasirSolver {
 impl From<Ipasir> for IpasirSolver {
     fn from(inner: Ipasir) -> Self {
         IpasirSolver::new(inner)
+    }
+}
+
+impl Debug for IpasirSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IpasirSolver").field("inner", &self.inner).finish()
     }
 }
 

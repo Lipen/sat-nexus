@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 use tap::Pipe;
@@ -36,6 +36,12 @@ impl Default for MiniSatSolver {
 impl From<MiniSat> for MiniSatSolver {
     fn from(inner: MiniSat) -> Self {
         MiniSatSolver::new_custom(inner)
+    }
+}
+
+impl Debug for MiniSatSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MiniSatSolver").field("inner", &self.inner).finish()
     }
 }
 

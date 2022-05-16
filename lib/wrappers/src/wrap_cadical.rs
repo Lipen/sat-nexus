@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 
@@ -36,6 +36,12 @@ impl Default for CadicalSolver {
 impl From<Cadical> for CadicalSolver {
     fn from(inner: Cadical) -> Self {
         CadicalSolver::new_custom(inner)
+    }
+}
+
+impl Debug for CadicalSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CadicalSolver").field("inner", &self.inner).finish()
     }
 }
 

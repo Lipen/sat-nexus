@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use easy_ext::ext;
 
@@ -26,6 +26,12 @@ pub trait SimpleSolver {
 
     fn solve(&mut self) -> SolveResponse;
     fn value(&self, lit: Lit) -> LitValue;
+}
+
+impl Debug for dyn SimpleSolver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SimpleSolver({})", self.signature())
+    }
 }
 
 impl Display for dyn SimpleSolver {

@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use crate::ffi::*;
 use crate::types::*;
@@ -35,6 +35,12 @@ impl Drop for Ipasir {
 impl From<&'static IpasirFFI> for Ipasir {
     fn from(ffi: &'static IpasirFFI) -> Self {
         Self::new_custom(ffi)
+    }
+}
+
+impl Debug for Ipasir {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ipasir").field("ptr", &self.ptr).finish()
     }
 }
 

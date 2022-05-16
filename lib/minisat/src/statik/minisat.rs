@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 
@@ -30,6 +30,12 @@ impl Default for MiniSat {
 impl Drop for MiniSat {
     fn drop(&mut self) {
         self.release()
+    }
+}
+
+impl Debug for MiniSat {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MiniSat").field("ptr", &self.ptr).finish()
     }
 }
 
