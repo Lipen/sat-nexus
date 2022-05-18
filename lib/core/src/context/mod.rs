@@ -32,10 +32,7 @@ impl From<TypeMap> for Context {
 }
 
 impl Context {
-    pub fn insert<T: 'static>(&mut self, value: T) -> Option<T>
-    where
-        T: std::fmt::Debug,
-    {
+    pub fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
         self.storage.insert::<T>(value)
     }
 
