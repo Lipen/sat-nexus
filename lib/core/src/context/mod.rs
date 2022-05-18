@@ -1,8 +1,8 @@
-use snafu::Snafu;
 use std::any::type_name;
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use snafu::Snafu;
 use type_map::TypeMap;
 
 type NamedStorageType = Cow<'static, str>;
@@ -32,12 +32,26 @@ impl From<TypeMap> for Context {
 }
 
 impl Context {
+    pub fn contains<T: 'static>(&self) -> bool {
+        self.storage.contains::<T>()
+    }
+
+    pub fn entry<T: 'static>(&mut self) -> type_map::Entry<T> {
+        self.storage.entry()
+    }
+
     pub fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
         self.storage.insert::<T>(value)
     }
 
     pub fn get<T: 'static>(&self) -> Result<&T> {
         self.storage.get::<T>().ok_or_else(|| ContextError::NoElementByType {
+            type_name: type_name::<T>(),
+        })
+    }
+
+    pub fn get_mut<T: 'static>(&mut self) -> Result<&mut T> {
+        self.storage.get_mut::<T>().ok_or_else(|| ContextError::NoElementByType {
             type_name: type_name::<T>(),
         })
     }
