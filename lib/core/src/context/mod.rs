@@ -1,3 +1,4 @@
+use snafu::Snafu;
 use std::any::type_name;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -38,12 +39,10 @@ impl Context {
         self.storage.insert::<T>(value)
     }
 
-    pub fn get<T: 'static>(&self) -> Option<&T> {
-        self.storage.get::<T>()
-    }
-
-    pub fn extract<T: 'static>(&self) -> &T {
-        self.get::<T>().unwrap_or_else(|| panic!("Could not extract {}", type_name::<T>()))
+    pub fn get<T: 'static>(&self) -> Result<&T> {
+        self.storage.get::<T>().ok_or_else(|| ContextError::NoElementByType {
+            type_name: type_name::<T>(),
+        })
     }
 
     pub fn insert_named<T: 'static, S>(&mut self, name: S, value: T) -> Option<T>
@@ -56,23 +55,26 @@ impl Context {
             .insert(name.into(), value)
     }
 
-    pub fn get_named<T: 'static, S>(&self, name: S) -> Option<&T>
+    pub fn get_named<T: 'static, S>(&self, name: S) -> Result<&T>
     where
         S: Into<NamedStorageType>,
     {
-        let map = self.storage.get::<NamedStorage<T>>()?;
-        map.get(&name.into())
-    }
-
-    pub fn extract_named<T: 'static, S>(&self, name: S) -> &T
-    where
-        S: Into<NamedStorageType>,
-    {
-        // Note: we have to `clone` here because of the second use of `name` in `unwrap_or_else`.
+        let map = self.get::<NamedStorage<T>>()?;
         let name = name.into();
-        self.get_named(name.clone())
-            .unwrap_or_else(|| panic!("Could not extract {} with name `{}`", type_name::<T>(), name))
+        map.get(&name).ok_or(ContextError::NoElementByName { name })
     }
+}
+
+pub type Result<T, E = ContextError> = std::result::Result<T, E>;
+
+#[derive(Debug, Snafu)]
+#[allow(clippy::enum_variant_names)]
+pub enum ContextError {
+    #[snafu(display("No element of type {}", type_name))]
+    NoElementByType { type_name: &'static str },
+
+    #[snafu(display("No element with name {}", name))]
+    NoElementByName { name: NamedStorageType },
 }
 
 #[cfg(test)]

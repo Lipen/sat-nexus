@@ -15,6 +15,7 @@ tynm = "0.1.6"
 dimacs = "0.2.0"
 log = "0.4"
 easy-ext = "1.0.0"
+snafu = "0.7"
 
 [dev-dependencies]
 color-eyre = "0.6"

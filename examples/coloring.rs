@@ -1,6 +1,5 @@
 //! Graph coloring example.
 
-use color_eyre::eyre::Result;
 use itertools::Itertools;
 use ndarray::ArrayD;
 
@@ -27,7 +26,13 @@ impl Edge {
 
 type ColorArray = ArrayD<DomainVar<usize>>;
 
-fn declare_variables<S>(solver: &mut S, context: &mut Context, num_vertices: usize, num_colors: usize, edges: &[Edge])
+fn declare_variables<S>(
+    solver: &mut S,
+    context: &mut Context,
+    num_vertices: usize,
+    num_colors: usize,
+    edges: &[Edge],
+) -> color_eyre::Result<()>
 where
     S: Solver,
 {
@@ -50,18 +55,20 @@ where
 
     let color: ColorArray = solver.new_domain_var_array_dyn([num_vertices], |_| 1..=num_colors);
     context.insert_named("color", color);
+
+    Ok(())
 }
 
-fn declare_constraints<S>(solver: &mut S, context: &mut Context)
+fn declare_constraints<S>(solver: &mut S, context: &mut Context) -> color_eyre::Result<()>
 where
     S: Solver,
 {
     println!("=> Declaring constraints...");
 
-    let num_vertices = *context.extract_named::<usize, _>("num_vertices");
-    let num_colors = *context.extract_named::<usize, _>("num_colors");
-    let edges = context.extract_named::<Vec<Edge>, _>("edges");
-    let color = context.extract_named::<ColorArray, _>("color");
+    let num_vertices = *context.get_named::<usize, _>("num_vertices")?;
+    let num_colors = *context.get_named::<usize, _>("num_colors")?;
+    let edges = context.get_named::<Vec<Edge>, _>("edges")?;
+    let color = context.get_named::<ColorArray, _>("color")?;
 
     println!("num_vertices = {}", num_vertices);
     println!("num_colors = {}", num_colors);
@@ -77,10 +84,12 @@ where
 
     // [aux]
     // (color[1] = 1)
-    solver.add_clause_(&[color[[0]].eq(1)])
+    solver.add_clause_(&[color[[0]].eq(1)]);
+
+    Ok(())
 }
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     println!("==> Graph coloring example");
 
@@ -110,8 +119,8 @@ fn main() -> Result<()> {
     let mut context = Context::new();
     println!("context = {:?}", context);
 
-    declare_variables(&mut solver, &mut context, num_vertices, num_colors, &edges);
-    declare_constraints(&mut solver, &mut context);
+    declare_variables(&mut solver, &mut context, num_vertices, num_colors, &edges)?;
+    declare_constraints(&mut solver, &mut context)?;
 
     println!("=> Declared {} variables and {} clauses", solver.num_vars(), solver.num_clauses());
 
@@ -120,7 +129,7 @@ fn main() -> Result<()> {
     println!("=> Solver returned: {:?}", response);
 
     if matches!(response, SolveResponse::Sat) {
-        let color = context.extract_named::<ArrayD<DomainVar<usize>>, _>("color");
+        let color = context.get_named::<ArrayD<DomainVar<usize>>, _>("color")?;
 
         assert!(matches!(solver.eval(&color[[0]].eq(1)), LitValue::True));
 

@@ -13,7 +13,7 @@ impl Arbitrary for Value {
 }
 
 #[test]
-fn test_it_works() {
+fn test_it_works() -> Result<()> {
     let mut context = Context::new();
 
     let forty_two = Value(42);
@@ -26,42 +26,44 @@ fn test_it_works() {
     context.insert_named("eleven".to_string(), eleven);
     context.insert(five);
 
-    let extracted = context.get::<Value>().unwrap();
+    let extracted = context.get::<Value>()?;
     assert_eq!(extracted, &five);
-    let extracted = context.extract::<Value>();
+    let extracted = context.get::<Value>()?;
     assert_eq!(extracted, &five);
-    let extracted = context.extract_named::<Value, _>("ten".to_string());
+    let extracted = context.get_named::<Value, _>("ten".to_string())?;
     assert_eq!(extracted, &ten);
-    let extracted = context.extract_named::<Value, _>("eleven");
+    let extracted = context.get_named::<Value, _>("eleven")?;
     assert_eq!(extracted, &eleven);
+
+    Ok(())
 }
 
 #[quickcheck]
-fn insert_extract(value: Value) -> bool {
+fn insert_get(value: Value) -> Result<bool> {
     let mut context = Context::new();
     context.insert(value);
-    let extracted = *context.extract::<Value>();
-    extracted == value
+    let extracted = *context.get::<Value>()?;
+    Ok(extracted == value)
 }
 
 #[quickcheck]
-fn multi_insert_extract(values: Vec<Value>) -> bool {
+fn multi_insert_get(values: Vec<Value>) -> Result<bool> {
     if values.is_empty() {
-        return true;
+        return Ok(true);
     }
     let mut context = Context::new();
     let last = *values.last().unwrap();
     for value in values.into_iter() {
         context.insert(value);
     }
-    let extracted = *context.extract::<Value>();
-    extracted == last
+    let extracted = *context.get::<Value>()?;
+    Ok(extracted == last)
 }
 
 #[quickcheck]
-fn insert_named_extract(value: Value, name: String) -> bool {
+fn insert_named_get(value: Value, name: String) -> Result<bool> {
     let mut context = Context::new();
     context.insert_named(name.clone(), value);
-    let extracted = *context.extract_named::<Value, _>(name);
-    extracted == value
+    let extracted = *context.get_named::<Value, _>(name)?;
+    Ok(extracted == value)
 }

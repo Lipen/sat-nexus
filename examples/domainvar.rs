@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     println!("myvar (Debug):\n{:?}", myvar);
     context.insert(myvar);
 
-    let myvar = context.extract::<ArrayD<DomainVar<usize>>>();
+    let myvar = context.get::<ArrayD<DomainVar<usize>>>()?;
     println!("myvar:\n{}", myvar);
 
     solver.add_clause([myvar[[0, 0]].eq(3)]);

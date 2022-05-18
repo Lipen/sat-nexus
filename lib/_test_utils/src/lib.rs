@@ -13,7 +13,7 @@ where
     let value: i32 = 42;
     println!("value = {:?}", value);
     context.insert(value);
-    let extracted = *context.extract::<i32>();
+    let extracted = *context.get::<i32>()?;
     println!("extracted = {:?}", extracted);
 
     solver.add_clause([1, 2]);
