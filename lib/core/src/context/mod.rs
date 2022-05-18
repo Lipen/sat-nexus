@@ -74,6 +74,15 @@ impl Context {
         let name = name.into();
         map.get(&name).ok_or(ContextError::NoElementByName { name })
     }
+
+    pub fn get_named_mut<T: 'static, S>(&mut self, name: S) -> Result<&mut T>
+    where
+        S: Into<NamedStorageType>,
+    {
+        let map = self.get_mut::<NamedStorage<T>>()?;
+        let name = name.into();
+        map.get_mut(&name).ok_or(ContextError::NoElementByName { name })
+    }
 }
 
 pub type Result<T, E = ContextError> = std::result::Result<T, E>;
