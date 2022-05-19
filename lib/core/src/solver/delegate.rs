@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
 use itertools::Itertools;
@@ -77,10 +77,10 @@ impl Solver for DelegateSolver {
 
     fn add_clause_<A, L>(&mut self, lits: A)
     where
-        A: Borrow<[L]>,
+        A: AsRef<[L]>,
         L: Into<Lit> + Copy,
     {
-        let lits = lits.borrow().iter().map_into::<Lit>().collect_vec();
+        let lits = lits.as_ref().iter().map_into::<Lit>().collect_vec();
         self.inner.add_clause(&lits)
     }
 
