@@ -10,6 +10,7 @@ members = [
     "lib/ipasir-sys",
     "lib/minisat-sys",
     "lib/cadical-sys",
+    "lib/cli",
 ]
 
 [dependencies]
