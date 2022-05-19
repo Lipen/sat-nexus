@@ -84,7 +84,7 @@ where
 
     // [aux]
     // (color[1] = 1)
-    solver.add_clause_(&[color[[0]].eq(1)]);
+    solver.add_unit(color[[0]].eq(1));
 
     Ok(())
 }
