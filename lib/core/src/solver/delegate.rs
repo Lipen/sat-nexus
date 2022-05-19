@@ -78,7 +78,7 @@ impl Solver for DelegateSolver {
     fn add_clause_<A, L>(&mut self, lits: A)
     where
         A: AsRef<[L]>,
-        L: Into<Lit>,
+        L: Into<Lit> + Copy,
     {
         let lits = lits.as_ref().iter().map_into::<Lit>().collect_vec();
         self.inner.add_clause(&lits)
