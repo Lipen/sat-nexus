@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 use std::fmt::{Display, Formatter};
 
 use itertools::Itertools;
@@ -73,6 +73,15 @@ impl Solver for DelegateSolver {
         I::Item: Into<Lit>,
     {
         self.inner.add_clause__(&mut lits.into_iter().map_into::<Lit>())
+    }
+
+    fn add_clause_<A, L>(&mut self, lits: A)
+    where
+        A: Borrow<[L]>,
+        L: Into<Lit> + Copy,
+    {
+        let lits = lits.borrow().iter().map_into::<Lit>().collect_vec();
+        self.inner.add_clause(&lits)
     }
 
     fn solve(&mut self) -> SolveResponse {
