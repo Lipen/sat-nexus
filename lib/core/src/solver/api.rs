@@ -27,7 +27,7 @@ pub trait Solver: Sized {
     fn add_clause_<A, L>(&mut self, lits: A)
     where
         A: AsRef<[L]>,
-        L: Into<Lit> + Copy,
+        L: Into<Lit>,
     {
         self.add_clause(lits.as_ref())
     }

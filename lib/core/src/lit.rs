@@ -28,10 +28,10 @@ impl Display for Lit {
 
 impl<L> From<&L> for Lit
 where
-    L: Into<Lit> + Copy,
+    L: Into<Lit>,
 {
     fn from(val: &L) -> Self {
-        (*val).into()
+        val.into()
     }
 }
 
