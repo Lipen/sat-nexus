@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::ops::Neg;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Lit(i32);
 
 impl Lit {

@@ -4,6 +4,8 @@ use std::slice::Iter;
 
 use clause::Clause;
 
+use crate::lit::Lit;
+
 pub mod clause;
 mod parsing;
 
@@ -67,5 +69,40 @@ impl Cnf {
         let clause = clause.into();
         self.max_var = self.max_var.max(clause.lits.iter().map(|lit| lit.var() as usize).max().unwrap());
         self.clauses.push(clause);
+    }
+}
+
+impl Extend<Clause> for Cnf {
+    fn extend<T: IntoIterator<Item = Clause>>(&mut self, iter: T) {
+        for clause in iter {
+            self.add_clause(clause)
+        }
+    }
+}
+
+impl crate::op::ops::AddClause for Cnf {
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.add_clause(lits)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::op::ops::Ops;
+
+    use super::*;
+
+    #[test]
+    fn test_cnf() {
+        let mut cnf = Cnf::new();
+        let a = Lit::from(1i32);
+        let b = Lit::from(2i32);
+        let c = Lit::from(3i32);
+        cnf.imply_and(a, [b, c]);
+        assert_eq!(cnf.clauses, [Clause::from([-1, 2]), Clause::from([-1, 3])]);
     }
 }

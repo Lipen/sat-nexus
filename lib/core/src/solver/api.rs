@@ -45,3 +45,16 @@ pub trait Solver: Sized {
     where
         L: Into<Lit>;
 }
+
+impl<S> crate::op::ops::AddClause for S
+where
+    S: Solver,
+{
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>,
+    {
+        self.add_clause(lits)
+    }
+}

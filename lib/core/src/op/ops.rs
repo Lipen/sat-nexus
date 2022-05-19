@@ -1,11 +1,17 @@
 use std::array;
 
 use crate::lit::Lit;
-use crate::solver::Solver;
 
-impl<S> Ops for S where S: Solver {}
+pub trait AddClause {
+    fn add_clause<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<Lit>;
+}
 
-pub trait Ops: Solver + Sized {
+impl<S> Ops for S where S: AddClause {}
+
+pub trait Ops: AddClause {
     // ==========
     // basic ops
     // ==========

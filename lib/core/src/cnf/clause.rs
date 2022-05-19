@@ -42,3 +42,14 @@ impl Display for Clause {
         list.finish()
     }
 }
+
+impl PartialEq for Clause {
+    fn eq(&self, other: &Self) -> bool {
+        if self.lits.len() != other.lits.len() {
+            return false;
+        }
+        let lhs = self.lits.iter().copied().sorted_unstable();
+        let rhs = other.lits.iter().copied().sorted_unstable();
+        itertools::equal(lhs, rhs)
+    }
+}
