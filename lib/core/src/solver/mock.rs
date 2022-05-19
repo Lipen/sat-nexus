@@ -78,13 +78,6 @@ impl Solver for MockSolver {
         self.clauses.push(lits);
     }
 
-    fn add_unit<L>(&mut self, lit: L)
-    where
-        L: Into<Lit>,
-    {
-        self.add_clause([lit])
-    }
-
     fn solve(&mut self) -> SolveResponse {
         // TODO
         SolveResponse::Sat
