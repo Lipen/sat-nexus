@@ -123,6 +123,14 @@ impl Solver for DispatchSolver {
         dispatch_delegate!(self, add_clause(lits))
     }
 
+    fn add_clause_<A, L>(&mut self, lits: A)
+    where
+        A: AsRef<[L]>,
+        L: Into<Lit>,
+    {
+        dispatch_delegate!(self, add_clause_(lits))
+    }
+
     fn add_unit<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
