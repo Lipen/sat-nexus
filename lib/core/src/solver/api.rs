@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 
 use crate::lit::Lit;
 
@@ -26,10 +26,10 @@ pub trait Solver: Sized {
 
     fn add_clause_<A, L>(&mut self, lits: A)
     where
-        A: AsRef<[L]>,
+        A: Borrow<[L]>,
         L: Into<Lit> + Copy,
     {
-        self.add_clause(lits.as_ref())
+        self.add_clause(lits.borrow())
     }
 
     fn add_unit<L>(&mut self, lit: L)
