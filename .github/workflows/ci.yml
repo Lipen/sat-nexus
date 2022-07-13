@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - $default_branch
+      - ${{ github.event.repository.default_branch }}
     paths-ignore:
       - 'README.adoc'
   pull_request:
