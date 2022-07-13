@@ -35,7 +35,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --workspace --release
+          args: --workspace
 
       - name: Build Cadical shared library
         run: |
@@ -53,7 +53,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --release
+          args: --workspace
 
   fmt:
     name: Rustfmt
