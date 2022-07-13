@@ -1,0 +1,38 @@
+main = _{SOI ~ expr ~ EOI}
+
+expr = {
+    atom ~ (bin_op ~ atom)*
+}
+bin_op = _{ and | or | imply /*| iff*/ }
+    and = { "&" }
+    or = { "|" }
+    imply = { "->" | "=>" }
+    // iff = { "<->" | "<=>" }
+atom = _{
+    "(" ~ expr ~ ")"
+    | negated_atom
+    | variable
+    | bool
+}
+
+negated_atom = {
+    ("~" | "!") ~ atom
+}
+variable = @{
+    "x" ~ ASCII_DIGIT+
+}
+bool = {
+    true_lit | false_lit
+}
+true_lit = {
+    "true"
+    | "T"
+    | "⊤"
+}
+false_lit = {
+    "false"
+    | "F"
+    | "⊥"
+}
+
+WHITESPACE = _{ " " }

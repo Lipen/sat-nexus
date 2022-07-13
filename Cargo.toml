@@ -11,6 +11,7 @@ members = [
     "lib/minisat-sys",
     "lib/cadical-sys",
     "lib/cli",
+    "lib/expr-parser",
 ]
 
 [dependencies]
