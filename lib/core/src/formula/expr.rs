@@ -7,7 +7,7 @@ use tap::Tap;
 
 use crate::formula::var::Var;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     Constant(bool),
     Variable(Var),

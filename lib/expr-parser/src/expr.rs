@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::ops;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     Const(bool),
     Var(u32),
@@ -9,7 +9,7 @@ pub enum Expr {
     BinOp { op: BinOp, lhs: Box<Expr>, rhs: Box<Expr> },
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BinOp {
     And,
     Or,
