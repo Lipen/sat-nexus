@@ -6,4 +6,4 @@
 	url = https://github.com/niklasso/minisat-c-bindings
 [submodule "lib/cadical-sys/vendor/cadical"]
 	path = lib/cadical-sys/vendor/cadical
-	url = https://github.com/arminbiere/cadical
+	url = https://github.com/Lipen/cadical

@@ -14,7 +14,7 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  tests:
+  build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
@@ -39,15 +39,30 @@ jobs:
           command: build
           args: --workspace
 
-      - name: Build Cadical shared library
+      - name: Build and install MiniSat shared library (libminisat.so)
+        working-directory: lib/minisat-sys/vendor/minisat
         run: |
-          git clone --depth=1 --branch=rel-1.5.2 https://github.com/arminbiere/cadical cadical-git
-          cd cadical-git
-          curl -OL https://raw.githubusercontent.com/Lipen/kotlin-satlib/27bf8cbc4354a03c17987d3cf308047801d7e334/jni/patches/cadical-shared.patch
-          git apply --verbose cadical-shared.patch
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -- -j8
+          sudo cmake --install build --strip --prefix /usr/local
+
+      - name: Build and install MiniSat-C shared library (libminisat-c.so)
+        working-directory: lib/minisat-sys/vendor/minisat-c-bindings
+        run: |
+          make config MINISAT_INCLUDE="-I/usr/local/include"
+          make config MINISAT_LIB="-L/usr/local/lib -lminisat"
+          make config prefix=/usr/local
+          sudo make install
+
+      - name: Build and install Cadical shared library (libcadical.so)
+        working-directory: lib/cadical-sys/vendor/cadical
+        run: |
           ./configure -fPIC
           make -j8 shared
           sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
+
+      - name: Update ld cache and update LD_LIBRARY_PATH
+        run: |
           sudo ldconfig -n /usr/local/lib
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
 
