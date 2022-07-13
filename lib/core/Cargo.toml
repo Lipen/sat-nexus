@@ -16,8 +16,12 @@ dimacs = "0.2.0"
 log = "0.4"
 easy-ext = "1.0.0"
 snafu = "0.7"
+expr-parser = { path = "../expr-parser" }
+eyre = "0.6.8"
 
 [dev-dependencies]
 color-eyre = "0.6"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.0.0"
+test-log = "0.2.10"
+env_logger = "0.9"

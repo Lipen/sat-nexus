@@ -5,6 +5,7 @@ pub mod cnf;
 pub mod context;
 pub mod domainvar;
 pub mod eval;
+pub mod formula;
 pub mod lit;
 pub mod model;
 pub mod op;
