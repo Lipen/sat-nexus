@@ -93,6 +93,8 @@ jobs:
 
       - name: Set up cache
         uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
 
       - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
