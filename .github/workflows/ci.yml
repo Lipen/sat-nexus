@@ -128,11 +128,11 @@ jobs:
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so minisat-c.dll
           cp lib/cadical-sys/vendor/cadical/build/cadical.dll .
 
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --workspace
+#      - name: Build
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: build
+#          args: --workspace
 
       - name: Test
         uses: actions-rs/cargo@v1
