@@ -12,6 +12,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
 
 jobs:
 #  build-and-test:
@@ -117,7 +118,7 @@ jobs:
         working-directory: lib/cadical-sys/vendor/cadical
         run: |
           ./configure -fPIC
-          make -j dll
+          make -j dll  2>&1
           # Result: build/cadical.dll
           ldd build/cadical.dll
 
@@ -126,9 +127,10 @@ jobs:
           mkdir -p libs
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so libs/minisat-c.dll
-          cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
+          install -Dt lib/cadical-sys/vendor/cadical/build/cadical.dll libs
           curl -OL https://github.com/Lipen/kotlin-satlib/releases/download/0.24.2/cadical.dll
           mv cadical.dll libs/cadical2.dll
+          echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
           echo "$(realpath libs)" >> $GITHUB_PATH
 
 #      - name: Build
