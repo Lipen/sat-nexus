@@ -122,15 +122,23 @@ jobs:
           # Result: build/cadical.dll
           ldd build/cadical.dll
 
-      - name: Copy dynamic libraries and update PATH
+      - name: Copy dynamic libraries
         run: |
           mkdir -p libs
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so libs/minisat-c.dll
-          install lib/cadical-sys/vendor/cadical/build/cadical.dll -Dt libs
+          cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
           curl -OL https://github.com/Lipen/kotlin-satlib/releases/download/0.24.2/cadical.dll
           mv cadical.dll libs/cadical2.dll
-          echo "$(realpath libs)" >> $GITHUB_PATH
+          # echo "$(realpath libs)" >> $GITHUB_PATH
+          ldd libs/*.dll
+          ls -al libs/*.dll
+          cp libs/*.dll C:/Windows
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my-dlls
+          path: libs/
 
 #      - name: Build
 #        uses: actions-rs/cargo@v1
@@ -145,10 +153,6 @@ jobs:
 #          args: --workspace
 
       - run: echo $PATH
-
-      - run: ldd libs/*.dll
-
-      - run: cp libs/*.dll C:/Windows/
 
       - name: Test 'cadical'
         continue-on-error: true
