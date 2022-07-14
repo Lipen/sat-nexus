@@ -16,7 +16,7 @@ pub type CCadicalPtr = *mut bindings::CCaDiCaL;
 impl CCadicalFFI {
     pub fn load(name: &str) -> Self {
         unsafe { Self::new(libloading::library_filename(name)) }
-            .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}", name, e))
+            .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}: {:?}", name, e, e))
     }
 
     pub fn init(&self) -> CCadicalPtr {
