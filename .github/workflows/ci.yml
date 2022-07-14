@@ -148,6 +148,8 @@ jobs:
 
       - run: ldd libs/*.dll
 
+      - run: cp libs/*.dll C:/Windows/
+
       - name: Test 'cadical'
         continue-on-error: true
         uses: actions-rs/cargo@v1
