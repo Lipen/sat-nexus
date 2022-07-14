@@ -143,6 +143,8 @@ jobs:
 
       - run: echo $PATH
 
+      - run: ldd libs/*.dll
+
       - name: Test 'cadical'
         continue-on-error: true
         uses: actions-rs/cargo@v1
