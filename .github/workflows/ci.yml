@@ -140,6 +140,8 @@ jobs:
 #          command: test
 #          args: --workspace
 
+      - run: echo %PATH%
+
       - name: Test 'cadical'
         uses: actions-rs/cargo@v1
         with:
