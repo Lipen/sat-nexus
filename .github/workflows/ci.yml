@@ -120,11 +120,13 @@ jobs:
           make -j dll
           # Result: build/cadical.dll
 
-      - name: Copy dynamic libraries
+      - name: Copy dynamic libraries and update PATH
         run: |
-          cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll .
-          cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so minisat-c.dll
-          cp lib/cadical-sys/vendor/cadical/build/cadical.dll .
+          mkdir -p libs
+          cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
+          cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so libs/minisat-c.dll
+          cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/.
+          echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
 
 #      - name: Build
 #        uses: actions-rs/cargo@v1
