@@ -94,6 +94,10 @@ jobs:
       - name: Set up cache
         uses: Swatinem/rust-cache@v1
 
+      - name: Install ZLIB
+        shell: cmd
+        run: powershell -Command "(Invoke-WebRequest -Uri https://git.io/JnHTY -OutFile install_zlib.bat)"; ./install_zlib.bat; del install_zlib.bat
+
       - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
@@ -105,8 +109,8 @@ jobs:
       - name: Build MiniSat-C dynamic library
         working-directory: lib/minisat-sys/vendor/minisat-c-bindings
         run: |
-          make config MINISAT_INCLUDE="-I../minisat/install/include -I../zlib"
-          make config MINISAT_LIB="-LC:/Strawberry/c/lib -L../minisat/install/lib -lminisat"
+          make config MINISAT_INCLUDE="-I\"%PROGRAMFILES%\"/zlib/include -I../minisat/install/include"
+          make config MINISAT_LIB="-L\"%PROGRAMFILES%\"/zlib/lib -L../minisat/install/lib -lminisat"
           make config prefix=install
           make install
           # Result: install/lib/libminisat-c.so (but this is actually a DLL!)
