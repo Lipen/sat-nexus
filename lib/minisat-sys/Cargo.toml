@@ -10,7 +10,7 @@ dynamic = ["libloading", "once_cell"]
 static = ["cc"]
 
 [dependencies]
-libloading = { version = "0.7.2", optional = true }
+libloading = { version = "0.7.3", optional = true }
 once_cell = { version = "1.8.0", optional = true }
 
 [build-dependencies]
