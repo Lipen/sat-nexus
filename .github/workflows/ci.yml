@@ -94,6 +94,10 @@ jobs:
       - name: Set up cache
         uses: Swatinem/rust-cache@v1
 
+      - name: Debug
+        run: |
+          cpp -v /dev/null
+
       - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
