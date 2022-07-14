@@ -1,8 +1,6 @@
-use color_eyre::eyre::Result;
-
 use sat_nexus_core::cnf::Cnf;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let xs = [&[1, 2, 3][..], &[-3, 2][..]];

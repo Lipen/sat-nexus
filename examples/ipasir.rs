@@ -1,10 +1,8 @@
 use std::convert::TryInto;
 
-use color_eyre::eyre::Result;
-
 use ipasir::*;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let solver = Ipasir::new_cadical();

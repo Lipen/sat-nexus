@@ -1,9 +1,7 @@
-use color_eyre::eyre::Result;
-
 use minisat::dynamic::*;
 
 //noinspection DuplicatedCode
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let solver = MiniSat::new();

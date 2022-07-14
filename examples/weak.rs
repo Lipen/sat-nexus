@@ -1,8 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use color_eyre::eyre::Result;
-
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::*;
 use sat_nexus_wrappers::ipasir::IpasirSolver;
@@ -22,7 +20,7 @@ where
     }
 }
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let solver = IpasirSolver::new_cadical();

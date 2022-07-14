@@ -1,8 +1,6 @@
-use color_eyre::eyre::Result;
-
 use minisat_sys::dynamic::*;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     unsafe {

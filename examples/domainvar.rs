@@ -1,4 +1,3 @@
-use color_eyre::eyre::Result;
 use ndarray::ArrayD;
 
 use sat_nexus_core::context::Context;
@@ -7,7 +6,7 @@ use sat_nexus_core::solver::ext::SolverExt;
 use sat_nexus_core::solver::*;
 use sat_nexus_wrappers::cadical::CadicalSolver;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let mut solver = CadicalSolver::new();

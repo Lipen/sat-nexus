@@ -1,8 +1,6 @@
-use color_eyre::eyre::Result;
-
 use cadical::*;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let solver = Cadical::new();

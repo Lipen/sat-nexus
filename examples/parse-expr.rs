@@ -1,8 +1,7 @@
-use color_eyre::Result;
 use sat_nexus_core::formula::expr::Expr;
 use sat_nexus_core::formula::var::Var;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let s = "x1 | x2 & !x3";
