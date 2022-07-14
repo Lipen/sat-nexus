@@ -7,3 +7,6 @@
 [submodule "lib/cadical-sys/vendor/cadical"]
 	path = lib/cadical-sys/vendor/cadical
 	url = https://github.com/Lipen/cadical
+[submodule "lib/minisat-sys/vendor/zlib"]
+	path = lib/minisat-sys/vendor/zlib
+	url = https://github.com/madler/zlib
