@@ -100,30 +100,33 @@ jobs:
           command: build
           args: --workspace
 
-      - name: Build and install MiniSat shared library (libminisat.so)
+      - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -G "MinGW Makefiles"
           cmake --build build
           cmake --install build --strip --prefix install
+          # Result: install/bin/libminisat.dll
 
-      - name: Build and install MiniSat-C shared library (libminisat-c.so)
+      - name: Build MiniSat-C dynamic library
         working-directory: lib/minisat-sys/vendor/minisat-c-bindings
         run: |
           make config MINISAT_INCLUDE="-I../minisat/install/include"
           make config MINISAT_LIB="-L../minisat/install/lib -lminisat"
           make config prefix=install
           make install
+          # Result: install/lib/libminisat-c.so (but this is actually a DLL!)
 
-      - name: Build and install Cadical shared library (libcadical.so)
+      - name: Build Cadical dynamic library
         working-directory: lib/cadical-sys/vendor/cadical
         run: |
           ./configure -fPIC
           make -j dll
+          # Result: build/cadical.dll
 
       - name: Copy dynamic libraries
         run: |
-          cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll minisat.dll
+          cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll .
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so minisat-c.dll
           cp lib/cadical-sys/vendor/cadical/build/cadical.dll .
 
