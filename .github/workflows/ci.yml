@@ -15,7 +15,7 @@ env:
 
 jobs:
   build-and-test:
-    name: Build and test
+    name: Build and test on Linux
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -71,6 +71,68 @@ jobs:
         with:
           command: test
           args: --workspace
+
+  build-windows:
+    name: Build and test on Windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Set up cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace
+
+      - name: Build and install MiniSat shared library (libminisat.so)
+        working-directory: lib/minisat-sys/vendor/minisat
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -G "MinGW Makefiles"
+          cmake --build build
+          cmake --install build --strip --prefix install
+
+      - name: Build and install MiniSat-C shared library (libminisat-c.so)
+        working-directory: lib/minisat-sys/vendor/minisat-c-bindings
+        run: |
+          make config MINISAT_INCLUDE="-I../minisat/install/include"
+          make config MINISAT_LIB="-L../minisat/install/lib -lminisat"
+          make config prefix=install
+          make install
+
+      - name: Build and install Cadical shared library (libcadical.so)
+        working-directory: lib/cadical-sys/vendor/cadical
+        run: |
+          ./configure -fPIC
+          make -j dll
+
+      - name: Copy dynamic libraries
+        run: |
+          cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll minisat.dll
+          cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so minisat-c.dll
+          cp lib/cadical-sys/vendor/cadical/build/cadical.dll .
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+
 
   fmt:
     name: Rustfmt
