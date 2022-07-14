@@ -75,9 +75,6 @@ jobs:
   build-windows:
     name: Build and test on Windows
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -119,12 +116,14 @@ jobs:
 
       - name: Build Cadical dynamic library
         working-directory: lib/cadical-sys/vendor/cadical
+        shell: bash
         run: |
           ./configure -fPIC
           make -j dll
           # Result: build/cadical.dll
 
       - name: Copy dynamic libraries
+        shell: bash
         run: |
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll .
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so minisat-c.dll
