@@ -53,6 +53,7 @@ fn build_static_lib() {
         .cpp(true)
         .include("vendor/minisat/minisat")
         .include("vendor/minisat")
+        .include("vendor/zlib")
         .file("vendor/minisat/minisat/core/Solver.cc")
         .file("vendor/minisat/minisat/simp/SimpSolver.cc")
         .file("vendor/minisat/minisat/utils/System.cc")
