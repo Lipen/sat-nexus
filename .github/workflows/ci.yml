@@ -116,7 +116,7 @@ jobs:
       - name: Build Cadical dynamic library
         working-directory: lib/cadical-sys/vendor/cadical
         run: |
-          ./configure -fPIC -lpsapi
+          ./configure -fPIC
           make -j dll
           # Result: build/cadical.dll
           ldd build/cadical.dll
