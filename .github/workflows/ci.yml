@@ -109,7 +109,7 @@ jobs:
       - name: Build MiniSat-C dynamic library
         working-directory: lib/minisat-sys/vendor/minisat-c-bindings
         run: |
-          make config MINISAT_INCLUDE="-I../minisat/install/include"
+          make config MINISAT_INCLUDE="-I../minisat/install/include -IC:/Strawberry/c/include"
           make config MINISAT_LIB="-L../minisat/install/lib -lminisat"
           make config prefix=install
           make install
