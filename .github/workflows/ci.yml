@@ -134,11 +134,29 @@ jobs:
 #          command: build
 #          args: --workspace
 
-      - name: Test
+#      - name: Test
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: test
+#          args: --workspace
+
+      - name: Test 'cadical'
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace
+          args: -p cadical
+
+      - name: Test 'minisat' (dynamic)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p minisat --features dynamic
+
+      - name: Test 'minisat' (static)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p minisat --features static
 
 #  fmt:
 #    name: Rustfmt
