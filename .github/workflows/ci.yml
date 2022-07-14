@@ -127,7 +127,7 @@ jobs:
           mkdir -p libs
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so libs/minisat-c.dll
-          install -Dt lib/cadical-sys/vendor/cadical/build/cadical.dll libs
+          install lib/cadical-sys/vendor/cadical/build/cadical.dll -Dt libs
           curl -OL https://github.com/Lipen/kotlin-satlib/releases/download/0.24.2/cadical.dll
           mv cadical.dll libs/cadical2.dll
           echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
