@@ -113,19 +113,20 @@ jobs:
           make install
           # Result: install/lib/libminisat-c.so (but this is actually a DLL!)
 
-      - name: Build Cadical dynamic library
-        working-directory: lib/cadical-sys/vendor/cadical
-        run: |
-          ./configure -fPIC
-          make -j dll
-          # Result: build/cadical.dll
+#      - name: Build Cadical dynamic library
+#        working-directory: lib/cadical-sys/vendor/cadical
+#        run: |
+#          ./configure -fPIC
+#          make -j dll
+#          # Result: build/cadical.dll
 
       - name: Copy dynamic libraries and update PATH
         run: |
           mkdir -p libs
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/libminisat-c.so libs/minisat-c.dll
-          cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/.
+          # cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
+          wget -P libs https://github.com/Lipen/kotlin-satlib/releases/download/0.24.2/cadical.dll
           echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
 
 #      - name: Build
