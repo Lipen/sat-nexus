@@ -59,6 +59,7 @@ fn build_static_lib() {
     cc::Build::new()
         .cpp(true)
         .files(files)
+        .flag_if_supported("-Wno-nonnull-compare")
         .define("NDEBUG", None)
         .define("NBUILD", None)
         .define("NUNLOCKED", None)
