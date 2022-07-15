@@ -152,8 +152,12 @@ jobs:
           echo "echo GH_WS/libs = $GITHUB_WORKSPACE/libs"
           ####
           # echo "$(realpath libs)" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
+          # echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
           # cp libs/*.dll C:/Windows
+
+      - name: Update PATH
+        shell: pwsh
+        run: Add-Content $env:GITHUB_PATH "$(Get-Item libs).FullName"
 
       - uses: actions/upload-artifact@v3
         with:
