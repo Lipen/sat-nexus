@@ -157,7 +157,7 @@ jobs:
 
       - name: Update PATH
         shell: pwsh
-        run: Add-Content $env:GITHUB_PATH "$(Get-Item libs).FullName"
+        run: Add-Content $env:GITHUB_PATH "$((Get-Item libs).FullName)"
 
       - uses: actions/upload-artifact@v3
         with:
