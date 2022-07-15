@@ -19,6 +19,10 @@ impl Clause {
 impl Clause {
     pub fn new(lits: Vec<Lit>) -> Self {
         debug_assert!(!lits.is_empty(), "Clause must be non-empty");
+        debug_assert!(
+            itertools::equal(lits.iter(), lits.iter().unique()),
+            "Clause must have unique literals"
+        );
         Clause { lits }
     }
 }
@@ -51,5 +55,17 @@ impl PartialEq for Clause {
         let lhs = self.lits.iter().copied().sorted_unstable();
         let rhs = other.lits.iter().copied().sorted_unstable();
         itertools::equal(lhs, rhs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_and_display_clause() {
+        let lits = vec![Lit::new(1), -Lit::new(2), Lit::new(3)];
+        let clause = Clause::new(lits);
+        assert_eq!("[1, -2, 3]", &format!("{}", clause))
     }
 }
