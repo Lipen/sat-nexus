@@ -15,63 +15,57 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-#  build-and-test:
-#    name: Build and test on Linux
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#        with:
-#          submodules: recursive
-#
-#      - name: Set up Rust
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          profile: minimal
-#          toolchain: stable
-#          override: true
-#
-#      - name: Set up cache
-#        uses: Swatinem/rust-cache@v1
-#
-#      - name: Build
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: build
-#          args: --workspace
-#
-#      - name: Build and install MiniSat shared library (libminisat.so)
-#        working-directory: lib/minisat-sys/vendor/minisat
-#        run: |
-#          cmake -B build -DCMAKE_BUILD_TYPE=Release
-#          cmake --build build -- -j8
-#          sudo cmake --install build --strip --prefix /usr/local
-#
-#      - name: Build and install MiniSat-C shared library (libminisat-c.so)
-#        working-directory: lib/minisat-sys/vendor/minisat-c-bindings
-#        run: |
-#          make config MINISAT_INCLUDE="-I/usr/local/include"
-#          make config MINISAT_LIB="-L/usr/local/lib -lminisat"
-#          make config prefix=/usr/local
-#          sudo make install
-#
-#      - name: Build and install Cadical shared library (libcadical.so)
-#        working-directory: lib/cadical-sys/vendor/cadical
-#        run: |
-#          ./configure -fPIC
-#          make -j8 shared
-#          sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
-#
-#      - name: Update ld cache and update LD_LIBRARY_PATH
-#        run: |
-#          sudo ldconfig -n /usr/local/lib
-#          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
-#
-#      - name: Test
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: test
-#          args: --workspace
+  build:
+    name: Build and test on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Check all
+        run: cargo check --workspace
+
+      - name: Build and install MiniSat shared library (libminisat.so)
+        working-directory: lib/minisat-sys/vendor/minisat
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -- -j8
+          sudo cmake --install build --strip --prefix /usr/local
+
+      - name: Build and install MiniSat-C shared library (libminisat-c.so)
+        working-directory: lib/minisat-sys/vendor/minisat-c-bindings
+        run: |
+          make config MINISAT_INCLUDE="-I/usr/local/include"
+          make config MINISAT_LIB="-L/usr/local/lib -lminisat"
+          make config prefix=/usr/local
+          sudo make install
+
+      - name: Build and install Cadical shared library (libcadical.so)
+        working-directory: lib/cadical-sys/vendor/cadical
+        run: |
+          ./configure -fPIC
+          make -j8 shared
+          sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
+
+      - name: Run ldconfig and update LD_LIBRARY_PATH
+        run: |
+          sudo ldconfig -n /usr/local/lib
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
+
+      - name: Test all
+        run: cargo test --workspace
 
   build-windows:
     name: Build and test on Windows
@@ -96,6 +90,9 @@ jobs:
         uses: Swatinem/rust-cache@v1
         with:
           cache-on-failure: true
+
+      - name: Check all
+        run: cargo check --workspace
 
       - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
@@ -143,9 +140,6 @@ jobs:
           name: DLLs
           path: libs/
 
-      - name: Check all
-        run: cargo check --workspace
-
       - name: Test 'cadical'
         continue-on-error: true
         run: cargo test -p cadical
@@ -168,52 +162,46 @@ jobs:
           NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
           SSH_PASS: ${{ secrets.SSH_PASS }}
 
-#  fmt:
-#    name: Rustfmt
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#
-#      - name: Set up Rust stable
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          profile: minimal
-#          toolchain: stable
-#          override: true
-#          components: rustfmt
-#
-#      - name: Set up cache
-#        uses: Swatinem/rust-cache@v1
-#
-#      - name: Run rustfmt
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: fmt
-#          args: --all -- --check
-#
-#  clippy:
-#    name: Clippy
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#        with:
-#          submodules: recursive
-#
-#      - name: Set up Rust nightly
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          profile: minimal
-#          toolchain: nightly
-#          override: true
-#          components: clippy
-#
-#      - name: Set up cache
-#        uses: Swatinem/rust-cache@v1
-#
-#      - name: Run clippy
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: clippy
-#          args: --workspace --tests
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run rustfmt
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: clippy
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run clippy
+        run: cargo clippy --workspace --tests
