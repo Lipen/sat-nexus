@@ -170,12 +170,6 @@ jobs:
 #          command: build
 #          args: --workspace
 
-#      - name: Test
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: test
-#          args: --workspace
-
       - run: echo $PATH
 
       - name: Test 'cadical'
@@ -198,6 +192,12 @@ jobs:
         with:
           command: test
           args: -p minisat --features static
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
 
       - name: Start SSH session
         if: ${{ failure() }}
