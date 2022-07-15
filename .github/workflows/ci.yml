@@ -130,7 +130,8 @@ jobs:
           cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
           ldd libs/*.dll
           ls -al libs/*.dll
-          echo "$(realpath libs)" >> $GITHUB_PATH
+          # echo "$(realpath libs)" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/libs" >> $GITHUB_PATH
           # cp libs/*.dll C:/Windows
 
       - uses: actions/upload-artifact@v3
