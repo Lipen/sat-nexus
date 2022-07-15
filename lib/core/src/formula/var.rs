@@ -9,9 +9,9 @@ pub struct Var(pub u32);
 impl Display for Var {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
-            write!(f, "{}", self.0)
-        } else {
             write!(f, "x{}", self.0)
+        } else {
+            write!(f, "{}", self.0)
         }
     }
 }
