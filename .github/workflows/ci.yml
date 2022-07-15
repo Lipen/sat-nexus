@@ -134,7 +134,7 @@ jobs:
       - name: Build Cadical dynamic library
         working-directory: lib/cadical-sys/vendor/cadical
         run: |
-          CC=clang CXX=clang++ ./configure -fPIC
+          ./configure -fPIC
           make -j dll  2>&1
           # Result: build/cadical.dll
           ldd build/cadical.dll
