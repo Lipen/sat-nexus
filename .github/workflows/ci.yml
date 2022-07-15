@@ -109,7 +109,7 @@ jobs:
           toolchain: stable-gnu
           override: true
 
-      - name: Set up cache
+      - name: Set up Rust cache
         uses: Swatinem/rust-cache@v1
         with:
           cache-on-failure: true
@@ -165,39 +165,24 @@ jobs:
           path: libs/
 
 #      - name: Build
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: build
-#          args: --workspace
+#        run: cargo build --workspace
 
       - run: echo $PATH
 
       - name: Test 'cadical'
         continue-on-error: true
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p cadical
+        run: cargo test -p cadical
 
       - name: Test 'minisat' (dynamic)
         continue-on-error: true
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p minisat --features dynamic
+        run: cargo test -p minisat --features dynamic
 
       - name: Test 'minisat' (static)
         continue-on-error: true
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p minisat --features static
+        run: cargo test -p minisat --features static
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace
+        run: cargo test --workspace
 
       - name: Start SSH session
         if: ${{ failure() }}
