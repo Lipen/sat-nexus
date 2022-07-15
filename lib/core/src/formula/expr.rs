@@ -187,11 +187,13 @@ mod tests {
             }),
         };
         info!("e1 = {:?}", e1);
+        info!("e1 = {:#}", e1);
         info!("e1 = {}", e1);
 
         // e = x42 & ~True
         let e2 = Expr::from(Var(42)) & !Expr::from(true);
         info!("e2 = {:?}", e2);
+        info!("e2 = {:#}", e2);
         info!("e2 = {}", e2);
 
         assert_eq!(e1, e2);
@@ -203,6 +205,7 @@ mod tests {
         let x1 = Var(1);
         let f = x1 & !Expr::from(false);
         info!("f = {:?}", f);
+        info!("f = {:#}", f);
         info!("f = {}", f);
 
         let mut mapping = HashMap::new();
