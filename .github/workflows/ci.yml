@@ -168,6 +168,8 @@ jobs:
 #        run: cargo build --workspace
 
       - run: echo $PATH
+      - run: $env:PATH
+        shell: pwsh
 
       - name: Test 'cadical'
         continue-on-error: true
