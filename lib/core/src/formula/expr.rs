@@ -9,8 +9,8 @@ use crate::formula::var::Var;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
-    Constant(bool),
-    Variable(Var),
+    Const(bool),
+    Var(Var),
     Not { arg: Box<Expr> },
     And { lhs: Box<Expr>, rhs: Box<Expr> },
     Or { lhs: Box<Expr>, rhs: Box<Expr> },
@@ -18,23 +18,6 @@ pub enum Expr {
 
 // Constructors
 impl Expr {
-    pub fn constant(b: bool) -> Self {
-        Expr::Constant(b)
-    }
-    pub fn true_() -> Self {
-        Expr::Constant(true)
-    }
-    pub fn false_() -> Self {
-        Expr::Constant(false)
-    }
-
-    pub fn variable(var: Var) -> Self {
-        Expr::Variable(var)
-    }
-    pub fn var(v: u32) -> Self {
-        Expr::Variable(Var(v))
-    }
-
     pub fn not(arg: Self) -> Self {
         Expr::Not { arg: Box::new(arg) }
     }
@@ -56,13 +39,13 @@ impl Expr {
 
 impl From<bool> for Expr {
     fn from(b: bool) -> Self {
-        Expr::Constant(b)
+        Expr::Const(b)
     }
 }
 
 impl From<Var> for Expr {
     fn from(var: Var) -> Self {
-        Expr::Variable(var)
+        Expr::Var(var)
     }
 }
 
@@ -70,11 +53,11 @@ impl Display for Expr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
-                Expr::Constant(b) => {
+                Expr::Const(b) => {
                     write!(f, "Const({b:#})")
                 }
-                Expr::Variable(var) => {
-                    write!(f, "Variable({var:#})")
+                Expr::Var(var) => {
+                    write!(f, "Var({var:#})")
                 }
                 Expr::Not { arg } => {
                     write!(f, "Not({arg:#})")
@@ -88,10 +71,10 @@ impl Display for Expr {
             }
         } else {
             match self {
-                Expr::Constant(b) => {
+                Expr::Const(b) => {
                     write!(f, "{b}")
                 }
-                Expr::Variable(var) => {
+                Expr::Var(var) => {
                     write!(f, "{var}")
                 }
                 Expr::Not { arg } => {
@@ -117,8 +100,8 @@ impl Expr {
         fn convert(parsed_expr: ParsedExpr) -> Expr {
             use expr_parser::expr::BinOp;
             match parsed_expr {
-                ParsedExpr::Const(b) => Expr::constant(b),
-                ParsedExpr::Var(v) => Expr::var(v),
+                ParsedExpr::Const(b) => Expr::from(b),
+                ParsedExpr::Var(v) => Expr::from(Var(v)),
                 ParsedExpr::Negation { arg } => Expr::not(convert(*arg)),
                 ParsedExpr::BinOp { op, lhs, rhs } => {
                     let lhs = convert(*lhs);
@@ -139,8 +122,8 @@ impl Expr {
     pub fn eval(&self, mapping: &HashMap<Var, bool>) -> bool {
         debug!("-> Expr::eval({self})...");
         match self {
-            Expr::Constant(b) => *b,
-            Expr::Variable(var) => *mapping.get(var).unwrap_or_else(|| panic!("Mapping does not contain {var}")),
+            Expr::Const(b) => *b,
+            Expr::Var(var) => *mapping.get(var).unwrap_or_else(|| panic!("Mapping does not contain {var}")),
             Expr::Not { arg } => !arg.eval(mapping),
             Expr::And { lhs, rhs } => lhs.eval(mapping) && rhs.eval(mapping),
             Expr::Or { lhs, rhs } => lhs.eval(mapping) || rhs.eval(mapping),
@@ -198,16 +181,16 @@ mod tests {
     fn test_create_expr() {
         // e1 = x42 & ~True
         let e1 = Expr::And {
-            lhs: Box::new(Expr::Variable(Var(42))),
+            lhs: Box::new(Expr::Var(Var(42))),
             rhs: Box::new(Expr::Not {
-                arg: Box::new(Expr::Constant(true)),
+                arg: Box::new(Expr::Const(true)),
             }),
         };
         info!("e1 = {:?}", e1);
         info!("e1 = {}", e1);
 
         // e = x42 & ~True
-        let e2 = Expr::var(42) & !Expr::true_();
+        let e2 = Expr::from(Var(42)) & !Expr::from(true);
         info!("e2 = {:?}", e2);
         info!("e2 = {}", e2);
 
