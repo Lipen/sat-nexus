@@ -6,7 +6,7 @@ use std::ops::Neg;
 pub struct Lit(i32);
 
 impl Lit {
-    pub fn new(val: i32) -> Self {
+    pub const fn new(val: i32) -> Self {
         debug_assert!(val != 0);
         Lit(val)
     }
