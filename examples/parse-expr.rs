@@ -16,8 +16,10 @@ fn main() -> color_eyre::Result<()> {
     let x1 = Var(1);
     let x2 = Var(2);
     let x3 = Var(3);
-    let e: Expr = x1 | x2 & x3;
+    let e: Expr<Var> = x1 | x2 & !x3;
     println!("e = {} = {0:?}", e);
+    let nnf = e.to_nnf();
+    println!("nnf = {:?}", nnf);
 
     Ok(())
 }

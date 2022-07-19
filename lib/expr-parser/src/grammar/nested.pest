@@ -1,0 +1,43 @@
+main = _{SOI ~ expression ~ EOI}
+
+expression = {
+    disjunction
+}
+disjunction = {
+    conjunction ~ ( "|" ~ conjunction )*
+}
+conjunction = {
+    term ~ ( "&" ~ term )*
+}
+
+term = _{
+    negated_term
+    | braced_expression
+    | variable
+    | bool
+}
+negated_term = {
+    ("~" | "!") ~ term
+}
+braced_expression = {
+    "(" ~ expression ~ ")"
+}
+variable = @{
+    "x" ~ ASCII_DIGIT+
+}
+
+bool = {
+    true_lit | false_lit
+}
+true_lit = {
+    "true"
+    | "T"
+    | "⊤"
+}
+false_lit = {
+    "false"
+    | "F"
+    | "⊥"
+}
+
+WHITESPACE = _{ " " }

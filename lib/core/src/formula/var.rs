@@ -16,40 +16,45 @@ impl Display for Var {
     }
 }
 
+// !Var
 impl ops::Not for Var {
-    type Output = Expr;
+    type Output = Expr<Var>;
 
     fn not(self) -> Self::Output {
         !Expr::from(self)
     }
 }
 
+// Var & Var
 impl ops::BitAnd for Var {
-    type Output = Expr;
+    type Output = Expr<Var>;
 
     fn bitand(self, rhs: Var) -> Self::Output {
         Expr::from(self) & Expr::from(rhs)
     }
 }
-impl ops::BitAnd<Expr> for Var {
-    type Output = Expr;
+// Var & Expr
+impl ops::BitAnd<Expr<Var>> for Var {
+    type Output = Expr<Var>;
 
-    fn bitand(self, rhs: Expr) -> Self::Output {
+    fn bitand(self, rhs: Expr<Var>) -> Self::Output {
         Expr::from(self) & rhs
     }
 }
 
+// Var | Var
 impl ops::BitOr for Var {
-    type Output = Expr;
+    type Output = Expr<Var>;
 
     fn bitor(self, rhs: Var) -> Self::Output {
         Expr::from(self) | Expr::from(rhs)
     }
 }
-impl ops::BitOr<Expr> for Var {
-    type Output = Expr;
+// Var | Expr
+impl ops::BitOr<Expr<Var>> for Var {
+    type Output = Expr<Var>;
 
-    fn bitor(self, rhs: Expr) -> Self::Output {
+    fn bitor(self, rhs: Expr<Var>) -> Self::Output {
         Expr::from(self) | rhs
     }
 }

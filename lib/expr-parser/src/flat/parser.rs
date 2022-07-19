@@ -5,10 +5,10 @@ use pest::iterators::Pair;
 use pest::prec_climber::PrecClimber;
 use pest::Parser;
 
-use crate::expr::{BinOp, Expr};
+use super::expr::{BinOp, Expr};
 
 #[derive(Parser)]
-#[grammar = "expr.pest"] // relative to project `src`
+#[grammar = "grammar/flat.pest"] // relative to project `src`
 struct ExprParser;
 
 static PREC_CLIMBER: Lazy<PrecClimber<Rule>> = Lazy::new(|| {
@@ -86,8 +86,6 @@ pub fn parse_expr(input: &str) -> Result<Expr, Error<Rule>> {
 #[cfg(test)]
 mod tests {
     use test_log::test;
-
-    use crate::expr::Expr;
 
     use super::*;
 
