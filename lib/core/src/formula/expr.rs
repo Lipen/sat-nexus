@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
-use std::iter::once;
 use std::ops;
 
-use itertools::{all, any, chain, Itertools};
+use itertools::{all, any, Itertools};
 
 use crate::formula::nnf::NNF;
 use crate::formula::var::Var;
@@ -21,7 +20,11 @@ pub enum Expr<T> {
 // Constructors
 impl<T> Expr<T> {
     pub fn not(arg: Self) -> Self {
-        Expr::Not { arg: Box::new(arg) }
+        // Double negation: Not(Not(x)) == x
+        match arg {
+            Expr::Not { arg: sub_arg } => *sub_arg,
+            _ => Expr::Not { arg: Box::new(arg) },
+        }
     }
 
     pub fn and<I>(args: I) -> Self
@@ -29,11 +32,20 @@ impl<T> Expr<T> {
         I: IntoIterator,
         I::Item: Into<Self>,
     {
-        let args = args.into_iter().map_into::<Self>().collect_vec();
-        match args.len() {
+        // Auto-consolidate: AND(x1,AND(x2,x3)) == AND(x1,x2,x3)
+        let mut new_args = Vec::new();
+        for arg in args.into_iter().map_into::<Self>() {
+            match arg {
+                Expr::And { args: sub_args } => {
+                    new_args.extend(sub_args);
+                }
+                _ => new_args.push(arg),
+            }
+        }
+        match new_args.len() {
             // 0 => Expr::Const(true), // 0-ary AND is True
-            1 => args.into_iter().next().unwrap(),
-            _ => Expr::And { args },
+            1 => new_args.into_iter().next().unwrap(), // single arg
+            _ => Expr::And { args: new_args },
         }
     }
 
@@ -42,11 +54,20 @@ impl<T> Expr<T> {
         I: IntoIterator,
         I::Item: Into<Self>,
     {
-        let args = args.into_iter().map_into::<Self>().collect_vec();
-        match args.len() {
+        // Auto-consolidate: OR(x1,OR(x2,x3)) == OR(x1,x2,x3)
+        let mut new_args = Vec::new();
+        for arg in args.into_iter().map_into::<Self>() {
+            match arg {
+                Expr::Or { args: sub_args } => {
+                    new_args.extend(sub_args);
+                }
+                _ => new_args.push(arg),
+            }
+        }
+        match new_args.len() {
             // 0 => Expr::Const(false), // 0-ary OR is False
-            1 => args.into_iter().next().unwrap(),
-            _ => Expr::Or { args },
+            1 => new_args.into_iter().next().unwrap(), // single arg
+            _ => Expr::Or { args: new_args },
         }
     }
 }
@@ -116,14 +137,7 @@ impl<T> ops::BitAnd for Expr<T> {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        // Auto-consolidate
-        use Expr::And;
-        match (self, rhs) {
-            (And { args: lhs_args }, And { args: rhs_args }) => Expr::and(chain(lhs_args, rhs_args)),
-            (And { args: lhs_args }, rhs) => Expr::and(chain(lhs_args, once(rhs))),
-            (lhs, And { args: rhs_args }) => Expr::and(chain(once(lhs), rhs_args)),
-            (lhs, rhs) => Expr::and([lhs, rhs]),
-        }
+        Expr::and([self, rhs])
     }
 }
 // Expr & Var
@@ -140,14 +154,7 @@ impl<T> ops::BitOr for Expr<T> {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        // Auto-consolidate
-        use Expr::Or;
-        match (self, rhs) {
-            (Or { args: lhs_args }, Or { args: rhs_args }) => Expr::or(chain!(lhs_args, rhs_args)),
-            (Or { args: lhs_args }, rhs) => Expr::or(chain(lhs_args, once(rhs))),
-            (lhs, Or { args: rhs_args }) => Expr::or(chain(once(lhs), rhs_args)),
-            (lhs, rhs) => Expr::or([lhs, rhs]),
-        }
+        Expr::or([self, rhs])
     }
 }
 // Expr | Var
