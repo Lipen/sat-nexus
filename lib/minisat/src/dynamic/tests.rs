@@ -33,9 +33,20 @@ fn test_minisat_solver() -> color_eyre::Result<()> {
     let val2 = solver.model_value_lit(lit2);
     let val3 = solver.model_value_lit(lit3);
     let val4 = solver.model_value_lit(lit4);
-    eprintln!("values: {:?}", [val1, val2, val3, val4]);
+    println!("values: {:?}", [val1, val2, val3, val4]);
     assert!(val1.bool() ^ val2.bool());
     assert!(val3.bool() ^ val4.bool());
+
+    println!("=== STATISTICS ===");
+    println!("vars =         {}", solver.num_vars());
+    println!("clauses =      {}", solver.num_clauses());
+    println!("assigns =      {}", solver.num_assigns());
+    println!("free_vars =    {}", solver.num_free_vars());
+    println!("learnts =      {}", solver.num_learnts());
+    println!("conflicts =    {}", solver.num_conflicts());
+    println!("decisions =    {}", solver.num_decisions());
+    println!("restarts =     {}", solver.num_restarts());
+    println!("propagations = {}", solver.num_propagations());
 
     Ok(())
 }
