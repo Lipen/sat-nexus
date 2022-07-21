@@ -21,7 +21,7 @@ fn generate_bindings_dynamic() {
         .header("vendor/minisat-c-bindings/minisat.h")
         .dynamic_library_name("minisat")
         .dynamic_link_require_all(true)
-        .blocklist_type("minisat_bool") // manually aliases to Rust's `bool`
+        .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .layout_tests(false)
         .generate()
@@ -38,7 +38,7 @@ fn generate_bindings_static() {
     let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
     bindgen::builder()
         .header("vendor/minisat-c-bindings/minisat.h")
-        .blocklist_type("minisat_bool") // manually aliases to Rust's `bool`
+        .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Could not create bindings!")
