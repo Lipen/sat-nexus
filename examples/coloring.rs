@@ -5,6 +5,10 @@ use ndarray::ArrayD;
 
 use sat_nexus_core::context::Context;
 use sat_nexus_core::domainvar::DomainVar;
+use sat_nexus_core::formula::constraint::add_constraint;
+use sat_nexus_core::formula::expr::Expr;
+use sat_nexus_core::formula::var::Var;
+use sat_nexus_core::lit::Lit;
 use sat_nexus_core::op::ops::Ops;
 use sat_nexus_core::solver::ext::SolverExt;
 use sat_nexus_core::solver::*;
@@ -75,10 +79,28 @@ where
     println!("edges = {:?}", edges);
     println!("color = {}", color);
 
+    static USE_CONSTRAINT: bool = true;
+
+    fn lit_to_var(lit: Lit) -> Expr<Var> {
+        let e = Expr::from(Var(lit.var()));
+        if lit.get() < 0 {
+            !e
+        } else {
+            e
+        }
+    }
+
     // (color[a] = c) -> (color[b] != c)
     for &Edge(a, b) in edges.iter() {
         for c in 1..=num_colors {
-            solver.imply(color[[a - 1]].eq(c), color[[b - 1]].neq(c));
+            if USE_CONSTRAINT {
+                add_constraint(
+                    solver,
+                    Expr::or([!lit_to_var(color[[a - 1]].eq(c)), lit_to_var(color[[b - 1]].neq(c))]),
+                )
+            } else {
+                solver.imply(color[[a - 1]].eq(c), color[[b - 1]].neq(c));
+            }
         }
     }
 
@@ -137,6 +159,12 @@ fn main() -> color_eyre::Result<()> {
         for v in 1..=num_vertices {
             println!("color[{: >2}] = {}", v, color[[v - 1]].eval(&solver));
         }
+
+        println!("=> Checking coloring...");
+        for &Edge(a, b) in edges.iter() {
+            assert_ne!(color[[a - 1]].eval(&solver), color[[b - 1]].eval(&solver),);
+        }
+        println!("=> Coloring: OK");
     }
 
     Ok(())
