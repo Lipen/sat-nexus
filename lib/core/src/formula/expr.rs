@@ -186,7 +186,34 @@ impl<T> Expr<T> {
 }
 
 impl Expr<Var> {
-    pub fn parse(input: &str) -> eyre::Result<Self> {
+    pub fn parse_flat(input: &str) -> eyre::Result<Self> {
+        let parsed_expr = expr_parser::flat::parser::parse_expr(input)?;
+
+        use expr_parser::flat::expr::BinOp;
+        use expr_parser::flat::expr::Expr as ParsedExpr;
+
+        fn convert(parsed_expr: ParsedExpr) -> Expr<Var> {
+            match parsed_expr {
+                ParsedExpr::Const(b) => Expr::Const(b),
+                ParsedExpr::Var(v) => Expr::Terminal(Var(v)),
+                ParsedExpr::Negation { arg } => Expr::not(convert(*arg)),
+                ParsedExpr::BinOp { op, lhs, rhs } => {
+                    let lhs = convert(*lhs);
+                    let rhs = convert(*rhs);
+                    match op {
+                        BinOp::And => lhs & rhs,
+                        BinOp::Or => lhs | rhs,
+                        BinOp::Imply => Expr::imply(lhs, rhs),
+                        // other ops
+                    }
+                }
+            }
+        }
+
+        Ok(convert(parsed_expr))
+    }
+
+    pub fn parse_nested(input: &str) -> eyre::Result<Self> {
         let parsed_expr = expr_parser::nested::parser::parse_expr(input)?;
 
         use expr_parser::nested::expr::Expr as ParsedExpr;

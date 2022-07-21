@@ -6,7 +6,7 @@ fn main() -> color_eyre::Result<()> {
 
     let s = "x1 | x2 & !x3";
     println!("Input: {}", s);
-    let expr = Expr::parse(s);
+    let expr = Expr::parse_nested(s);
     println!("Parsed: {:?}", expr);
     if let Ok(expr) = expr {
         println!("Parsed: {}", expr);
