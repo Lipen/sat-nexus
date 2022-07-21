@@ -96,7 +96,7 @@ where
             if USE_CONSTRAINT {
                 add_constraint(
                     solver,
-                    Expr::or([!lit_to_var(color[[a - 1]].eq(c)), lit_to_var(color[[b - 1]].neq(c))]),
+                    Expr::imply(lit_to_var(color[[a - 1]].eq(c)), lit_to_var(color[[b - 1]].neq(c))),
                 )
             } else {
                 solver.imply(color[[a - 1]].eq(c), color[[b - 1]].neq(c));

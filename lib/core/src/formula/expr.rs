@@ -70,6 +70,10 @@ impl<T> Expr<T> {
             _ => Expr::Or { args: new_args },
         }
     }
+
+    pub fn imply(lhs: impl Into<Self>, rhs: impl Into<Self>) -> Self {
+        !lhs.into() | rhs.into()
+    }
 }
 
 impl<T> From<T> for Expr<T> {
