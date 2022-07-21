@@ -162,6 +162,10 @@ mod tests {
         println!("cnf = {:?}", cnf);
         println!("nvars = {}", nvars);
         println!("nclauses = {}", cnf.0 .0.len());
+        for clause in cnf.0 .0.iter() {
+            println!(". {:?}", clause);
+        }
+        assert_eq!(nvars, 5);
         assert_eq!(cnf.0 .0.len(), 5);
     }
 
@@ -187,6 +191,7 @@ mod tests {
         for clause in cnf.0 .0.iter() {
             println!(". {:?}", clause);
         }
+        assert_eq!(nvars, 5);
         assert_eq!(cnf.0 .0.len(), 9);
     }
 
@@ -209,6 +214,7 @@ mod tests {
         for clause in cnf.0 .0.iter() {
             println!(". {:?}", clause);
         }
+        assert_eq!(nvars, 3);
         assert_eq!(cnf.0 .0.len(), 3);
     }
 }
