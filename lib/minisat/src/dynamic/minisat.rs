@@ -225,11 +225,11 @@ impl MiniSat {
     pub fn num_decisions(&self) -> i32 {
         unsafe { self.ffi.minisat_num_decisions(self.ptr) }
     }
-    pub fn num_propagations(&self) -> i32 {
-        unsafe { self.ffi.minisat_num_propagations(self.ptr) }
-    }
     pub fn num_restarts(&self) -> i32 {
         unsafe { self.ffi.minisat_num_restarts(self.ptr) }
+    }
+    pub fn num_propagations(&self) -> i32 {
+        unsafe { self.ffi.minisat_num_propagations(self.ptr) }
     }
 }
 
