@@ -202,6 +202,26 @@ impl Cadical {
         unsafe { self.ffi.ccadical_irredundant(self.ptr) }
     }
 
+    /// Number of conflicts.
+    pub fn conflicts(&self) -> i64 {
+        unsafe { self.ffi.ccadical_conflicts(self.ptr) }
+    }
+
+    /// Number of decisions.
+    pub fn decisions(&self) -> i64 {
+        unsafe { self.ffi.ccadical_decisions(self.ptr) }
+    }
+
+    /// Number of restarts.
+    pub fn restarts(&self) -> i64 {
+        unsafe { self.ffi.ccadical_restarts(self.ptr) }
+    }
+
+    /// Number of propagations.
+    pub fn propagations(&self) -> i64 {
+        unsafe { self.ffi.ccadical_propagations(self.ptr) }
+    }
+
     /// Root level assigned variables can be queried with this function.
     /// It returns '1' if the literal is implied by the formula, '-1' if its
     /// negation is implied, or '0' if this is unclear at this point.

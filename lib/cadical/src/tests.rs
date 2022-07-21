@@ -30,9 +30,14 @@ fn test_cadical_solver() -> color_eyre::Result<()> {
     let val2 = solver.val(2)?;
     let val3 = solver.val(3)?;
     let val4 = solver.val(4)?;
-    eprintln!("values: {:?}", vec![val1, val2, val3, val4]);
+    println!("values: {:?}", vec![val1, val2, val3, val4]);
     assert!(bool::from(val1) ^ bool::from(val2));
     assert!(bool::from(val3) ^ bool::from(val4));
+
+    println!("conflicts:    {}", solver.conflicts());
+    println!("decisions:    {}", solver.decisions());
+    println!("restarts:     {}", solver.restarts());
+    println!("propagations: {}", solver.propagations());
 
     Ok(())
 }
