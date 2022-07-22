@@ -6,8 +6,8 @@ pub mod bindings {
     #![allow(deref_nullptr)] // see https://github.com/rust-lang/rust-bindgen/issues/1651
     #![allow(clippy::style)]
 
-    include!(concat!(env!("OUT_DIR"), "/bindings-minisat-dynamic.rs"));
-    // include!("../_bindings-minisat-dynamic.rs");
+    include!(concat!(env!("OUT_DIR"), "/bindings-cminisat-dynamic.rs"));
+    // include!("../_bindings-cminisat-dynamic.rs");
 
     // `minisat.h` contains the following declaration:
     //   typedef opaque(int) minisat_bool;
@@ -16,16 +16,16 @@ pub mod bindings {
     pub type minisat_bool = bool;
 }
 
-pub type MiniSatFFI = bindings::minisat;
-pub type MiniSatPtr = *mut bindings::minisat_solver;
+pub type CMiniSatFFI = bindings::cminisat;
+pub type CMiniSatPtr = *mut bindings::minisat_solver;
 
-impl MiniSatFFI {
+impl CMiniSatFFI {
     pub fn load(name: &str) -> Self {
         unsafe { Self::new(libloading::library_filename(name)) }
             .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}: {:?}", name, e, e))
     }
 
-    pub fn init(&self) -> MiniSatPtr {
+    pub fn init(&self) -> CMiniSatPtr {
         unsafe { self.minisat_new() }
     }
 }
@@ -33,18 +33,18 @@ impl MiniSatFFI {
 macro_rules! instance {
     ($name:expr) => {{
         use ::once_cell::sync::OnceCell;
-        static INSTANCE: OnceCell<MiniSatFFI> = OnceCell::new();
-        INSTANCE.get_or_init(|| MiniSatFFI::load($name))
+        static INSTANCE: OnceCell<CMiniSatFFI> = OnceCell::new();
+        INSTANCE.get_or_init(|| CMiniSatFFI::load($name))
     }};
 }
 
-impl MiniSatFFI {
+impl CMiniSatFFI {
     pub fn instance() -> &'static Self {
         instance!("minisat-c")
     }
 }
 
-impl MiniSatFFI {
+impl CMiniSatFFI {
     pub fn minisat_l_true(&self) -> bindings::minisat_lbool {
         unsafe { self.minisat_get_l_True() }
     }

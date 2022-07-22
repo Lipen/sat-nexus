@@ -15,18 +15,18 @@ fn main() {
 fn generate_bindings_dynamic() {
     println!("cargo:warning=Generating MiniSat dynamic bindings...");
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen vendor/minisat-c-bindings/minisat.h -o _bindings-minisat-dynamic.rs --dynamic-loading minisat --blocklist-type minisat_bool --allowlist-function minisat_.*
+    //   bindgen vendor/minisat-c-bindings/minisat.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --blocklist-type minisat_bool --allowlist-function minisat_.*
     let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
     bindgen::builder()
         .header("vendor/minisat-c-bindings/minisat.h")
-        .dynamic_library_name("minisat")
+        .dynamic_library_name("cminisat")
         .dynamic_link_require_all(true)
         .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .layout_tests(false)
         .generate()
         .expect("Could not create bindings!")
-        .write_to_file(out_path.join("bindings-minisat-dynamic.rs"))
+        .write_to_file(out_path.join("bindings-cminisat-dynamic.rs"))
         .expect("Could not write bindings!");
 }
 
@@ -34,7 +34,7 @@ fn generate_bindings_dynamic() {
 fn generate_bindings_static() {
     println!("cargo:warning=Generating MiniSat static bindings...");
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen vendor/minisat-c-bindings/minisat.h -o _bindings-minisat-static.rs --blocklist-type minisat_bool --allowlist-function minisat_.*
+    //   bindgen vendor/minisat-c-bindings/minisat.h -o _bindings-cminisat-static.rs --blocklist-type minisat_bool --allowlist-function minisat_.*
     let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
     bindgen::builder()
         .header("vendor/minisat-c-bindings/minisat.h")
@@ -42,7 +42,7 @@ fn generate_bindings_static() {
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Could not create bindings!")
-        .write_to_file(out_path.join("bindings-minisat-static.rs"))
+        .write_to_file(out_path.join("bindings-cminisat-static.rs"))
         .expect("Could not write bindings!");
 }
 

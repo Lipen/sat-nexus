@@ -4,7 +4,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     unsafe {
-        let ffi = MiniSatFFI::load("minisat-c");
+        let ffi = CMiniSatFFI::load("minisat-c");
         let ptr = ffi.init();
         println!("ptr = {:?}", ptr);
 

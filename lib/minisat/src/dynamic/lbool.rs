@@ -1,5 +1,5 @@
 use super::ffi::bindings::minisat_lbool;
-use super::ffi::MiniSatFFI;
+use super::ffi::CMiniSatFFI;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LBool {
@@ -27,7 +27,7 @@ impl LBool {
 }
 
 impl LBool {
-    pub(crate) fn from_c(ffi: &MiniSatFFI, lbool: minisat_lbool) -> Self {
+    pub(crate) fn from_c(ffi: &CMiniSatFFI, lbool: minisat_lbool) -> Self {
         if lbool == ffi.minisat_l_true() {
             LBool::True
         } else if lbool == ffi.minisat_l_false() {
@@ -39,7 +39,7 @@ impl LBool {
         }
     }
 
-    pub(crate) fn to_c(self, ffi: &MiniSatFFI) -> minisat_lbool {
+    pub(crate) fn to_c(self, ffi: &CMiniSatFFI) -> minisat_lbool {
         match self {
             LBool::True => ffi.minisat_l_true(),
             LBool::False => ffi.minisat_l_false(),

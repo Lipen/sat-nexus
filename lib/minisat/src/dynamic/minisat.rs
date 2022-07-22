@@ -35,16 +35,16 @@ use super::var::*;
 /// # }
 /// ```
 pub struct MiniSat {
-    ffi: &'static MiniSatFFI,
-    ptr: MiniSatPtr,
+    ffi: &'static CMiniSatFFI,
+    ptr: CMiniSatPtr,
 }
 
 impl MiniSat {
     pub fn new() -> Self {
-        Self::new_custom(MiniSatFFI::instance())
+        Self::new_custom(CMiniSatFFI::instance())
     }
 
-    pub fn new_custom(ffi: &'static MiniSatFFI) -> Self {
+    pub fn new_custom(ffi: &'static CMiniSatFFI) -> Self {
         let ptr = ffi.init();
         unsafe {
             ffi.minisat_eliminate(ptr, true);

@@ -1,9 +1,9 @@
 use once_cell::sync::Lazy;
 
 use minisat::dynamic::*;
-use minisat_sys::dynamic::MiniSatFFI;
+use minisat_sys::dynamic::CMiniSatFFI;
 
-static GLUCOSE: Lazy<MiniSatFFI> = Lazy::new(|| MiniSatFFI::load("glucose-c"));
+static GLUCOSE: Lazy<CMiniSatFFI> = Lazy::new(|| CMiniSatFFI::load("glucose-c"));
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;

@@ -4,7 +4,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     unsafe {
-        let ffi = MiniSatFFI::load("glucose-c");
+        let ffi = CMiniSatFFI::load("glucose-c");
         println!("ffi created");
         let ptr = ffi.init();
         println!("ptr = {:?}", ptr);

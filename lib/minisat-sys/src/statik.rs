@@ -6,8 +6,8 @@ pub mod bindings {
     #![allow(deref_nullptr)] // see https://github.com/rust-lang/rust-bindgen/issues/1651
     #![allow(clippy::style)]
 
-    include!(concat!(env!("OUT_DIR"), "/bindings-minisat-static.rs"));
-    // include!("../_bindings-minisat-static.rs");
+    include!(concat!(env!("OUT_DIR"), "/bindings-cminisat-static.rs"));
+    // include!("../_bindings-cminisat-static.rs");
 
     // `minisat.h` contains the following declaration:
     //   typedef opaque(int) minisat_bool;
