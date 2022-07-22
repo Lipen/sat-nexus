@@ -55,5 +55,6 @@ fn main() -> color_eyre::Result<()> {
             println!("val({}) = {}", -i, lib.ccadical_val(ptr, -i));
         }
     }
+
     Ok(())
 }

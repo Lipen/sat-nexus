@@ -89,5 +89,6 @@ fn main() -> color_eyre::Result<()> {
         println!("result = {}", result);
         assert!(!result);
     }
+
     Ok(())
 }
