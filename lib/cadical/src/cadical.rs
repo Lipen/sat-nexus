@@ -182,8 +182,8 @@ impl Cadical {
         debug_assert_ne!(lit, 0, "Literal must be non-zero");
         // ensure!(lit != 0, ZeroLiteral);
         match unsafe { self.ffi.ccadical_failed(self.ptr, lit) } {
-            0 => Ok(true),
-            1 => Ok(false),
+            0 => Ok(false),
+            1 => Ok(true),
             invalid => Err(CadicalError::InvalidResponseFailed { lit, value: invalid }),
         }
     }
