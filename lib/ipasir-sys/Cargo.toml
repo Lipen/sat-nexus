@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 libloading = "0.7.3"
-once_cell = "1.8.0"
 
 [build-dependencies]
 bindgen = "0.60.1"

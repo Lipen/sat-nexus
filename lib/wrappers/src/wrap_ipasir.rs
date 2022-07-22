@@ -26,12 +26,12 @@ impl IpasirSolver {
     pub fn new_cadical() -> Self {
         Self::new(Ipasir::new_cadical())
     }
-    pub fn new_minisat() -> Self {
-        Self::new(Ipasir::new_minisat())
-    }
-    pub fn new_glucose() -> Self {
-        Self::new(Ipasir::new_glucose())
-    }
+    // pub fn new_minisat() -> Self {
+    //     Self::new(Ipasir::new_minisat())
+    // }
+    // pub fn new_glucose() -> Self {
+    //     Self::new(Ipasir::new_glucose())
+    // }
 }
 
 impl From<Ipasir> for IpasirSolver {

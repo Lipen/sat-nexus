@@ -19,23 +19,3 @@ impl IpasirFFI {
         c_str.to_str().expect("The IPASIR implementation returned invalid UTF-8.")
     }
 }
-
-macro_rules! instance {
-    ($name:expr) => {{
-        use once_cell::sync::OnceCell;
-        static FFI: OnceCell<IpasirFFI> = OnceCell::new();
-        FFI.get_or_init(|| IpasirFFI::load($name))
-    }};
-}
-
-impl IpasirFFI {
-    pub fn instance_minisat() -> &'static Self {
-        instance!("minisat")
-    }
-    pub fn instance_glucose() -> &'static Self {
-        instance!("glucose")
-    }
-    pub fn instance_cadical() -> &'static Self {
-        instance!("cadical")
-    }
-}

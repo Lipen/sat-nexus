@@ -9,21 +9,30 @@ pub struct Ipasir {
     ptr: IpasirPtr,
 }
 
+// TODO: maybe make it public?
+macro_rules! ipasir_instance {
+    ($name:expr) => {{
+        use once_cell::sync::OnceCell;
+        static FFI: OnceCell<IpasirFFI> = OnceCell::new();
+        FFI.get_or_init(|| IpasirFFI::load($name))
+    }};
+}
+
 impl Ipasir {
     pub fn new_custom(ffi: &'static IpasirFFI) -> Self {
         let ptr = ffi.init();
         Self { ffi, ptr }
     }
 
-    pub fn new_minisat() -> Self {
-        Self::new_custom(IpasirFFI::instance_minisat())
-    }
-    pub fn new_glucose() -> Self {
-        Self::new_custom(IpasirFFI::instance_glucose())
-    }
     pub fn new_cadical() -> Self {
-        Self::new_custom(IpasirFFI::instance_cadical())
+        Self::new_custom(ipasir_instance!("cadical"))
     }
+    // pub fn new_minisat() -> Self {
+    //     Self::new_custom(IpasirFFI::instance_minisat())
+    // }
+    // pub fn new_glucose() -> Self {
+    //     Self::new_custom(IpasirFFI::instance_glucose())
+    // }
 }
 
 impl Drop for Ipasir {
