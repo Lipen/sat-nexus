@@ -81,6 +81,28 @@ impl Cadical {
         }
     }
 
+    /// Adds a literal to the constraint clause. Same functionality as 'add' but
+    /// the clause only exists for the next call to solve (same lifetime as
+    /// assumptions). Only one constraint may exists at a time. A new constraint
+    /// replaces the old.
+    /// The main application of this functionality is the model checking algorithm
+    /// IC3. See our FMCAD'21 paper `[FroleyksBiere-FMCAD'21]` for more details.
+    ///
+    /// Add valid literal to the constraint clause or zero to terminate it.
+    pub fn constrain(&self, lit_or_zero: i32) {
+        unsafe { self.ffi.ccadical_constrain(self.ptr, lit_or_zero) }
+    }
+
+    /// Determine whether the constraint was used to proof the unsatisfiability.
+    /// Note that the formula might still be unsatisfiable without the constraint.
+    pub fn constraint_failed(&self) -> Result<bool> {
+        match unsafe { self.ffi.ccadical_constraint_failed(self.ptr) } {
+            0 => Ok(false),
+            1 => Ok(true),
+            invalid => Err(CadicalError::InvalidResponseConstraintFailed { value: invalid }),
+        }
+    }
+
     /// Explicit version of setting an option.  If the option 'name' exists
     /// and 'val' can be parsed then 'true' is returned.  If the option value
     /// is out of range the actual value is computed as the closest (minimum or

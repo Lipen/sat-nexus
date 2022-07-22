@@ -7,6 +7,9 @@ pub enum CadicalError {
     #[snafu(display("Literal must be non-zero"))]
     ZeroLiteral,
 
+    #[snafu(display("Invalid response from `constraint_failed()`: {}", value))]
+    InvalidResponseConstraintFailed { value: i32 },
+
     #[snafu(display("Invalid response from `simplify()`: {}", value))]
     InvalidResponseSimplify { value: i32 },
 
