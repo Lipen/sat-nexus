@@ -41,3 +41,42 @@ fn test_cadical_solver() -> color_eyre::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_simple_unsat() -> color_eyre::Result<()> {
+    let solver = Cadical::new();
+
+    solver.add_clause([1]);
+    solver.add_clause([-2]);
+    solver.assume(-1);
+    let res = solver.solve()?;
+    assert_eq!(res, SolveResponse::Unsat);
+
+    let f1 = solver.failed(1)?;
+    let fn1 = solver.failed(-1)?;
+    println!("failed 1: {}, -1: {}", f1, fn1);
+    assert!(fn1);
+    assert!(!f1);
+    let f2 = solver.failed(2)?;
+    let fn2 = solver.failed(-2)?;
+    println!("failed 2: {}, -2: {}", f2, fn2);
+
+    println!("active: {}", solver.active());
+    println!("irredundant: {}", solver.irredundant());
+    println!("fixed 1: {:?}, fixed -1: {:?}", solver.fixed(1)?, solver.fixed(-1)?);
+    println!("fixed 2: {:?}, fixed -2: {:?}", solver.fixed(2)?, solver.fixed(-2)?);
+    println!("fixed 3: {:?}, fixed -3: {:?}", solver.fixed(3)?, solver.fixed(-3)?);
+
+    println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
+    solver.freeze(2);
+    println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
+    assert_eq!(solver.frozen(2)?, FrozenResponse::Frozen);
+    solver.melt(2);
+    println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
+    assert_eq!(solver.frozen(2)?, FrozenResponse::NotFrozen);
+
+    let res = solver.simplify()?;
+    println!("simplify() = {:?}", res);
+
+    Ok(())
+}
