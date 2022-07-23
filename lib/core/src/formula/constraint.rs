@@ -1,9 +1,10 @@
+use std::borrow::Borrow;
+
 use crate::formula::expr::Expr;
 use crate::formula::simplify::simplify;
 use crate::formula::var::Var;
 use crate::lit::Lit;
 use crate::solver::Solver;
-use std::borrow::Borrow;
 
 pub fn add_constraint<S>(solver: &mut S, expr: impl Borrow<Expr<Var>>)
 where

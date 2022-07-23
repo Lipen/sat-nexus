@@ -57,11 +57,13 @@ impl From<DelegateSolver> for DispatchSolver {
         DispatchSolver::Delegate(inner)
     }
 }
+
 impl From<MiniSatSolver> for DispatchSolver {
     fn from(inner: MiniSatSolver) -> Self {
         DispatchSolver::MiniSat(inner)
     }
 }
+
 impl From<CadicalSolver> for DispatchSolver {
     fn from(inner: CadicalSolver) -> Self {
         DispatchSolver::Cadical(inner)
@@ -193,6 +195,7 @@ mod tests {
         assert!(solver.signature().contains("minisat"));
         run_test(solver)
     }
+
     #[test]
     fn test_dispatch_delegate_cadical() -> color_eyre::Result<()> {
         let solver = DispatchSolver::new_delegate_wrap(CadicalSolver::new());
@@ -208,6 +211,7 @@ mod tests {
         assert!(solver.signature().contains("minisat"));
         run_test(solver)
     }
+
     #[test]
     fn test_dispatch_cadical() -> color_eyre::Result<()> {
         let solver = DispatchSolver::new_cadical();

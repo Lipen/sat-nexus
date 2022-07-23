@@ -1,6 +1,7 @@
+use std::fmt::Display;
+
 use sat_nexus::core::context::Context;
 use sat_nexus::core::solver::*;
-use std::fmt::Display;
 
 pub fn run_test_1<S>(mut solver: S) -> color_eyre::Result<()>
 where
