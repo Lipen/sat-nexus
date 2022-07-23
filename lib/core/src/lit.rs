@@ -11,11 +11,11 @@ impl Lit {
         Lit(val)
     }
 
-    pub fn get(self) -> i32 {
+    pub const fn get(self) -> i32 {
         self.0
     }
 
-    pub fn var(self) -> u32 {
+    pub const fn var(self) -> u32 {
         self.get().unsigned_abs()
     }
 }

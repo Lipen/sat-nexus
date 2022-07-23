@@ -16,7 +16,7 @@ pub struct MockSolver {
 }
 
 impl MockSolver {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             nvars: 0,
             nclauses: 0,

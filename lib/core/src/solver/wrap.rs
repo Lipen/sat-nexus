@@ -18,7 +18,7 @@ impl<S> WrapSolver<S>
 where
     S: Solver,
 {
-    pub fn new(inner: S) -> Self {
+    pub const fn new(inner: S) -> Self {
         Self { inner }
     }
 }

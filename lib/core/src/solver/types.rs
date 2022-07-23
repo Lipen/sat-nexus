@@ -26,7 +26,7 @@ pub enum LitValue {
 }
 
 impl LitValue {
-    pub fn bool(&self) -> bool {
+    pub const fn bool(&self) -> bool {
         use LitValue::*;
         match self {
             True => true,
