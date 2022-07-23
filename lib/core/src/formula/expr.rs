@@ -19,6 +19,7 @@ pub enum Expr<T> {
 
 // Constructors
 impl<T> Expr<T> {
+    #[allow(clippy::should_implement_trait)]
     pub fn not(arg: Self) -> Self {
         // Double negation: Not(Not(x)) == x
         match arg {
