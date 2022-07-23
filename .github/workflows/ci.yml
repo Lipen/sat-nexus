@@ -32,7 +32,7 @@ jobs:
           override: true
 
       - name: Set up Rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
 
@@ -203,7 +203,7 @@ jobs:
           components: clippy
 
       - name: Set up Rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Run clippy
         run: cargo clippy --workspace --tests
