@@ -14,6 +14,7 @@ pub enum Expr {
 
 // Constructors
 impl Expr {
+    #[allow(clippy::should_implement_trait)]
     pub fn not(arg: Self) -> Self {
         Expr::Not { arg: Box::new(arg) }
     }
