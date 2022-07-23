@@ -142,27 +142,8 @@ jobs:
           name: DLLs
           path: libs/
 
-      - name: Test 'cadical'
-        continue-on-error: true
-        run: cargo test -p cadical
-
-      - name: Test 'minisat' (dynamic)
-        continue-on-error: true
-        run: cargo test -p minisat --features dynamic
-
-      - name: Test 'minisat' (static)
-        continue-on-error: true
-        run: cargo test -p minisat --features static
-
       - name: Test all
         run: cargo test --workspace --verbose
-
-      - name: Start SSH session
-        if: ${{ failure() }}
-        uses: luchihoratiu/debug-via-ssh@main
-        with:
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-          SSH_PASS: ${{ secrets.SSH_PASS }}
 
   fmt:
     name: Rustfmt
