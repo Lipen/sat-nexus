@@ -70,10 +70,10 @@ fn test_simple_unsat() -> color_eyre::Result<()> {
     println!("frozen 1: {}, frozen 2: {}", solver.frozen(1)?, solver.frozen(2)?);
     solver.freeze(2);
     println!("frozen 1: {}, frozen 2: {}", solver.frozen(1)?, solver.frozen(2)?);
-    assert_eq!(solver.frozen(2)?, true);
+    assert!(solver.frozen(2)?);
     solver.melt(2);
     println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
-    assert_eq!(solver.frozen(2)?, false);
+    assert!(!solver.frozen(2)?);
 
     let res = solver.simplify()?;
     println!("simplify() = {:?}", res);
