@@ -2,7 +2,7 @@ use std::any::type_name;
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use snafu::Snafu;
+use snafu::{OptionExt, Snafu};
 use type_map::TypeMap;
 
 type NamedStorageType = Cow<'static, str>;
@@ -45,13 +45,13 @@ impl Context {
     }
 
     pub fn get<T: 'static>(&self) -> Result<&T> {
-        self.storage.get::<T>().ok_or_else(|| ContextError::NoElementByType {
+        self.storage.get::<T>().with_context(|| NoElementByTypeSnafu {
             type_name: type_name::<T>(),
         })
     }
 
     pub fn get_mut<T: 'static>(&mut self) -> Result<&mut T> {
-        self.storage.get_mut::<T>().ok_or_else(|| ContextError::NoElementByType {
+        self.storage.get_mut::<T>().with_context(|| NoElementByTypeSnafu {
             type_name: type_name::<T>(),
         })
     }
@@ -72,7 +72,7 @@ impl Context {
     {
         let map = self.get::<NamedStorage<T>>()?;
         let name = name.into();
-        map.get(&name).ok_or(ContextError::NoElementByName { name })
+        map.get(&name).with_context(|| NoElementByNameSnafu { name })
     }
 
     pub fn get_named_mut<T: 'static, S>(&mut self, name: S) -> Result<&mut T>
@@ -81,7 +81,7 @@ impl Context {
     {
         let map = self.get_mut::<NamedStorage<T>>()?;
         let name = name.into();
-        map.get_mut(&name).ok_or(ContextError::NoElementByName { name })
+        map.get_mut(&name).with_context(|| NoElementByNameSnafu { name })
     }
 }
 
@@ -90,10 +90,10 @@ pub type Result<T, E = ContextError> = std::result::Result<T, E>;
 #[derive(Debug, Snafu)]
 #[allow(clippy::enum_variant_names)]
 pub enum ContextError {
-    #[snafu(display("No element of type {}", type_name))]
+    #[snafu(display("No element of type {:?}", type_name))]
     NoElementByType { type_name: &'static str },
 
-    #[snafu(display("No element with name {}", name))]
+    #[snafu(display("No element with name {:?}", name))]
     NoElementByName { name: NamedStorageType },
 }
 
