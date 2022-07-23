@@ -170,6 +170,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn test_nnf_reify2() {
         let mut nvars = 0usize;
         let mut new_var = || {
