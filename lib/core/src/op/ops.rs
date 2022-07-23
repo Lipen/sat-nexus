@@ -359,8 +359,8 @@ mod tests {
     where
         T: Eq + Hash,
     {
-        let a: HashSet<_> = a.into_iter().collect();
-        let b: HashSet<_> = b.into_iter().collect();
+        let a: HashSet<_> = a.iter().collect();
+        let b: HashSet<_> = b.iter().collect();
         a == b
     }
 
