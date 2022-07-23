@@ -3,6 +3,7 @@ use snafu::Snafu;
 pub type Result<T, E = CadicalError> = std::result::Result<T, E>;
 
 #[derive(Debug, Snafu)]
+#[snafu(visibility(pub(crate)))]
 pub enum CadicalError {
     #[snafu(display("Literal must be non-zero"))]
     ZeroLiteral,
@@ -69,16 +70,9 @@ impl From<LitValue> for bool {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FixedResponse {
     /// The literal is implied by the formula.
-    Implied = 1,
+    Positive = 1,
     /// The negation of the literal is implied by the formula.
-    Negation = -1,
+    Negative = -1,
     /// It is unclear at this point whether the literal is implied by the formula.
     Unclear = 0,
-}
-
-/// Possible responses from a call to `frozen`.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FrozenResponse {
-    Frozen,
-    NotFrozen,
 }

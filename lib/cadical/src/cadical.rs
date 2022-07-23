@@ -1,6 +1,8 @@
 use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
 
+use snafu::ensure;
+
 use crate::ffi::*;
 use crate::types::*;
 
@@ -9,7 +11,7 @@ use crate::types::*;
 /// # Examples
 ///
 /// ```
-/// # fn main() -> color_eyre::eyre::Result<()> {
+/// # fn main() -> color_eyre::Result<()> {
 /// use cadical::{Cadical, SolveResponse};
 /// // Create solver
 /// use cadical::LitValue;
@@ -99,7 +101,7 @@ impl Cadical {
         match unsafe { self.ffi.ccadical_constraint_failed(self.ptr) } {
             0 => Ok(false),
             1 => Ok(true),
-            invalid => Err(CadicalError::InvalidResponseConstraintFailed { value: invalid }),
+            invalid => InvalidResponseConstraintFailedSnafu { value: invalid }.fail(),
         }
     }
 
@@ -151,7 +153,6 @@ impl Cadical {
     /// as well as after returning from 'simplify' and 'lookahead'.
     pub fn assume(&self, lit: i32) {
         debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
         unsafe { self.ffi.ccadical_assume(self.ptr, lit) }
     }
 
@@ -167,7 +168,7 @@ impl Cadical {
             0 => Ok(SimplifyResponse::Unknown),
             10 => Ok(SimplifyResponse::Sat),
             20 => Ok(SimplifyResponse::Unsat),
-            invalid => Err(CadicalError::InvalidResponseSimplify { value: invalid }),
+            invalid => InvalidResponseSimplifySnafu { value: invalid }.fail(),
         }
     }
 
@@ -177,7 +178,7 @@ impl Cadical {
             0 => Ok(SolveResponse::Interrupted),
             10 => Ok(SolveResponse::Sat),
             20 => Ok(SolveResponse::Unsat),
-            invalid => Err(CadicalError::InvalidResponseSolve { value: invalid }),
+            invalid => InvalidResponseSolveSnafu { value: invalid }.fail(),
         }
     }
 
@@ -188,12 +189,11 @@ impl Cadical {
 
     /// Get value of valid non-zero literal.
     pub fn val(&self, lit: i32) -> Result<LitValue> {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
+        ensure!(lit != 0, ZeroLiteralSnafu);
         match unsafe { self.ffi.ccadical_val(self.ptr, lit) } {
             p if p == lit => Ok(LitValue::True),
             n if n == -lit => Ok(LitValue::False),
-            invalid => Err(CadicalError::InvalidResponseVal { lit, value: invalid }),
+            invalid => InvalidResponseValSnafu { lit, value: invalid }.fail(),
         }
     }
 
@@ -201,12 +201,11 @@ impl Cadical {
     /// Returns `true` if the literal is in the core and `false` otherwise.
     /// Note that the core does not have to be minimal.
     pub fn failed(&self, lit: i32) -> Result<bool> {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
+        ensure!(lit != 0, ZeroLiteralSnafu);
         match unsafe { self.ffi.ccadical_failed(self.ptr, lit) } {
             0 => Ok(false),
             1 => Ok(true),
-            invalid => Err(CadicalError::InvalidResponseFailed { lit, value: invalid }),
+            invalid => InvalidResponseFailedSnafu { lit, value: invalid }.fail(),
         }
     }
 
@@ -248,35 +247,31 @@ impl Cadical {
     /// It returns '1' if the literal is implied by the formula, '-1' if its
     /// negation is implied, or '0' if this is unclear at this point.
     pub fn fixed(&self, lit: i32) -> Result<FixedResponse> {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
+        ensure!(lit != 0, ZeroLiteralSnafu);
         match unsafe { self.ffi.ccadical_fixed(self.ptr, lit) } {
-            1 => Ok(FixedResponse::Implied),
-            -1 => Ok(FixedResponse::Negation),
+            1 => Ok(FixedResponse::Positive),
+            -1 => Ok(FixedResponse::Negative),
             0 => Ok(FixedResponse::Unclear),
-            invalid => Err(CadicalError::InvalidResponseFixed { lit, value: invalid }),
+            invalid => InvalidResponseFixedSnafu { lit, value: invalid }.fail(),
         }
     }
 
-    pub fn frozen(&self, lit: i32) -> Result<FrozenResponse> {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
+    pub fn frozen(&self, lit: i32) -> Result<bool> {
+        ensure!(lit != 0, ZeroLiteralSnafu);
         match unsafe { self.ffi.ccadical_frozen(self.ptr, lit) } {
-            0 => Ok(FrozenResponse::NotFrozen),
-            1 => Ok(FrozenResponse::Frozen),
-            invalid => Err(CadicalError::InvalidResponseFrozen { lit, value: invalid }),
+            0 => Ok(false),
+            1 => Ok(true),
+            invalid => InvalidResponseFrozenSnafu { lit, value: invalid }.fail(),
         }
     }
 
     pub fn freeze(&self, lit: i32) {
         debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
         unsafe { self.ffi.ccadical_freeze(self.ptr, lit) }
     }
 
     pub fn melt(&self, lit: i32) {
         debug_assert_ne!(lit, 0, "Literal must be non-zero");
-        // ensure!(lit != 0, ZeroLiteral);
         unsafe { self.ffi.ccadical_melt(self.ptr, lit) }
     }
 }

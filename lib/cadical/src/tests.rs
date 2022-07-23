@@ -67,13 +67,13 @@ fn test_simple_unsat() -> color_eyre::Result<()> {
     println!("fixed 2: {:?}, fixed -2: {:?}", solver.fixed(2)?, solver.fixed(-2)?);
     println!("fixed 3: {:?}, fixed -3: {:?}", solver.fixed(3)?, solver.fixed(-3)?);
 
-    println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
+    println!("frozen 1: {}, frozen 2: {}", solver.frozen(1)?, solver.frozen(2)?);
     solver.freeze(2);
-    println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
-    assert_eq!(solver.frozen(2)?, FrozenResponse::Frozen);
+    println!("frozen 1: {}, frozen 2: {}", solver.frozen(1)?, solver.frozen(2)?);
+    assert_eq!(solver.frozen(2)?, true);
     solver.melt(2);
     println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
-    assert_eq!(solver.frozen(2)?, FrozenResponse::NotFrozen);
+    assert_eq!(solver.frozen(2)?, false);
 
     let res = solver.simplify()?;
     println!("simplify() = {:?}", res);
