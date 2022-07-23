@@ -61,7 +61,7 @@ impl NNF {
                     let mut clause = Vec::new();
                     for arg in args.iter() {
                         let (v, cls) = arg.reify(new_var);
-                        clauses.extend(cls.into_iter().map(|cl| Disjunction(cl)));
+                        clauses.extend(cls.into_iter().map(Disjunction));
                         clause.push(v);
                     }
                     clauses.push(Disjunction(clause));

@@ -13,6 +13,6 @@ where
     let nnf = expr.to_nnf();
     let cnf = nnf.to_cnf(&mut || solver.new_var().get());
     for clause in cnf.0 .0 {
-        solver.add_clause(clause.0.into_iter().map(|x| Lit::new(x)))
+        solver.add_clause(clause.0.into_iter().map(Lit::new))
     }
 }
