@@ -64,6 +64,7 @@ jobs:
       - name: Run ldconfig and update LD_LIBRARY_PATH
         run: |
           sudo ldconfig -n /usr/local/lib
+          ldconfig -p
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
 
       - name: Upload shared libraries
