@@ -1,6 +1,8 @@
 use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 
+use itertools::Itertools;
+
 use crate::ffi::*;
 use crate::types::*;
 
@@ -114,10 +116,10 @@ impl Ipasir {
 
 // Additional fluent interface
 impl Ipasir {
-    pub fn add_clause<I, L>(&self, lits: I)
+    pub fn add_clause<I>(&self, lits: I)
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         for lit in lits.into_iter() {
             self.add(lit.into().into());
@@ -125,12 +127,13 @@ impl Ipasir {
         self.add(0);
     }
 
-    pub fn try_add_clause<I, L>(&self, lits: I) -> Result<(), <L as TryInto<Lit>>::Error>
+    // TODO: remove
+    pub fn try_add_clause<I>(&self, lits: I) -> Result<(), <I::Item as TryInto<Lit>>::Error>
     where
-        I: IntoIterator<Item = L>,
-        L: TryInto<Lit>,
+        I: IntoIterator,
+        I::Item: TryInto<Lit>,
     {
-        let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
+        let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).try_collect()?;
         self.add_clause(lits);
         Ok(())
     }

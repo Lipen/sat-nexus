@@ -1,6 +1,7 @@
 use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
 
+use itertools::Itertools;
 use snafu::ensure;
 
 use crate::ffi::*;
@@ -286,10 +287,10 @@ impl Cadical {
         self.ptr = self.ffi.init();
     }
 
-    pub fn add_clause<I, L>(&self, lits: I)
+    pub fn add_clause<I>(&self, lits: I)
     where
-        I: IntoIterator<Item = L>,
-        L: Into<i32>,
+        I: IntoIterator,
+        I::Item: Into<i32>,
     {
         for lit in lits.into_iter() {
             self.add(lit.into());
@@ -297,12 +298,13 @@ impl Cadical {
         self.add(0);
     }
 
-    pub fn try_add_clause<I, L>(&self, lits: I) -> Result<(), <L as TryInto<i32>>::Error>
+    // TODO: remove
+    pub fn try_add_clause<I>(&self, lits: I) -> Result<(), <I::Item as TryInto<i32>>::Error>
     where
-        I: IntoIterator<Item = L>,
-        L: TryInto<i32>,
+        I: IntoIterator,
+        I::Item: TryInto<i32>,
     {
-        let lits: Vec<i32> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
+        let lits: Vec<i32> = lits.into_iter().map(|x| x.try_into()).try_collect()?;
         self.add_clause(lits);
         Ok(())
     }

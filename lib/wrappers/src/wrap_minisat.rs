@@ -111,20 +111,21 @@ impl Solver for MiniSatSolver {
 }
 
 fn to_ms(lit: Lit) -> MiniSatLit {
-    let lit: i32 = lit.into();
-    let var = lit.abs() - 1; // 0-based variable index
+    let lit = lit.get();
+    debug_assert_ne!(lit, 0, "Literal must be non-zero");
+    let var = (lit.abs() - 1) as _; // 0-based variable index
     let sign = if lit > 0 { 0 } else { 1 }; // 0 if positive, 1 if negative
-    (2 * var + sign).into()
+    MiniSatLit::mk(var, sign)
 }
 
 fn from_ms(lit: MiniSatLit) -> Lit {
-    let lit: i32 = lit.into();
-    let var = (lit >> 1) + 1; // 1-based variable index
-    let sign = lit & 1; // 0 if negative, 1 if positive
-    if sign > 0 {
-        Lit::new(var)
-    } else {
-        Lit::new(-var)
+    let var = lit.var() + 1; // 1-based variable index
+    let sign = lit.sign(); // 0 if positive, 1 if negative
+    let lit = var as _;
+    match sign {
+        0 => Lit::new(lit),
+        1 => Lit::new(-lit),
+        _ => unreachable!(),
     }
 }
 
@@ -143,6 +144,10 @@ mod tests {
         let c = solver.new_var();
         let d = solver.new_var();
         assert_eq!(solver.num_vars(), 4);
+        assert_eq!(a.get(), 1);
+        assert_eq!(b.get(), 2);
+        assert_eq!(c.get(), 3);
+        assert_eq!(d.get(), 4);
 
         // Adding [(a or b) and (c or d) and not(a and b) and not(c and d)]
         solver.add_clause([a, b]);

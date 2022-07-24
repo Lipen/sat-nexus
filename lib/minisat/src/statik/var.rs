@@ -1,24 +1,11 @@
+pub use crate::common::Var;
+
 use super::ffi::minisat_Var;
 
-#[derive(Debug, Copy, Clone)]
-pub struct Var(minisat_Var);
-
-impl Var {
-    pub fn new(var: minisat_Var) -> Self {
-        debug_assert!(var >= 0);
-        Var(var)
-    }
+pub(crate) fn var_from_c(var: minisat_Var) -> Var {
+    Var::new(var as _)
 }
 
-impl From<minisat_Var> for Var {
-    fn from(var: minisat_Var) -> Self {
-        Var(var)
-    }
-}
-
-// Into<minisat_Var>
-impl From<Var> for minisat_Var {
-    fn from(x: Var) -> Self {
-        x.0
-    }
+pub(crate) fn var_to_c(var: Var) -> minisat_Var {
+    var.get() as _
 }

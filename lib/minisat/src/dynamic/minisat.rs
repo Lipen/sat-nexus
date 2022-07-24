@@ -12,8 +12,8 @@ use super::var::*;
 /// # Examples
 ///
 /// ```
-/// # fn main() -> color_eyre::eyre::Result<()> {
-/// use minisat::dynamic::{MiniSat, Lit, LBool};
+/// # fn main() -> color_eyre::Result<()> {
+/// use minisat::dynamic::*;
 /// // Create solver
 /// let solver = MiniSat::new();
 /// // Initialize variables
@@ -51,6 +51,15 @@ impl MiniSat {
         }
         MiniSat { ffi, ptr }
     }
+
+    pub fn release(&mut self) {
+        if !self.ptr.is_null() {
+            unsafe {
+                self.ffi.minisat_delete(self.ptr);
+            }
+            self.ptr = std::ptr::null_mut();
+        }
+    }
 }
 
 impl Default for MiniSat {
@@ -83,17 +92,6 @@ impl MiniSat {
         "minisat"
     }
 
-    // Destructor
-
-    pub fn release(&mut self) {
-        if !self.ptr.is_null() {
-            unsafe {
-                self.ffi.minisat_delete(self.ptr);
-            }
-            self.ptr = std::ptr::null_mut();
-        }
-    }
-
     // Status
 
     pub fn okay(&self) -> bool {
@@ -103,34 +101,34 @@ impl MiniSat {
     // New var/lit
 
     pub fn new_var(&self) -> Var {
-        unsafe { self.ffi.minisat_newVar(self.ptr) }.into()
+        unsafe { var_from_c(self.ffi.minisat_newVar(self.ptr)) }
     }
     pub fn new_lit(&self) -> Lit {
-        unsafe { self.ffi.minisat_newLit(self.ptr) }.into()
+        unsafe { lit_from_c(self.ffi.minisat_newLit(self.ptr)) }
     }
 
     // Customize variables
 
     pub fn set_polarity(&self, var: Var, pol: LBool) {
-        unsafe { self.ffi.minisat_setPolarity(self.ptr, var.into(), pol.to_c(self.ffi)) }
+        unsafe { self.ffi.minisat_setPolarity(self.ptr, var_to_c(var), lbool_to_c(pol, self.ffi)) }
     }
     pub fn set_decision_var(&self, var: Var, pol: bool) {
-        unsafe { self.ffi.minisat_setPolarity(self.ptr, var.into(), pol.into()) }
+        unsafe { self.ffi.minisat_setDecisionVar(self.ptr, var_to_c(var), pol.into()) }
     }
     pub fn set_frozen(&self, var: Var, frozen: bool) {
-        unsafe { self.ffi.minisat_setFrozen(self.ptr, var.into(), frozen) }
+        unsafe { self.ffi.minisat_setFrozen(self.ptr, var_to_c(var), frozen) }
     }
 
     // Query variable status
 
     pub fn is_eliminated(&self, var: Var) -> bool {
-        unsafe { self.ffi.minisat_isEliminated(self.ptr, var.into()) }
+        unsafe { self.ffi.minisat_isEliminated(self.ptr, var_to_c(var)) }
     }
     pub fn value_var(&self, var: Var) -> LBool {
-        unsafe { LBool::from_c(self.ffi, self.ffi.minisat_value_Var(self.ptr, var.into())) }
+        unsafe { lbool_from_c(self.ffi.minisat_value_Var(self.ptr, var_to_c(var)), self.ffi) }
     }
     pub fn value_lit(&self, lit: Lit) -> LBool {
-        unsafe { LBool::from_c(self.ffi, self.ffi.minisat_value_Lit(self.ptr, lit.into())) }
+        unsafe { lbool_from_c(self.ffi.minisat_value_Lit(self.ptr, lit_to_c(lit)), self.ffi) }
     }
 
     // Add clause
@@ -139,7 +137,7 @@ impl MiniSat {
         unsafe { self.ffi.minisat_addClause_begin(self.ptr) }
     }
     pub fn add_clause_add_lit(&self, lit: Lit) {
-        unsafe { self.ffi.minisat_addClause_addLit(self.ptr, lit.into()) }
+        unsafe { self.ffi.minisat_addClause_addLit(self.ptr, lit_to_c(lit)) }
     }
     pub fn add_clause_commit(&self) -> bool {
         unsafe { self.ffi.minisat_addClause_commit(self.ptr) }
@@ -184,22 +182,22 @@ impl MiniSat {
         unsafe { self.ffi.minisat_solve_begin(self.ptr) }
     }
     pub fn solve_add_lit(&self, lit: Lit) {
-        unsafe { self.ffi.minisat_solve_addLit(self.ptr, lit.into()) }
+        unsafe { self.ffi.minisat_solve_addLit(self.ptr, lit_to_c(lit)) }
     }
     pub fn solve_commit(&self) -> bool {
         unsafe { self.ffi.minisat_solve_commit(self.ptr) }
     }
     pub fn solve_limited_commit(&self) -> LBool {
-        unsafe { LBool::from_c(self.ffi, self.ffi.minisat_limited_solve_commit(self.ptr)) }
+        unsafe { lbool_from_c(self.ffi.minisat_limited_solve_commit(self.ptr), self.ffi) }
     }
 
     // Model
 
     pub fn model_value_var(&self, var: Var) -> LBool {
-        unsafe { LBool::from_c(self.ffi, self.ffi.minisat_modelValue_Var(self.ptr, var.into())) }
+        unsafe { lbool_from_c(self.ffi.minisat_modelValue_Var(self.ptr, var_to_c(var)), self.ffi) }
     }
     pub fn model_value_lit(&self, lit: Lit) -> LBool {
-        unsafe { LBool::from_c(self.ffi, self.ffi.minisat_modelValue_Lit(self.ptr, lit.into())) }
+        unsafe { lbool_from_c(self.ffi.minisat_modelValue_Lit(self.ptr, lit_to_c(lit)), self.ffi) }
     }
 
     // Statistics
@@ -246,6 +244,7 @@ impl MiniSat {
             LBool::Undef => LBool::Undef,
             _ => {
                 if lit.sign() > 0 {
+                    // if `lit` is negated (sign=1), flip `pol`
                     pol.flip()
                 } else {
                     pol
@@ -255,10 +254,10 @@ impl MiniSat {
         self.set_polarity(var, pol);
     }
 
-    pub fn add_clause<I, L>(&self, lits: I) -> bool
+    pub fn add_clause<I>(&self, lits: I) -> bool
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         self.add_clause_begin();
         let mut max = 0;
@@ -269,26 +268,27 @@ impl MiniSat {
         }
         // Allocate new variables if necessary
         // for _ in (self.num_vars() + 1)..=max {
-        for _ in self.num_vars()..max {
+        for _ in self.num_vars()..max as _ {
             self.new_var();
         }
         self.add_clause_commit()
     }
 
-    pub fn try_add_clause<I, L>(&self, lits: I) -> Result<(), <L as TryInto<Lit>>::Error>
+    // TODO: remove
+    pub fn try_add_clause<I>(&self, lits: I) -> Result<(), <I::Item as TryInto<Lit>>::Error>
     where
-        I: IntoIterator<Item = L>,
-        L: TryInto<Lit>,
+        I: IntoIterator,
+        I::Item: TryInto<Lit>,
     {
-        let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
+        let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).try_collect()?;
         self.add_clause(lits);
         Ok(())
     }
 
-    pub fn solve_under_assumptions<I, L>(&self, lits: I) -> bool
+    pub fn solve_under_assumptions<I>(&self, lits: I) -> bool
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         self.solve_begin();
         for lit in lits.into_iter() {

@@ -1,49 +1,24 @@
+pub use crate::common::LBool;
+
 use super::ffi::bindings::minisat_lbool;
 use super::ffi::CMiniSatFFI;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum LBool {
-    True,  // = 1,
-    False, // = 0,
-    Undef, // = -1,
-}
-
-impl LBool {
-    pub fn bool(self) -> bool {
-        match self {
-            LBool::True => true,
-            LBool::False => false,
-            LBool::Undef => panic!("LBool::Undef cannot be safely converted to bool"),
-        }
-    }
-
-    pub fn flip(self) -> Self {
-        match self {
-            LBool::True => LBool::False,
-            LBool::False => LBool::True,
-            LBool::Undef => panic!("LBool::Undef cannot be safely flipped"),
-        }
+pub(crate) fn lbool_from_c(lbool: minisat_lbool, ffi: &CMiniSatFFI) -> LBool {
+    if lbool == ffi.minisat_l_true() {
+        LBool::True
+    } else if lbool == ffi.minisat_l_false() {
+        LBool::False
+    } else if lbool == ffi.minisat_l_undef() {
+        LBool::Undef
+    } else {
+        panic!("Bad lbool '{:?}'", lbool)
     }
 }
 
-impl LBool {
-    pub(crate) fn from_c(ffi: &CMiniSatFFI, lbool: minisat_lbool) -> Self {
-        if lbool == ffi.minisat_l_true() {
-            LBool::True
-        } else if lbool == ffi.minisat_l_false() {
-            LBool::False
-        } else if lbool == ffi.minisat_l_undef() {
-            LBool::Undef
-        } else {
-            panic!("Bad lbool '{:?}'", lbool)
-        }
-    }
-
-    pub(crate) fn to_c(self, ffi: &CMiniSatFFI) -> minisat_lbool {
-        match self {
-            LBool::True => ffi.minisat_l_true(),
-            LBool::False => ffi.minisat_l_false(),
-            LBool::Undef => ffi.minisat_l_undef(),
-        }
+pub(crate) fn lbool_to_c(lbool: LBool, ffi: &CMiniSatFFI) -> minisat_lbool {
+    match lbool {
+        LBool::True => ffi.minisat_l_true(),
+        LBool::False => ffi.minisat_l_false(),
+        LBool::Undef => ffi.minisat_l_undef(),
     }
 }

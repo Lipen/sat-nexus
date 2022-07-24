@@ -2,8 +2,9 @@
 use super::*;
 
 #[test]
-fn test_minisat_solver() -> color_eyre::Result<()> {
+fn test_minisat_solver_static() -> color_eyre::Result<()> {
     let solver = MiniSat::new();
+    println!("solver = {}", solver);
     assert!(solver.signature().starts_with("minisat"));
 
     let lit1 = solver.new_lit();
@@ -37,7 +38,7 @@ fn test_minisat_solver() -> color_eyre::Result<()> {
     assert!(val1.bool() ^ val2.bool());
     assert!(val3.bool() ^ val4.bool());
 
-    println!("=== STATISTICS ===");
+    println!("Statistics:");
     println!("vars =         {}", solver.num_vars());
     println!("clauses =      {}", solver.num_clauses());
     println!("assigns =      {}", solver.num_assigns());
@@ -48,5 +49,6 @@ fn test_minisat_solver() -> color_eyre::Result<()> {
     println!("restarts =     {}", solver.num_restarts());
     println!("propagations = {}", solver.num_propagations());
 
+    println!("{}", "=".repeat(42));
     Ok(())
 }

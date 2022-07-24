@@ -7,6 +7,33 @@ use super::lbool::*;
 use super::lit::*;
 use super::var::*;
 
+/// MiniSat solver.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> color_eyre::Result<()> {
+/// use minisat::statik::*;
+/// // Create solver
+/// let solver = MiniSat::new();
+/// // Initialize variables
+/// let a = solver.new_lit();
+/// let b = solver.new_lit();
+/// let c = solver.new_lit();
+/// // Add some clauses: (a or b) and (b or c) and (not a or c) and (not c)
+/// solver.add_clause([a, b]);
+/// solver.add_clause(vec![b, c]);
+/// solver.try_add_clause([-a, c])?;
+/// solver.add_clause([-c]);
+/// // Solve the SAT problem
+/// assert!(solver.solve());
+/// // Query the result
+/// assert_eq!(solver.model_value_lit(a), LBool::False);
+/// assert_eq!(solver.model_value_lit(b), LBool::True);
+/// assert_eq!(solver.model_value_lit(c), LBool::False);
+/// # Ok(())
+/// # }
+/// ```
 pub struct MiniSat {
     ptr: *mut minisat_solver,
 }
@@ -71,34 +98,34 @@ impl MiniSat {
     // New var/lit
 
     pub fn new_var(&self) -> Var {
-        unsafe { minisat_newVar(self.ptr) }.into()
+        unsafe { var_from_c(minisat_newVar(self.ptr)) }
     }
     pub fn new_lit(&self) -> Lit {
-        unsafe { minisat_newLit(self.ptr) }.into()
+        unsafe { lit_from_c(minisat_newLit(self.ptr)) }
     }
 
     // Customize variables
 
     pub fn set_polarity(&self, var: Var, pol: LBool) {
-        unsafe { minisat_setPolarity(self.ptr, var.into(), pol.to_c()) }
+        unsafe { minisat_setPolarity(self.ptr, var_to_c(var), lbool_to_c(pol)) }
     }
     pub fn set_decision_var(&self, var: Var, pol: bool) {
-        unsafe { minisat_setPolarity(self.ptr, var.into(), pol.into()) }
+        unsafe { minisat_setDecisionVar(self.ptr, var_to_c(var), pol.into()) }
     }
     pub fn set_frozen(&self, var: Var, frozen: bool) {
-        unsafe { minisat_setFrozen(self.ptr, var.into(), frozen) }
+        unsafe { minisat_setFrozen(self.ptr, var_to_c(var), frozen) }
     }
 
     // Query variable status
 
     pub fn is_eliminated(&self, var: Var) -> bool {
-        unsafe { minisat_isEliminated(self.ptr, var.into()) }
+        unsafe { minisat_isEliminated(self.ptr, var_to_c(var)) }
     }
     pub fn value_var(&self, var: Var) -> LBool {
-        unsafe { LBool::from_c(minisat_value_Var(self.ptr, var.into())) }
+        unsafe { lbool_from_c(minisat_value_Var(self.ptr, var_to_c(var))) }
     }
     pub fn value_lit(&self, lit: Lit) -> LBool {
-        unsafe { LBool::from_c(minisat_value_Lit(self.ptr, lit.into())) }
+        unsafe { lbool_from_c(minisat_value_Lit(self.ptr, lit_to_c(lit))) }
     }
 
     // Add clause
@@ -107,7 +134,7 @@ impl MiniSat {
         unsafe { minisat_addClause_begin(self.ptr) }
     }
     pub fn add_clause_add_lit(&self, lit: Lit) {
-        unsafe { minisat_addClause_addLit(self.ptr, lit.into()) }
+        unsafe { minisat_addClause_addLit(self.ptr, lit_to_c(lit)) }
     }
     pub fn add_clause_commit(&self) -> bool {
         unsafe { minisat_addClause_commit(self.ptr) }
@@ -152,22 +179,22 @@ impl MiniSat {
         unsafe { minisat_solve_begin(self.ptr) }
     }
     pub fn solve_add_lit(&self, lit: Lit) {
-        unsafe { minisat_solve_addLit(self.ptr, lit.into()) }
+        unsafe { minisat_solve_addLit(self.ptr, lit_to_c(lit)) }
     }
     pub fn solve_commit(&self) -> bool {
         unsafe { minisat_solve_commit(self.ptr) }
     }
     pub fn solve_limited_commit(&self) -> LBool {
-        unsafe { LBool::from_c(minisat_limited_solve_commit(self.ptr)) }
+        unsafe { lbool_from_c(minisat_limited_solve_commit(self.ptr)) }
     }
 
     // Model
 
     pub fn model_value_var(&self, var: Var) -> LBool {
-        unsafe { LBool::from_c(minisat_modelValue_Var(self.ptr, var.into())) }
+        unsafe { lbool_from_c(minisat_modelValue_Var(self.ptr, var_to_c(var))) }
     }
     pub fn model_value_lit(&self, lit: Lit) -> LBool {
-        unsafe { LBool::from_c(minisat_modelValue_Lit(self.ptr, lit.into())) }
+        unsafe { lbool_from_c(minisat_modelValue_Lit(self.ptr, lit_to_c(lit))) }
     }
 
     // Statistics
@@ -214,6 +241,7 @@ impl MiniSat {
             LBool::Undef => LBool::Undef,
             _ => {
                 if lit.sign() > 0 {
+                    // if `lit` is negated (sign=1), flip `pol`
                     pol.flip()
                 } else {
                     pol
@@ -223,10 +251,10 @@ impl MiniSat {
         self.set_polarity(var, pol);
     }
 
-    pub fn add_clause<I, L>(&self, lits: I) -> bool
+    pub fn add_clause<I>(&self, lits: I) -> bool
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         self.add_clause_begin();
         let mut max = 0;
@@ -237,26 +265,27 @@ impl MiniSat {
         }
         // Allocate new variables if necessary
         // for _ in (self.num_vars() + 1)..=max {
-        for _ in self.num_vars()..max {
+        for _ in self.num_vars()..max as _ {
             self.new_var();
         }
         self.add_clause_commit()
     }
 
-    pub fn try_add_clause<I, L>(&self, lits: I) -> Result<(), <L as TryInto<Lit>>::Error>
+    // TODO: remove
+    pub fn try_add_clause<I>(&self, lits: I) -> Result<(), <I::Item as TryInto<Lit>>::Error>
     where
-        I: IntoIterator<Item = L>,
-        L: TryInto<Lit>,
+        I: IntoIterator,
+        I::Item: TryInto<Lit>,
     {
         let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
         self.add_clause(lits);
         Ok(())
     }
 
-    pub fn solve_under_assumptions<I, L>(&self, lits: I) -> bool
+    pub fn solve_under_assumptions<I>(&self, lits: I) -> bool
     where
-        I: IntoIterator<Item = L>,
-        L: Into<Lit>,
+        I: IntoIterator,
+        I::Item: Into<Lit>,
     {
         self.solve_begin();
         for lit in lits.into_iter() {
