@@ -147,7 +147,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: DLLs
+          name: libs
           path: libs/
 
       - name: Test all
