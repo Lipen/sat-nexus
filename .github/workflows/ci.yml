@@ -70,7 +70,7 @@ jobs:
       - name: Upload shared libraries
         uses: actions/upload-artifact@v3
         with:
-          name: libs
+          name: Shared libs
           path: |
             /usr/local/lib/libminisat.so
             /usr/local/lib/libminisat-c.so
@@ -150,7 +150,7 @@ jobs:
       - name: Upload DLLs
         uses: actions/upload-artifact@v3
         with:
-          name: libs
+          name: DLLs
           path: libs/
 
       - name: Test all
