@@ -66,6 +66,14 @@ jobs:
           sudo ldconfig -n /usr/local/lib
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/lib" >> $GITHUB_ENV
 
+      - uses: actions/upload-artifact@v3
+        with:
+          name: libs
+          path: |
+            /usr/local/lib/libminisat.so
+            /usr/local/lib/libminisat-c.so
+            /usr/local/lib/libcadical.so
+
       - name: Test all
         run: cargo test --workspace --verbose
 
