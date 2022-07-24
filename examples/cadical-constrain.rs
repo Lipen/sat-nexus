@@ -27,7 +27,7 @@ fn main() -> color_eyre::Result<()> {
     // Incrementally solve again under one assumption.
 
     // Force TIE to true.
-    solver.assume(TIE);
+    solver.assume(TIE)?;
 
     // Problem is now unsatisfiable (under assumptions).
     let res = solver.solve()?;
@@ -59,7 +59,7 @@ fn main() -> color_eyre::Result<()> {
     // Incrementally solve once more under another assumption.
 
     // Now assume SHIRT is false.
-    solver.assume(-SHIRT);
+    solver.assume(-SHIRT)?;
 
     // Problem is unsatisfiable once again.
     let res = solver.solve()?;

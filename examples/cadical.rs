@@ -16,8 +16,8 @@ fn main() -> color_eyre::Result<()> {
     println!("Solver returned: {:?}", response);
     assert!(matches!(response, Ok(SolveResponse::Sat)));
 
-    solver.assume(1);
-    solver.assume(2);
+    solver.assume(1)?;
+    solver.assume(2)?;
     let response = solver.solve()?;
     println!("Solver returned: {:?}", response);
 

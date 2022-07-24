@@ -16,8 +16,8 @@ fn test_cadical_solver() -> color_eyre::Result<()> {
     assert_eq!(response, SolveResponse::Sat);
 
     // Assuming both 1 and 2 to be true
-    solver.assume(1);
-    solver.assume(2);
+    solver.assume(1)?;
+    solver.assume(2)?;
     // Problem is unsatisfiable under assumptions
     let response = solver.solve()?;
     assert_eq!(response, SolveResponse::Unsat);
@@ -48,7 +48,7 @@ fn test_simple_unsat() -> color_eyre::Result<()> {
 
     solver.add_clause([1]);
     solver.add_clause([-2]);
-    solver.assume(-1);
+    solver.assume(-1)?;
     let res = solver.solve()?;
     assert_eq!(res, SolveResponse::Unsat);
 
@@ -68,10 +68,10 @@ fn test_simple_unsat() -> color_eyre::Result<()> {
     println!("fixed 3: {:?}, fixed -3: {:?}", solver.fixed(3)?, solver.fixed(-3)?);
 
     println!("frozen 1: {}, frozen 2: {}", solver.frozen(1)?, solver.frozen(2)?);
-    solver.freeze(2);
+    solver.freeze(2)?;
     println!("frozen 1: {}, frozen 2: {}", solver.frozen(1)?, solver.frozen(2)?);
     assert!(solver.frozen(2)?);
-    solver.melt(2);
+    solver.melt(2)?;
     println!("frozen 1: {:?}, frozen 2: {:?}", solver.frozen(1)?, solver.frozen(2)?);
     assert!(!solver.frozen(2)?);
 

@@ -79,7 +79,7 @@ impl Solver for CadicalSolver {
     where
         L: Into<Lit>,
     {
-        self.inner.assume(lit.into().into());
+        self.inner.assume(lit.into().into()).unwrap();
     }
 
     fn add_clause<I>(&mut self, lits: I)

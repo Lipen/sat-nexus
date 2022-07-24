@@ -151,9 +151,10 @@ impl Cadical {
     /// Assume valid non zero literal for next call to 'solve'.
     /// These assumptions are reset after the call to 'solve'
     /// as well as after returning from 'simplify' and 'lookahead'.
-    pub fn assume(&self, lit: i32) {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
+    pub fn assume(&self, lit: i32) -> Result<()> {
+        ensure!(lit != 0, ZeroLiteralSnafu);
         unsafe { self.ffi.ccadical_assume(self.ptr, lit) }
+        Ok(())
     }
 
     /// This function executes the given number of preprocessing rounds.
@@ -265,14 +266,16 @@ impl Cadical {
         }
     }
 
-    pub fn freeze(&self, lit: i32) {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
+    pub fn freeze(&self, lit: i32) -> Result<()> {
+        ensure!(lit != 0, ZeroLiteralSnafu);
         unsafe { self.ffi.ccadical_freeze(self.ptr, lit) }
+        Ok(())
     }
 
-    pub fn melt(&self, lit: i32) {
-        debug_assert_ne!(lit, 0, "Literal must be non-zero");
+    pub fn melt(&self, lit: i32) -> Result<()> {
+        ensure!(lit != 0, ZeroLiteralSnafu);
         unsafe { self.ffi.ccadical_melt(self.ptr, lit) }
+        Ok(())
     }
 }
 
