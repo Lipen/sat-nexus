@@ -107,8 +107,8 @@ impl Ipasir {
 
     pub fn failed(&self, lit: Lit) -> Result<bool> {
         match unsafe { self.ffi.ipasir_failed(self.ptr, lit.into()) } {
-            0 => Ok(true),
-            1 => Ok(false),
+            0 => Ok(false),
+            1 => Ok(true),
             invalid => Err(IpasirError::InvalidResponseFailed { lit, value: invalid }),
         }
     }
