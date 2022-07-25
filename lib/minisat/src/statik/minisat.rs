@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use itertools::Itertools;
+use itertools::{process_results, Itertools};
 
 use super::ffi::*;
 use super::lbool::*;
@@ -272,14 +272,15 @@ impl MiniSat {
     }
 
     // TODO: remove
-    pub fn try_add_clause<I>(&self, lits: I) -> Result<(), <I::Item as TryInto<Lit>>::Error>
+    pub fn try_add_clause<I>(&self, lits: I) -> Result<bool, <I::Item as TryInto<Lit>>::Error>
     where
         I: IntoIterator,
         I::Item: TryInto<Lit>,
     {
-        let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
-        self.add_clause(lits);
-        Ok(())
+        process_results(lits.into_iter().map(|x| x.try_into()), |xs| self.add_clause(xs))
+        // let lits: Vec<Lit> = lits.into_iter().map(|x| x.try_into()).collect::<Result<_, _>>()?;
+        // self.add_clause(lits);
+        // Ok(())
     }
 
     pub fn solve_under_assumptions<I>(&self, lits: I) -> bool
