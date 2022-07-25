@@ -129,6 +129,10 @@ mod tests {
         let c = solver.new_var();
         let d = solver.new_var();
         assert_eq!(solver.num_vars(), 4);
+        assert_eq!(a.get(), 1);
+        assert_eq!(b.get(), 2);
+        assert_eq!(c.get(), 3);
+        assert_eq!(d.get(), 4);
 
         // Adding [(a or b) and (c or d) and not(a and b) and not(c and d)]
         solver.add_clause([a, b]);

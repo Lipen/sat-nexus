@@ -11,6 +11,11 @@ fn test_minisat_solver_static() -> color_eyre::Result<()> {
     let lit2 = solver.new_lit();
     let lit3 = solver.new_lit();
     let lit4 = solver.new_lit();
+    assert_eq!(solver.num_vars(), 4);
+    assert_eq!(lit1.get(), 0); // var 0, sign 0
+    assert_eq!(lit2.get(), 2); // var 1, sign 0
+    assert_eq!(lit3.get(), 4); // var 2, sign 0
+    assert_eq!(lit4.get(), 6); // var 3, sign 0
 
     // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
     solver.add_clause([lit1, lit2]);
