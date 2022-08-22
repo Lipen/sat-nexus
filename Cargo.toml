@@ -12,6 +12,7 @@ members = [
     "lib/cadical-sys",
     "lib/cli",
     "lib/expr-parser",
+    "lib/simple-sat",
 ]
 
 [dependencies]
