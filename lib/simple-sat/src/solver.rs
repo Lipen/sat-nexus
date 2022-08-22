@@ -834,7 +834,7 @@ impl Solver {
             let p = self.trail[index];
             seen[p.var()] = false; // TODO: why do we need to un-seen p?
             counter -= 1;
-            if counter <= 0 {
+            if counter == 0 {
                 // Prepend the asserting literal:
                 lemma.insert(0, !p);
                 break;
