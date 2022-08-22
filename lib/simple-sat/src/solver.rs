@@ -637,18 +637,13 @@ impl Solver {
     }
 
     fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<Rc<Clause>>) {
-        // assert_eq!(self.value(lit), None);
-        assert_eq!(self.value(lit), LBool::Undef);
+        debug_assert_eq!(self.value(lit), LBool::Undef);
 
-        // self.assignment.insert(lit.var(), !lit.negated());
         self.assignment[lit.var()] = LBool::from(!lit.negated());
-        self.var_data.insert(
-            lit.var(),
-            VarData {
-                reason,
-                level: self.decision_level(),
-            },
-        );
+        self.var_data[lit.var()] = VarData {
+            reason,
+            level: self.decision_level(),
+        };
         self.trail.push(lit);
     }
 
