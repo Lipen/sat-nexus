@@ -880,19 +880,9 @@ impl Solver {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use crate::lbool::LBool;
     use crate::lit::Lit;
     use crate::solver::Solver;
-
-    #[test]
-    fn test_it_works() {
-        let path = "data/coloring.cnf";
-        let mut solver = Solver::from_file(Path::new(path));
-        let res = solver.solve();
-        println!("Solver returned: {:?}", res);
-    }
 
     #[test]
     fn test_correctness() {
