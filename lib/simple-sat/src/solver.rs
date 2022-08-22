@@ -89,12 +89,12 @@ impl VarOrder {
 
         if !self.order_heap.contains(&var) {
             let ref act = self.activity;
-            self.order_heap.insert_by(var, |&a, &b| act[a] > act[b]);
-            // self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
-            //     Ordering::Less => false,
-            //     Ordering::Equal => a.0 < b.0,
-            //     Ordering::Greater => true,
-            // });
+            // self.order_heap.insert_by(var, |&a, &b| act[a] > act[b]);
+            self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
+                Ordering::Less => false,
+                Ordering::Equal => a.0 < b.0,
+                Ordering::Greater => true,
+            });
         }
 
         let time_insert_var_order = time_insert_var_order_start.elapsed();
@@ -106,12 +106,12 @@ impl VarOrder {
         let time_update_var_order_start = Instant::now();
 
         let ref act = self.activity;
-        self.order_heap.update_by(var, |&a, &b| act[a] > act[b]);
-        // self.order_heap.update_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
-        //     Ordering::Less => false,
-        //     Ordering::Equal => a.0 < b.0,
-        //     Ordering::Greater => true,
-        // });
+        // self.order_heap.update_by(var, |&a, &b| act[a] > act[b]);
+        self.order_heap.update_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
+            Ordering::Less => false,
+            Ordering::Equal => a.0 < b.0,
+            Ordering::Greater => true,
+        });
 
         let time_update_var_order = time_update_var_order_start.elapsed();
         self.time_update_var_order += time_update_var_order;
