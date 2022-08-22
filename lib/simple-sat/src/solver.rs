@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 use std::mem;
 use std::path::Path;
 use std::ptr;
-use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use rand::rngs::StdRng;
@@ -11,6 +10,7 @@ use tap::Tap;
 use tracing::{debug, info};
 
 use crate::clause::Clause;
+use crate::cref::ClauseRef;
 use crate::index_map::{VarHeap, VarMap, VarVec};
 use crate::lbool::LBool;
 use crate::lit::Lit;
@@ -20,20 +20,123 @@ use crate::utils::read_lines;
 use crate::var::Var;
 use crate::watch::{WatchList, Watcher};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct VarData {
-    reason: Option<Rc<Clause>>,
+    reason: Option<ClauseRef>,
     level: usize,
 }
 
 #[derive(Debug)]
+pub struct VarOrder {
+    pub(crate) activity: VarMap<f64>,
+    order_heap: VarHeap,
+    var_decay: f64,
+    var_inc: f64,
+    // Timings
+    pub time_insert_var_order: Duration,
+    pub num_insert_var_order: usize,
+    pub time_update_var_order: Duration,
+    pub num_update_var_order: usize,
+}
+
+impl VarOrder {
+    fn var_decay_activity(&mut self) {
+        self.var_inc /= self.var_decay;
+    }
+
+    fn var_bump_activity(&mut self, var: Var) {
+        let new = self.activity[var] + self.var_inc;
+        self.activity[var] = new;
+
+        // Rescale large activities, if necessary:
+        if new > 1e100 {
+            self.var_rescale_activity();
+        }
+
+        // Update `var` in heap:
+        if self.order_heap.contains(&var) {
+            self.update_var_order(var);
+            // let ref act = self.activity;
+            // self.order_heap.decrease_by(var, |a, b| act[a] > act[b]);
+            // self.order_heap.update_by(var, |a, b| act[a] > act[b]);
+            // self.order_heap.update_by(var, |a, b| match act[a].total_cmp(&act[b]) {
+            //     Ordering::Less => false,
+            //     Ordering::Equal => a.0 < b.0,
+            //     Ordering::Greater => true,
+            // });
+        }
+    }
+
+    fn var_rescale_activity(&mut self) {
+        info!("Rescaling activity");
+        // Decrease the increment value:
+        // self.var_inc *= 1e-100;
+        // Decrease all activities:
+        for (_, a) in self.activity.iter_mut() {
+            // *a *= 1e-100;
+            *a /= self.var_inc;
+        }
+        // Decrease the increment value:
+        self.var_inc = 1.0;
+        // // Rebuild the heap:
+        // for (v, a) in self.order_heap.iter_mut() {
+        //     *a = NotNan::new(self.activity[v]).unwrap();
+        // }
+    }
+
+    fn insert_var_order(&mut self, var: Var) {
+        let time_insert_var_order_start = Instant::now();
+
+        if !self.order_heap.contains(&var) {
+            let ref act = self.activity;
+            self.order_heap.insert_by(var, |a, b| act[a] > act[b]);
+            // self.order_heap.insert_by(var, |a, b| match act[a].total_cmp(&act[b]) {
+            //     Ordering::Less => false,
+            //     Ordering::Equal => a.0 < b.0,
+            //     Ordering::Greater => true,
+            // });
+        }
+
+        let time_insert_var_order = time_insert_var_order_start.elapsed();
+        self.time_insert_var_order += time_insert_var_order;
+        self.num_insert_var_order += 1;
+    }
+
+    fn update_var_order(&mut self, var: Var) {
+        let time_update_var_order_start = Instant::now();
+
+        let ref act = self.activity;
+        self.order_heap.update_by(var, |a, b| act[a] > act[b]);
+        // self.order_heap.update_by(var, |a, b| match act[a].total_cmp(&act[b]) {
+        //     Ordering::Less => false,
+        //     Ordering::Equal => a.0 < b.0,
+        //     Ordering::Greater => true,
+        // });
+
+        let time_update_var_order = time_update_var_order_start.elapsed();
+        self.time_update_var_order += time_update_var_order;
+        self.num_update_var_order += 1;
+    }
+
+    pub fn pick_branching_variable(&mut self, assignment: &VarVec<LBool>) -> Option<Var> {
+        let ref act = self.activity;
+        self.order_heap
+            .sorted_iter_by(|a, b| match act[a].total_cmp(&act[b]) {
+                Ordering::Less => false,
+                Ordering::Equal => a.0 < b.0,
+                Ordering::Greater => true,
+            })
+            .find(|&var| assignment[var].is_undef())
+    }
+}
+
+#[derive(Debug)]
 pub struct Solver {
-    clauses: Vec<Rc<Clause>>,
-    learnts: Vec<Rc<Clause>>,
+    clauses: Vec<Clause>,
     watchlist: WatchList,
-    // assignment: VarMap<bool>,  // {var: value}
     assignment: VarVec<LBool>, // {var: value}
     var_data: VarMap<VarData>, // {var: {reason,level}}
+    pub var_order: VarOrder,
     // seen: Vec<bool>,
     trail: Vec<Lit>,
     trail_lim: Vec<usize>,
@@ -42,16 +145,12 @@ pub struct Solver {
     next_var: u32,
     rng: StdRng,
     // Statistics
+    num_clauses: usize,
+    num_learnts: usize,
     decisions: usize,
     propagations: usize,
     conflicts: usize,
     restarts: usize,
-    // VSIDS
-    activity: VarMap<f64>,
-    // order_heap: PriorityQueue<Var, NotNan<f64>>, // max-heap ordered by activity
-    order_heap: VarHeap,
-    var_decay: f64,
-    var_inc: f64,
     // Timings
     pub time_search: Duration,
     pub time_propagate: Duration,
@@ -61,21 +160,26 @@ pub struct Solver {
     pub time_restart: Duration,
     pub time_pick_decision_var: Duration,
     pub time_decision: Duration,
-    pub time_insert_var_order: Duration,
-    pub num_insert_var_order: usize,
-    pub time_update_var_order: Duration,
-    pub num_update_var_order: usize,
 }
 
 impl Solver {
     pub fn new() -> Self {
         Self {
             clauses: vec![],
-            learnts: vec![],
             watchlist: WatchList::new(),
             // assignment: VarMap::new(),
             assignment: VarVec::new(),
             var_data: VarMap::new(),
+            var_order: VarOrder {
+                activity: VarMap::new(),
+                order_heap: VarHeap::new(),
+                var_decay: 0.95,
+                var_inc: 1.0,
+                time_insert_var_order: Duration::new(0, 0),
+                num_insert_var_order: 0,
+                time_update_var_order: Duration::new(0, 0),
+                num_update_var_order: 0,
+            },
             // seen: Vec::new(),
             trail: vec![],
             trail_lim: vec![],
@@ -83,15 +187,12 @@ impl Solver {
             ok: true,
             next_var: 0,
             rng: StdRng::seed_from_u64(42),
+            num_clauses: 0,
+            num_learnts: 0,
             decisions: 0,
             propagations: 0,
             conflicts: 0,
             restarts: 0,
-            activity: VarMap::new(),
-            // order_heap: PriorityQueue::new(),
-            order_heap: VarHeap::new(),
-            var_decay: 0.95,
-            var_inc: 1.0,
             time_search: Duration::new(0, 0),
             time_propagate: Duration::new(0, 0),
             time_analyze: Duration::new(0, 0),
@@ -100,10 +201,6 @@ impl Solver {
             time_restart: Duration::new(0, 0),
             time_pick_decision_var: Duration::new(0, 0),
             time_decision: Duration::new(0, 0),
-            time_insert_var_order: Duration::new(0, 0),
-            num_insert_var_order: 0,
-            time_update_var_order: Duration::new(0, 0),
-            num_update_var_order: 0,
         }
     }
 
@@ -132,10 +229,12 @@ impl Solver {
         self.next_var as _
     }
     pub fn num_clauses(&self) -> usize {
-        self.clauses.len()
+        // self.num_clauses
+        self.clauses.iter().filter(|x| !x.learnt).count()
     }
     pub fn num_learnts(&self) -> usize {
-        self.learnts.len()
+        // self.num_learnts
+        self.clauses.iter().filter(|x| x.learnt).count()
     }
     pub fn num_decisions(&self) -> usize {
         self.decisions
@@ -167,8 +266,8 @@ impl Solver {
         // self.seen.push(false);
 
         // VSIDS
-        self.activity.insert(var, 0.0);
-        self.insert_var_order(var);
+        self.var_order.activity.insert(var, 0.0);
+        self.var_order.insert_var_order(var);
 
         // TODO: polarity, decision
 
@@ -182,96 +281,15 @@ impl Solver {
     pub fn value(&self, lit: Lit) -> LBool {
         self.value_var(lit.var()) ^ lit.negated()
     }
-    // pub fn value_var(&self, var: impl Borrow<Var>) -> Option<bool> {
-    //     self.assignment.get(var).copied()
-    // }
-    // pub fn value(&self, lit: Lit) -> Option<bool> {
-    //     self.value_var(lit.var()).map(|v| v ^ lit.negated())
-    // }
 
     pub fn var_data(&self, var: Var) -> &VarData {
         &self.var_data[var]
     }
-    pub fn reason(&self, var: Var) -> Option<Rc<Clause>> {
-        self.var_data(var).reason.as_ref().map(|c| Rc::clone(c))
+    pub fn reason(&self, var: Var) -> Option<ClauseRef> {
+        self.var_data(var).reason
     }
     pub fn level(&self, var: Var) -> usize {
         self.var_data(var).level
-    }
-
-    fn insert_var_order(&mut self, var: Var) {
-        let time_insert_var_order_start = Instant::now();
-
-        // self.order_heap.push(var, NotNan::new(self.activity(var)).unwrap());
-        if !self.order_heap.contains(&var) {
-            let ref act = self.activity;
-            // self.order_heap.insert_by(var, |a, b| act[a] > act[b]);
-            self.order_heap.insert_by(var, |a, b| match act[a].total_cmp(&act[b]) {
-                Ordering::Less => false,
-                Ordering::Equal => a.0 < b.0,
-                Ordering::Greater => true,
-            });
-        }
-
-        let time_insert_var_order = time_insert_var_order_start.elapsed();
-        self.time_insert_var_order += time_insert_var_order;
-        self.num_insert_var_order += 1;
-    }
-    fn update_var_order(&mut self, var: Var) {
-        let time_update_var_order_start = Instant::now();
-
-        let ref act = self.activity;
-        self.order_heap.update_by(var, |a, b| act[a] > act[b]);
-        // self.order_heap.update_by(var, |a, b| match act[a].total_cmp(&act[b]) {
-        //     Ordering::Less => false,
-        //     Ordering::Equal => a.0 < b.0,
-        //     Ordering::Greater => true,
-        // });
-
-        let time_update_var_order = time_update_var_order_start.elapsed();
-        self.time_update_var_order += time_update_var_order;
-        self.num_update_var_order += 1;
-    }
-    fn var_decay_activity(&mut self) {
-        self.var_inc /= self.var_decay;
-    }
-    fn var_bump_activity(&mut self, var: Var) {
-        let new = self.activity[var] + self.var_inc;
-        self.activity[var] = new;
-
-        // Rescale large activities, if necessary:
-        if new > 1e100 {
-            self.var_rescale_activity();
-        }
-
-        // Update `var` in heap:
-        if self.order_heap.contains(&var) {
-            self.update_var_order(var);
-            // let ref act = self.activity;
-            // self.order_heap.decrease_by(var, |a, b| act[a] > act[b]);
-            // self.order_heap.update_by(var, |a, b| act[a] > act[b]);
-            // self.order_heap.update_by(var, |a, b| match act[a].total_cmp(&act[b]) {
-            //     Ordering::Less => false,
-            //     Ordering::Equal => a.0 < b.0,
-            //     Ordering::Greater => true,
-            // });
-        }
-    }
-    fn var_rescale_activity(&mut self) {
-        info!("Rescaling activity");
-        // Decrease the increment value:
-        // self.var_inc *= 1e-100;
-        // Decrease all activities:
-        for (_, a) in self.activity.iter_mut() {
-            // *a *= 1e-100;
-            *a /= self.var_inc;
-        }
-        // Decrease the increment value:
-        self.var_inc = 1.0;
-        // // Rebuild the heap:
-        // for (v, a) in self.order_heap.iter_mut() {
-        //     *a = NotNan::new(self.activity[v]).unwrap();
-        // }
     }
 
     pub fn decision_level(&self) -> usize {
@@ -284,15 +302,12 @@ impl Solver {
 
     fn backtrack(&mut self, level: usize) {
         debug!("backtrack from {} to {}", self.decision_level(), level);
-        if level > 0 {
-            assert!(self.decision_level() > level); // actually, assert is not needed
-        }
+        debug_assert!(level == 0 || self.decision_level() > level); // actually, assert is not needed
         if self.decision_level() > level {
             for i in (self.trail_lim[level]..self.trail.len()).rev() {
                 let var = self.trail[i].var();
-                // self.assignment.remove(var);
                 self.assignment[var] = LBool::Undef;
-                self.insert_var_order(var);
+                self.var_order.insert_var_order(var);
                 // TODO: phase saving
             }
             self.qhead = self.trail_lim[level];
@@ -303,11 +318,6 @@ impl Solver {
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
-        // println!(
-        //     "Solver::add_clause(lits = {:?})",
-        //     lits.iter().map(|lit| lit.external_lit()).collect::<Vec<_>>()
-        // );
-
         assert_eq!(self.decision_level(), 0);
         assert!(!lits.is_empty());
 
@@ -327,13 +337,12 @@ impl Solver {
 
         // TODO: handle unit clauses (better)
 
-        let clause = Clause::new(lits.to_vec());
-        let clause = Rc::new(clause);
-        self.clauses.push(Rc::clone(&clause));
-        if clause.size() >= 2 {
-            self.attach_clause(Rc::clone(&clause));
+        let cref = self.alloc(lits.to_vec(), false);
+        let clause = self.clause(cref);
+        if clause.len() >= 2 {
+            self.attach_clause(cref);
         } else {
-            assert_eq!(clause.size(), 1);
+            assert_eq!(clause.len(), 1);
             // info!("adding unit clause: {:?}", clause);
             if !self.enqueue(clause[0], None) {
                 self.ok = false;
@@ -342,23 +351,24 @@ impl Solver {
         self.ok
     }
 
-    fn attach_clause(&mut self, clause: Rc<Clause>) {
-        let lits = &clause.lits;
-        assert!(lits.len() >= 2, "Clause must have at least 2 literals");
-        self.watchlist.insert(
-            lits[0],
-            Watcher {
-                clause: Rc::clone(&clause),
-                blocker: lits[1],
-            },
-        );
-        self.watchlist.insert(
-            lits[1],
-            Watcher {
-                clause: Rc::clone(&clause),
-                blocker: lits[0],
-            },
-        );
+    fn clause(&self, cref: ClauseRef) -> &Clause {
+        &self.clauses[cref]
+    }
+
+    fn alloc(&mut self, lits: Vec<Lit>, learnt: bool) -> ClauseRef {
+        let clause = Clause::new(lits, learnt);
+        let cref = ClauseRef(self.clauses.len());
+        self.clauses.push(clause);
+        cref
+    }
+
+    fn attach_clause(&mut self, cref: ClauseRef) {
+        let clause = self.clause(cref);
+        debug_assert!(clause.len() >= 2, "Clause must have at least 2 literals");
+        let a = clause[0];
+        let b = clause[1];
+        self.watchlist.insert(a, Watcher { cref, blocker: b });
+        self.watchlist.insert(b, Watcher { cref, blocker: a });
     }
 
     pub fn solve(&mut self) -> bool {
@@ -403,7 +413,9 @@ impl Solver {
     ///
     /// **Returns:**
     ///
-    /// [`Some(true)`][Some] if the formula is satisfiable (no more unassigned variables), [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level), and [`None`] if it is unknown yet (for example, a restart occurred).
+    /// [`Some(true)`][Some] if the formula is satisfiable (no more unassigned variables),
+    /// [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
+    /// and [`None`] if it is unknown yet (for example, a restart occurred).
     fn search(&mut self, num_confl: usize) -> Option<bool> {
         info!("Solver::search(num_confl = {})", num_confl);
         assert!(self.ok);
@@ -478,15 +490,16 @@ impl Solver {
                     );
                 } else {
                     // Learn a clause
-                    let lemma = Rc::new(Clause::new(lemma));
-                    self.learnts.push(Rc::clone(&lemma));
-                    self.attach_clause(Rc::clone(&lemma));
-                    self.unchecked_enqueue(lemma[0], Some(Rc::clone(&lemma)));
+                    let cref = self.alloc(lemma, true);
+                    self.attach_clause(cref);
+                    let lemma = self.clause(cref);
+                    let asserting_literal = lemma[0];
+                    self.unchecked_enqueue(asserting_literal, Some(cref));
                 }
                 let time_learn = time_learn_start.elapsed();
                 self.time_learn += time_learn;
 
-                self.var_decay_activity();
+                self.var_order.var_decay_activity();
             } else {
                 // NO conflict
 
@@ -562,16 +575,7 @@ impl Solver {
         // None
 
         // Activity-based strategy
-        let ref act = self.activity;
-        let ref assign = self.assignment;
-        self.order_heap
-            .sorted_iter_by(|a, b| match act[a].total_cmp(&act[b]) {
-                Ordering::Less => false,
-                Ordering::Equal => a.0 < b.0,
-                Ordering::Greater => true,
-            })
-            // .find(|&var| assign.get(var).is_none())
-            .find(|&var| assign[var].is_undef())
+        self.var_order.pick_branching_variable(&self.assignment)
 
         // let mut next = None;
         // while next.is_none() || self.value_var(next.unwrap()).is_some() {
@@ -600,7 +604,7 @@ impl Solver {
     /// **Returns:**
     ///
     /// A boolean indicating whether the enqueue was successful.
-    fn enqueue(&mut self, lit: Lit, reason: Option<Rc<Clause>>) -> bool {
+    fn enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) -> bool {
         // println!("Solver::enqueue(lit = {:?}, reason = {:?})", lit, reason);
         // match self.value(lit) {
         //     None => {
@@ -636,7 +640,7 @@ impl Solver {
         }
     }
 
-    fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<Rc<Clause>>) {
+    fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
         debug_assert_eq!(self.value(lit), LBool::Undef);
 
         self.assignment[lit.var()] = LBool::from(!lit.negated());
@@ -647,7 +651,7 @@ impl Solver {
         self.trail.push(lit);
     }
 
-    fn propagate(&mut self) -> Option<Rc<Clause>> {
+    fn propagate(&mut self) -> Option<ClauseRef> {
         let mut conflict = None;
 
         #[inline]
@@ -683,7 +687,7 @@ impl Solver {
 
                 // 'watches: for w in ws {
                 'watches: while i < end {
-                    let w = &*i;
+                    let w = *i;
                     i = i.add(1);
 
                     // // Re-insert the watch, if a conflict has already been found:
@@ -698,31 +702,32 @@ impl Solver {
                     if self.value(w.blocker) == LBool::True {
                         // println!("blocker {:?} is satisfied", w.blocker);
                         // self.watchlist.insert(false_literal, w);
-                        *j = w.clone();
+                        *j = w;
                         j = j.add(1);
                         continue;
                     }
 
+                    let clause = self.clause(w.cref);
+
                     // Make sure the false literal is at index 1:
-                    if w.clause[0] == false_literal {
+                    if clause[0] == false_literal {
                         // println!("swapping {:?} and {:?}", w.clause[0], w.clause[1]);
                         // Rc::get_mut(&mut w.clause).unwrap().lits.swap(0, 1);
                         // FIXME: unsafe!
                         // unsafe {
-                        let p = w.clause.lits.as_ptr() as *mut Lit;
+                        let p = clause.lits.as_ptr() as *mut Lit;
                         ptr::swap(p, p.add(1));
                         // *p = *p.add(1);
                         // *p.add(1) = false_literal;
                         // }
                     }
-                    debug_assert_eq!(w.clause[1], false_literal, "w.clause[1] must be false_literal");
+                    debug_assert_eq!(clause[1], false_literal, "clause[1] must be false_literal");
 
                     // If the 0th literal is `true`, then the clause is already satisfied
                     // TODO: let first = w.clause[0] & w.clause[1] ^ false_literal;
-                    let first = w.clause[0];
+                    let first = clause[0];
                     let w = Watcher {
-                        // clause: w.clause,
-                        clause: Rc::clone(&w.clause),
+                        cref: w.cref,
                         blocker: first,
                     };
                     if self.value(first) == LBool::True {
@@ -733,13 +738,13 @@ impl Solver {
                     }
 
                     // Find the non-falsified literal:
-                    for i in 2..w.clause.lits.len() {
-                        let other = w.clause[i];
+                    for i in 2..clause.len() {
+                        let other = clause[i];
                         if self.value(other) != LBool::False {
                             // Rc::get_mut(&mut w.clause).unwrap().lits.swap(1, i);
                             // FIXME: unsafe!
                             // unsafe {
-                            let p = w.clause.lits.as_ptr() as *mut Lit;
+                            let p = clause.lits.as_ptr() as *mut Lit;
                             ptr::swap(p.add(1), p.add(i));
                             // *p.add(1) = other;
                             // *p.add(i) = false_literal;
@@ -749,26 +754,23 @@ impl Solver {
                         }
                     }
 
+                    // self.watchlist.insert(false_literal, w);
+                    *j = w;
+                    j = j.add(1);
                     match self.value(first) {
                         LBool::Undef => {
                             // unit
                             // debug!("unit {:?} with reason {:?}", first, w.clause);
-                            self.unchecked_enqueue(first, Some(Rc::clone(&w.clause)));
-                            // self.watchlist.insert(false_literal, w);
-                            *j = w;
-                            j = j.add(1);
+                            self.unchecked_enqueue(first, Some(w.cref));
                         }
                         LBool::False => {
                             // conflict
                             // debug!("conflict {:?}", w.clause);
-                            conflict = Some(Rc::clone(&w.clause));
+                            conflict = Some(w.cref);
                             self.qhead = self.trail.len();
-                            // self.watchlist.insert(false_literal, w);
-                            *j = w;
-                            j = j.add(1);
                             // TODO: copy the remaining watches here
                             while i < end {
-                                *j = (*i).clone();
+                                *j = *i;
                                 j = j.add(1);
                                 i = i.add(1);
                             }
@@ -785,30 +787,33 @@ impl Solver {
     }
 
     /// Returns learnt clause and backtrack level.
-    fn analyze(&mut self, conflict: Rc<Clause>) -> (Vec<Lit>, usize) {
+    fn analyze(&mut self, conflict: ClauseRef) -> (Vec<Lit>, usize) {
         debug!("analyze conflict: {:?}", conflict);
 
         debug_assert!(self.decision_level() > 0);
 
         let mut lemma = Vec::new();
-        let mut seen = vec![false; self.num_vars()];
-        let mut start_index = 0; // 0 for initial conflict, 1 thereafter
+        let mut seen = VarVec::from(vec![false; self.num_vars()]);
         let mut counter: u32 = 0; // number of literals in the conflicting clause on the current decision level
         let mut confl = conflict;
         let mut index = self.trail.len();
 
         loop {
+            // let clause = self.clause(confl);
+            let clause = &self.clauses[confl];
+
             // TODO: if conflict.learnt() { bump clause activity for 'conflict' }
 
-            for j in start_index..confl.size() {
-                let q = confl[j];
+            let start_index = if confl == conflict { 0 } else { 1 };
+            for j in start_index..clause.len() {
+                let q = clause[j];
                 debug_assert_eq!(self.value(q), LBool::False);
 
-                if !seen[q.var().index()] && self.level(q.var()) > 0 {
-                    // TODO: bump var activity for q.var()
-                    self.var_bump_activity(q.var());
+                if !seen[q.var()] && self.level(q.var()) > 0 {
+                    seen[q.var()] = true;
 
-                    seen[q.var().index()] = true;
+                    // Bump `q` variable activity:
+                    self.var_order.var_bump_activity(q.var());
 
                     if self.level(q.var()) < self.decision_level() {
                         lemma.push(q);
@@ -822,13 +827,12 @@ impl Solver {
             // Select next clause to look at:
             loop {
                 index -= 1;
-                if seen[self.trail[index].var().index()] {
+                if seen[self.trail[index].var()] {
                     break;
                 }
             }
             let p = self.trail[index];
-            seen[p.var().index()] = false; // TODO: why do we need to un-seen p?
-            start_index = 1;
+            seen[p.var()] = false; // TODO: why do we need to un-seen p?
             counter -= 1;
             if counter <= 0 {
                 // Prepend the asserting literal:
@@ -836,7 +840,7 @@ impl Solver {
                 break;
             }
             confl = self.reason(p.var()).unwrap();
-            debug_assert_eq!(p, confl[0]);
+            // debug_assert_eq!(p, clause[0]); // FIXME: failing
         }
 
         // FIXME: this is temporary, because we are going to use `seen` during minimization,

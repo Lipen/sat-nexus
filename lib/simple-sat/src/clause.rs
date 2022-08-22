@@ -1,23 +1,27 @@
+#![allow(dead_code)]
+
 use std::ops::{Index, IndexMut};
+use std::slice::SliceIndex;
 
 use crate::lit::Lit;
 
 #[derive(Debug, Clone)]
 pub struct Clause {
     pub(crate) lits: Vec<Lit>,
+    pub(crate) learnt: bool,
 }
 
 impl Clause {
-    pub const fn new(lits: Vec<Lit>) -> Self {
-        Self { lits }
+    pub const fn new(lits: Vec<Lit>, learnt: bool) -> Self {
+        Self { lits, learnt }
     }
 
     pub fn from_lits(lits: &[i32]) -> Self {
         let lits = lits.iter().map(|&lit| Lit::from_lit(lit)).collect();
-        Self::new(lits)
+        Self::new(lits, false)
     }
 
-    pub fn size(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.lits.len()
     }
 }

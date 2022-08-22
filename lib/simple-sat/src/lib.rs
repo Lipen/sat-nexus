@@ -1,6 +1,7 @@
 pub mod solver;
 
 pub mod clause;
+pub mod cref;
 pub mod index_map;
 pub mod lbool;
 pub mod lit;

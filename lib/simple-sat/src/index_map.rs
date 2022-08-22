@@ -137,6 +137,16 @@ impl<K: Idx, V> IdxVec<K, V> {
         }
     }
 
+    pub fn init(&mut self, k: K)
+    where
+        V: Default,
+    {
+        let new_len = k.idx() + 1;
+        if new_len > self.vec.len() {
+            self.vec.resize_with(new_len, Default::default);
+        }
+    }
+
     pub fn get(&self, k: K) -> Option<&V> {
         self.vec.get(k.idx())
     }
@@ -156,15 +166,9 @@ impl<K: Idx, V> IdxVec<K, V> {
     }
 }
 
-impl<K: Idx, V> IdxVec<K, V>
-where
-    V: Default,
-{
-    pub fn init(&mut self, k: K) {
-        let new_len = k.idx() + 1;
-        if new_len > self.vec.len() {
-            self.vec.resize_with(new_len, Default::default);
-        }
+impl<K: Idx, V> From<Vec<V>> for IdxVec<K, V> {
+    fn from(vec: Vec<V>) -> Self {
+        Self { vec, phantom: PhantomData }
     }
 }
 
