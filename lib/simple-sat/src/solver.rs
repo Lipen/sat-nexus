@@ -11,7 +11,7 @@ use tracing::{debug, info};
 
 use crate::clause::Clause;
 use crate::cref::ClauseRef;
-use crate::index_map::{VarHeap, VarMap, VarVec};
+use crate::index_map::{VarHeap, VarVec};
 use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::utils::luby;
@@ -28,7 +28,7 @@ pub struct VarData {
 
 #[derive(Debug)]
 pub struct VarOrder {
-    pub(crate) activity: VarMap<f64>,
+    pub(crate) activity: VarVec<f64>,
     order_heap: VarHeap,
     var_decay: f64,
     var_inc: f64,
@@ -72,7 +72,7 @@ impl VarOrder {
         // Decrease the increment value:
         // self.var_inc *= 1e-100;
         // Decrease all activities:
-        for (_, a) in self.activity.iter_mut() {
+        for a in self.activity.iter_mut() {
             // *a *= 1e-100;
             *a /= self.var_inc;
         }
@@ -89,8 +89,8 @@ impl VarOrder {
 
         if !self.order_heap.contains(&var) {
             let ref act = self.activity;
-            self.order_heap.insert_by(var, |a, b| act[a] > act[b]);
-            // self.order_heap.insert_by(var, |a, b| match act[a].total_cmp(&act[b]) {
+            self.order_heap.insert_by(var, |&a, &b| act[a] > act[b]);
+            // self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
             //     Ordering::Less => false,
             //     Ordering::Equal => a.0 < b.0,
             //     Ordering::Greater => true,
@@ -106,8 +106,8 @@ impl VarOrder {
         let time_update_var_order_start = Instant::now();
 
         let ref act = self.activity;
-        self.order_heap.update_by(var, |a, b| act[a] > act[b]);
-        // self.order_heap.update_by(var, |a, b| match act[a].total_cmp(&act[b]) {
+        self.order_heap.update_by(var, |&a, &b| act[a] > act[b]);
+        // self.order_heap.update_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
         //     Ordering::Less => false,
         //     Ordering::Equal => a.0 < b.0,
         //     Ordering::Greater => true,
@@ -121,7 +121,8 @@ impl VarOrder {
     pub fn pick_branching_variable(&mut self, assignment: &VarVec<LBool>) -> Option<Var> {
         let ref act = self.activity;
         self.order_heap
-            .sorted_iter_by(|a, b| match act[a].total_cmp(&act[b]) {
+            // .sorted_iter_by(|&a, &b| act[a] > act[b])
+            .sorted_iter_by(|&a, &b| match act[a].total_cmp(&act[b]) {
                 Ordering::Less => false,
                 Ordering::Equal => a.0 < b.0,
                 Ordering::Greater => true,
@@ -135,7 +136,7 @@ pub struct Solver {
     clauses: Vec<Clause>,
     watchlist: WatchList,
     assignment: VarVec<LBool>, // {var: value}
-    var_data: VarMap<VarData>, // {var: {reason,level}}
+    var_data: VarVec<VarData>, // {var: {reason,level}}
     pub var_order: VarOrder,
     // seen: Vec<bool>,
     trail: Vec<Lit>,
@@ -167,11 +168,10 @@ impl Solver {
         Self {
             clauses: vec![],
             watchlist: WatchList::new(),
-            // assignment: VarMap::new(),
             assignment: VarVec::new(),
-            var_data: VarMap::new(),
+            var_data: VarVec::new(),
             var_order: VarOrder {
-                activity: VarMap::new(),
+                activity: VarVec::new(),
                 order_heap: VarHeap::new(),
                 var_decay: 0.95,
                 var_inc: 1.0,
@@ -260,13 +260,13 @@ impl Solver {
         self.assignment.push(LBool::Undef);
 
         // Reason/level
-        self.var_data.insert(var, VarData { reason: None, level: 0 });
+        self.var_data.push(VarData { reason: None, level: 0 });
 
         // Seen
         // self.seen.push(false);
 
         // VSIDS
-        self.var_order.activity.insert(var, 0.0);
+        self.var_order.activity.push(0.0);
         self.var_order.insert_var_order(var);
 
         // TODO: polarity, decision
