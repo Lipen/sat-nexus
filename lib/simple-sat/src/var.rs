@@ -3,11 +3,11 @@
 pub struct Var(pub(crate) u32);
 
 impl Var {
-    pub fn new(var: u32) -> Self {
+    pub const fn new(var: u32) -> Self {
         Self(var)
     }
 
-    pub fn index(self) -> usize {
+    pub const fn index(self) -> usize {
         self.0 as usize
     }
 }

@@ -18,7 +18,7 @@ pub struct WatchList {
 }
 
 impl WatchList {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             // watchlist: LitMap::new(),
             watchlist: LitVec::new(),

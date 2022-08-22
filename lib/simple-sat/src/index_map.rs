@@ -121,13 +121,15 @@ impl<K: Idx, V> IndexMut<&K> for IdxMap<K, V> {
     }
 }
 
+// ==========================================
+
 pub struct IdxVec<K: Idx, V> {
     vec: Vec<V>,
     phantom: PhantomData<K>,
 }
 
 impl<K: Idx, V> IdxVec<K, V> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             vec: Vec::new(),
             phantom: PhantomData,

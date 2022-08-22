@@ -8,7 +8,7 @@ pub struct Clause {
 }
 
 impl Clause {
-    pub fn new(lits: Vec<Lit>) -> Self {
+    pub const fn new(lits: Vec<Lit>) -> Self {
         Self { lits }
     }
 

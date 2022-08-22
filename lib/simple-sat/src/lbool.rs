@@ -10,7 +10,7 @@ pub enum LBool {
 
 impl LBool {
     #[inline]
-    pub fn is_undef(self) -> bool {
+    pub const fn is_undef(self) -> bool {
         (self as u8) > 1
     }
 }

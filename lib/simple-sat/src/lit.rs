@@ -7,20 +7,20 @@ use crate::var::Var;
 pub struct Lit(pub(crate) u32);
 
 impl Lit {
-    pub fn new(var: Var, negated: bool) -> Self {
+    pub const fn new(var: Var, negated: bool) -> Self {
         Lit(var.0 << 1 | negated as u32)
     }
 
-    pub fn var(self) -> Var {
+    pub const fn var(self) -> Var {
         Var(self.0 >> 1)
     }
 
     // TODO: rename to `sign` (with the same same semantics, to match MiniSat)
-    pub fn negated(self) -> bool {
+    pub const fn negated(self) -> bool {
         (self.0 & 1) != 0
     }
 
-    pub fn sign(self) -> i32 {
+    pub const fn sign(self) -> i32 {
         if self.negated() {
             -1
         } else {
@@ -28,15 +28,15 @@ impl Lit {
         }
     }
 
-    pub fn index(self) -> usize {
+    pub const fn index(self) -> usize {
         self.0 as usize
     }
 
-    pub fn external_lit(self) -> i32 {
+    pub const fn external_lit(self) -> i32 {
         self.sign() * (self.var().0 + 1) as i32
     }
 
-    pub fn from_lit(lit: i32) -> Lit {
+    pub const fn from_lit(lit: i32) -> Lit {
         let var = lit.abs() as u32 - 1;
         Lit::new(Var(var), lit < 0)
     }
