@@ -37,7 +37,7 @@ impl Lit {
     }
 
     pub const fn from_lit(lit: i32) -> Lit {
-        let var = lit.abs() as u32 - 1;
+        let var = lit.unsigned_abs() - 1;
         Lit::new(Var(var), lit < 0)
     }
 }
