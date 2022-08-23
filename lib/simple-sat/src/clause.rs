@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use std::ops::{Index, IndexMut};
-use std::slice::SliceIndex;
 
 use crate::lit::Lit;
 
