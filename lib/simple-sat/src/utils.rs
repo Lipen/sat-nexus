@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use itertools::Itertools;
 
@@ -43,4 +44,13 @@ pub fn luby(y: f64, mut x: u32) -> f64 {
     }
 
     y.powi(seq)
+}
+
+pub fn measure_time<T, F>(f: F) -> (Duration, T)
+where
+    F: FnOnce() -> T,
+{
+    let time_start = Instant::now();
+    let result = f();
+    (time_start.elapsed(), result)
 }
