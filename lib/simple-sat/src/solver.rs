@@ -90,7 +90,10 @@ impl Solver {
         }
     }
 
-    pub fn from_file(path: &Path) -> Self {
+    pub fn from_file<P>(path: P) -> Self
+    where
+        P: AsRef<Path>,
+    {
         let mut solver = Self::new();
 
         let lines = read_lines(path).unwrap();
