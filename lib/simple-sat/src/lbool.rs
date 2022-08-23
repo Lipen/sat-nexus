@@ -30,22 +30,13 @@ impl BitXor<bool> for LBool {
     type Output = LBool;
 
     fn bitxor(self, rhs: bool) -> Self::Output {
-        match self {
-            LBool::False => {
-                if rhs {
-                    LBool::True
-                } else {
-                    LBool::False
-                }
-            }
-            LBool::True => {
-                if rhs {
-                    LBool::False
-                } else {
-                    LBool::True
-                }
-            }
-            LBool::Undef => LBool::Undef,
+        // https://godbolt.org/z/TezsxsdP6 (see bitxor4)
+        if self == LBool::Undef {
+            LBool::Undef
+        } else if ((self as u8) & (rhs as u8)) > 0 {
+            LBool::True
+        } else {
+            LBool::False
         }
     }
 }
