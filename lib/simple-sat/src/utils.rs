@@ -40,7 +40,7 @@ pub fn luby(y: f64, mut x: u32) -> f64 {
     while size - 1 != x {
         size = (size - 1) >> 1;
         seq -= 1;
-        x = x % size;
+        x %= size;
     }
 
     y.powi(seq)
