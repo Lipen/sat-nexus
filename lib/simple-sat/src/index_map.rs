@@ -218,20 +218,16 @@ impl<K: Idx, V> IndexMut<&K> for IdxVec<K, V> {
 
 // ==========================================
 
-type HeapIndexType = u32;
-
 #[derive(Debug)]
 pub struct IdxHeap<K: Idx> {
     heap: Vec<K>,
-    // index: vec_map::VecMap<usize>,
-    index: IdxVec<K, HeapIndexType>,
+    index: IdxVec<K, usize>,
 }
 
 impl<K: Idx> IdxHeap<K> {
     pub fn new() -> Self {
         Self {
             heap: Vec::new(),
-            // index: vec_map::VecMap::new(),
             index: IdxVec::new(),
         }
     }
@@ -244,7 +240,7 @@ impl<K: Idx> IdxHeap<K> {
     }
 
     pub fn contains(&self, key: &K) -> bool {
-        key.idx() < self.index.vec.len() && self.index[key] != HeapIndexType::MAX
+        key.idx() < self.index.vec.len() && self.index[key] != usize::MAX
     }
 
     pub fn clear(&mut self) {
@@ -311,7 +307,6 @@ impl<K: Idx> IdxHeap<K> {
     {
         let mut this = Self {
             heap: from,
-            // index: vec_map::VecMap::new(),
             index: IdxVec::new(),
         };
         for i in (0..this.len()).rev() {
@@ -335,7 +330,7 @@ impl<K: Idx> IdxHeap<K> {
         assert!(!self.contains(&key));
         let i = self.heap.len();
         self.heap.push(key);
-        self.index.init_by(key, || HeapIndexType::MAX);
+        self.index.init_by(key, || usize::MAX);
         self.sift_up_by(i, cmp);
     }
 
@@ -355,7 +350,7 @@ impl<K: Idx> IdxHeap<K> {
         } else {
             let res = self.heap.swap_remove(0);
             // self.index.remove(res.idx());
-            self.index[&res] = HeapIndexType::MAX;
+            self.index[&res] = usize::MAX;
             if !self.heap.is_empty() {
                 self.index[&self.heap[0]] = 0;
                 self.sift_down_by(0, cmp);
@@ -372,22 +367,22 @@ impl<K: Idx> IdxHeap<K> {
         F: Fn(&K, &K) -> bool,
     {
         let i = self.index[key];
-        self.sift_down_by(i as _, &cmp);
-        self.sift_up_by(i as _, cmp);
+        self.sift_down_by(i, &cmp);
+        self.sift_up_by(i, cmp);
     }
     pub fn decrease_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
         let i = self.index[key];
-        self.sift_up_by(i as _, cmp);
+        self.sift_up_by(i, cmp);
     }
     pub fn increase_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
         let i = self.index[key];
-        self.sift_down_by(i as _, cmp);
+        self.sift_down_by(i, cmp);
     }
 
     fn sift_up_by<F>(&mut self, mut i: usize, cmp: F)
@@ -397,14 +392,14 @@ impl<K: Idx> IdxHeap<K> {
         while i > 0 {
             let p = self.parent(i);
             if cmp(&self.heap[i], &self.heap[p]) {
-                self.index[&self.heap[p]] = i as _;
+                self.index[&self.heap[p]] = i;
                 self.heap.swap(i, p);
                 i = p;
             } else {
                 break;
             }
         }
-        self.index[&self.heap[i]] = i as _;
+        self.index[&self.heap[i]] = i;
     }
 
     fn sift_down_by<F>(&mut self, mut i: usize, cmp: F)
@@ -424,14 +419,14 @@ impl<K: Idx> IdxHeap<K> {
             };
 
             if cmp(&self.heap[c], &self.heap[i]) {
-                self.index[&self.heap[c]] = i as _;
+                self.index[&self.heap[c]] = i;
                 self.heap.swap(c, i);
                 i = c;
             } else {
                 break;
             }
         }
-        self.index[&self.heap[i]] = i as _;
+        self.index[&self.heap[i]] = i;
     }
 
     pub fn sorted_iter_by<F>(&mut self, cmp: F) -> IdxHeapSortedIter<K, F>
