@@ -98,7 +98,6 @@ impl<K: Idx, V> Index<K> for IdxMap<K, V> {
         self.map.index(k.idx())
     }
 }
-
 // map[&key]
 impl<K: Idx, V> Index<&K> for IdxMap<K, V> {
     type Output = V;
@@ -108,14 +107,13 @@ impl<K: Idx, V> Index<&K> for IdxMap<K, V> {
     }
 }
 
-// map[key] = value
+// map[key] = (value)
 impl<K: Idx, V> IndexMut<K> for IdxMap<K, V> {
     fn index_mut(&mut self, k: K) -> &mut Self::Output {
         self.map.index_mut(k.idx())
     }
 }
-
-// map[&key] = value
+// map[&key] = (value)
 impl<K: Idx, V> IndexMut<&K> for IdxMap<K, V> {
     fn index_mut(&mut self, k: &K) -> &mut Self::Output {
         self.map.index_mut(k.idx())
@@ -141,9 +139,16 @@ impl<K: Idx, V> IdxVec<K, V> {
     where
         V: Default,
     {
+        self.init_by(k, Default::default)
+    }
+
+    pub fn init_by<F>(&mut self, k: K, f: F)
+    where
+        F: FnMut() -> V,
+    {
         let new_len = k.idx() + 1;
         if new_len > self.vec.len() {
-            self.vec.resize_with(new_len, Default::default);
+            self.vec.resize_with(new_len, f);
         }
     }
 
@@ -181,6 +186,7 @@ where
     }
 }
 
+// vec[key]
 impl<K: Idx, V> Index<K> for IdxVec<K, V> {
     type Output = V;
 
@@ -188,26 +194,45 @@ impl<K: Idx, V> Index<K> for IdxVec<K, V> {
         self.vec.index(k.idx())
     }
 }
+// vec[&key]
+impl<K: Idx, V> Index<&K> for IdxVec<K, V> {
+    type Output = V;
 
+    fn index(&self, k: &K) -> &Self::Output {
+        self.vec.index(k.idx())
+    }
+}
+
+// vec[key] = (value)
 impl<K: Idx, V> IndexMut<K> for IdxVec<K, V> {
     fn index_mut(&mut self, k: K) -> &mut Self::Output {
+        self.vec.index_mut(k.idx())
+    }
+}
+// vec[&key] = (value)
+impl<K: Idx, V> IndexMut<&K> for IdxVec<K, V> {
+    fn index_mut(&mut self, k: &K) -> &mut Self::Output {
         self.vec.index_mut(k.idx())
     }
 }
 
 // ==========================================
 
+type HeapIndexType = u32;
+
 #[derive(Debug)]
 pub struct IdxHeap<K: Idx> {
     heap: Vec<K>,
-    index: vec_map::VecMap<usize>,
+    // index: vec_map::VecMap<usize>,
+    index: IdxVec<K, HeapIndexType>,
 }
 
 impl<K: Idx> IdxHeap<K> {
     pub fn new() -> Self {
         Self {
             heap: Vec::new(),
-            index: vec_map::VecMap::new(),
+            // index: vec_map::VecMap::new(),
+            index: IdxVec::new(),
         }
     }
 
@@ -219,12 +244,12 @@ impl<K: Idx> IdxHeap<K> {
     }
 
     pub fn contains(&self, key: &K) -> bool {
-        self.index.contains_key(key.idx())
+        key.idx() < self.index.vec.len() && self.index[key] != HeapIndexType::MAX
     }
 
     pub fn clear(&mut self) {
         self.heap.clear();
-        self.index.clear();
+        self.index.vec.clear();
     }
 
     pub fn parent(&self, i: usize) -> usize {
@@ -251,7 +276,10 @@ impl<K: Idx + Ord> IdxHeap<K> {
         // a.cmp(b) == Ordering::Less
     }
 
-    pub fn insert(&mut self, key: K) {
+    pub fn insert(&mut self, key: K)
+    where
+        K: Copy,
+    {
         self.insert_by(key, Self::ord_cmp)
     }
     pub fn pop(&mut self) -> Option<K> {
@@ -283,7 +311,8 @@ impl<K: Idx> IdxHeap<K> {
     {
         let mut this = Self {
             heap: from,
-            index: vec_map::VecMap::new(),
+            // index: vec_map::VecMap::new(),
+            index: IdxVec::new(),
         };
         for i in (0..this.len()).rev() {
             this.sift_down_by(i, &cmp);
@@ -299,12 +328,14 @@ impl<K: Idx> IdxHeap<K> {
     /// Panics if `key` is already in the heap.
     pub fn insert_by<F>(&mut self, key: K, cmp: F)
     where
+        K: Copy,
         F: Fn(&K, &K) -> bool,
     {
         // TODO: call `update_by` instead of panicking when `key` is already present.
-        assert!(!self.index.contains_key(key.idx()));
+        assert!(!self.contains(&key));
         let i = self.heap.len();
         self.heap.push(key);
+        self.index.init_by(key, || HeapIndexType::MAX);
         self.sift_up_by(i, cmp);
     }
 
@@ -323,8 +354,10 @@ impl<K: Idx> IdxHeap<K> {
             None
         } else {
             let res = self.heap.swap_remove(0);
-            self.index.remove(res.idx());
+            // self.index.remove(res.idx());
+            self.index[&res] = HeapIndexType::MAX;
             if !self.heap.is_empty() {
+                self.index[&self.heap[0]] = 0;
                 self.sift_down_by(0, cmp);
             }
             Some(res)
@@ -338,23 +371,23 @@ impl<K: Idx> IdxHeap<K> {
     where
         F: Fn(&K, &K) -> bool,
     {
-        let i = self.index[key.idx()];
-        self.sift_down_by(i, &cmp);
-        self.sift_up_by(i, cmp);
+        let i = self.index[key];
+        self.sift_down_by(i as _, &cmp);
+        self.sift_up_by(i as _, cmp);
     }
     pub fn decrease_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
-        let i = self.index[key.idx()];
-        self.sift_up_by(i, cmp);
+        let i = self.index[key];
+        self.sift_up_by(i as _, cmp);
     }
     pub fn increase_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
-        let i = self.index[key.idx()];
-        self.sift_down_by(i, cmp);
+        let i = self.index[key];
+        self.sift_down_by(i as _, cmp);
     }
 
     fn sift_up_by<F>(&mut self, mut i: usize, cmp: F)
@@ -364,14 +397,14 @@ impl<K: Idx> IdxHeap<K> {
         while i > 0 {
             let p = self.parent(i);
             if cmp(&self.heap[i], &self.heap[p]) {
-                self.index.insert(self.heap[p].idx(), i);
+                self.index[&self.heap[p]] = i as _;
                 self.heap.swap(i, p);
                 i = p;
             } else {
                 break;
             }
         }
-        self.index.insert(self.heap[i].idx(), i);
+        self.index[&self.heap[i]] = i as _;
     }
 
     fn sift_down_by<F>(&mut self, mut i: usize, cmp: F)
@@ -391,14 +424,14 @@ impl<K: Idx> IdxHeap<K> {
             };
 
             if cmp(&self.heap[c], &self.heap[i]) {
-                self.index.insert(self.heap[c].idx(), i);
+                self.index[&self.heap[c]] = i as _;
                 self.heap.swap(c, i);
                 i = c;
             } else {
                 break;
             }
         }
-        self.index.insert(self.heap[i].idx(), i);
+        self.index[&self.heap[i]] = i as _;
     }
 
     pub fn sorted_iter_by<F>(&mut self, cmp: F) -> IdxHeapSortedIter<K, F>
