@@ -8,7 +8,7 @@ use crate::var::Var;
 
 #[derive(Debug)]
 pub struct VarOrder {
-    pub(crate) activity: VarVec<f64>,
+    activity: VarVec<f64>,
     order_heap: VarHeap,
     var_decay: f64,
     var_inc: f64,
@@ -35,6 +35,10 @@ impl VarOrder {
 }
 
 impl VarOrder {
+    pub(crate) fn push_zero_activity(&mut self) {
+        self.activity.push(0.0);
+    }
+
     pub fn var_decay_activity(&mut self) {
         self.var_inc /= self.var_decay;
     }

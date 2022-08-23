@@ -155,7 +155,7 @@ impl Solver {
         // self.seen.push(false);
 
         // VSIDS
-        self.var_order.activity.push(0.0);
+        self.var_order.push_zero_activity();
         self.var_order.insert_var_order(var);
 
         // TODO: polarity, decision
