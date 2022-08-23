@@ -103,7 +103,7 @@ impl Solver {
                     // println!("Skipping comment '{}'", s);
                     continue;
                 } else if s.starts_with("p") {
-                    println!("Skipping header '{}'", s);
+                    debug!("Skipping header '{}'", s);
                     continue;
                 }
                 let lits = parse_dimacs_clause(&s);
