@@ -190,6 +190,7 @@ impl Solver {
     }
 
     fn backtrack(&mut self, level: usize) {
+        let time_backtrack_start = Instant::now();
         debug!("backtrack from {} to {}", self.decision_level(), level);
         debug_assert!(level == 0 || self.decision_level() > level); // actually, assert is not needed
         if self.decision_level() > level {
@@ -204,6 +205,8 @@ impl Solver {
             self.trail_lim.truncate(level);
         }
         // self.qhead = std::cmp::min(self.qhead, self.trail.len())
+        let time_backtrack = time_backtrack_start.elapsed();
+        self.time_backtrack += time_backtrack;
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
@@ -337,10 +340,7 @@ impl Solver {
                 let time_analyze = time_analyze_start.elapsed();
                 self.time_analyze += time_analyze;
                 // println!("analyzed conflict in {:?}", time_analyze);
-                let time_backtrack_start = Instant::now();
                 self.backtrack(backtrack_level);
-                let time_backtrack = time_backtrack_start.elapsed();
-                self.time_backtrack += time_backtrack;
 
                 let time_learn_start = Instant::now();
                 assert!(lemma.len() > 0);
