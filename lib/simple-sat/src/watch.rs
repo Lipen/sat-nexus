@@ -22,8 +22,8 @@ impl WatchList {
     }
 
     pub fn init(&mut self, var: Var) {
-        self.watchlist.init(Lit::new(var, false));
-        self.watchlist.init(Lit::new(var, true));
+        self.watchlist.init(&Lit::new(var, false));
+        self.watchlist.init(&Lit::new(var, true));
     }
 
     pub fn lookup(&mut self, lit: Lit) -> &mut Vec<Watcher> {
