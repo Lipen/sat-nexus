@@ -314,28 +314,7 @@ impl Solver {
         info!(". level restarts conflicts learnts clauses vars");
 
         // CDCL loop
-        let mut loop_index = 0;
         loop {
-            loop_index += 1;
-            // debug!("***** CDCL loop #{} *****", loop_index);
-            // debug!("clauses: {}", self.clauses.len());
-            // debug!("learnts: {}", self.learnts.len());
-            // debug!("assignment = {:?}", self.assignment);
-            // debug!("trail = {:?}", self.trail);
-            // debug!("trail_lim = {:?}", self.trail_lim);
-            // debug!("decision_level = {}", self.decision_level());
-
-            // if loop_index % 100_000 == 0 {
-            //     info!("=== CDCL loop #{}", loop_index);
-            //     info!("  vars:         {}", self.num_vars());
-            //     info!("  clauses:      {}", self.num_clauses());
-            //     info!("  learnts:      {}", self.num_learnts());
-            //     info!("  decisions:    {}", self.num_decisions());
-            //     info!("  propagations: {}", self.num_propagations());
-            //     info!("  conflicts:    {}", self.num_conflicts());
-            //     info!("  restarts:     {}", self.num_restarts());
-            // }
-
             let time_propagate_start = Instant::now();
             // let props = self.num_propagations();
             if let Some(conflict) = self.propagate().tap(|_| {
