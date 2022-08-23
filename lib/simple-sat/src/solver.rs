@@ -281,7 +281,7 @@ impl Solver {
             current_restarts += 1;
             let time_search = time_search_start.elapsed();
             self.time_search += time_search;
-            println!("Search #{} done in {:?}", current_restarts, time_search);
+            info!("Search #{} done in {:?}", current_restarts, time_search);
         }
 
         self.backtrack(0);
