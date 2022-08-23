@@ -71,8 +71,7 @@ impl VarOrder {
         let time_insert_var_order_start = Instant::now();
 
         if !self.order_heap.contains(&var) {
-            let ref act = self.activity;
-            self.order_heap.insert_by(var, |&a, &b| act[a] > act[b]);
+            self.order_heap.insert_by(var, |&a, &b| self.activity[a] > self.activity[b]);
             // self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
             //     Ordering::Less => false,
             //     Ordering::Equal => a.0 < b.0,
@@ -88,9 +87,8 @@ impl VarOrder {
     pub fn update_var_order(&mut self, var: Var) {
         let time_update_var_order_start = Instant::now();
 
-        let ref act = self.activity;
-        self.order_heap.update_by(var, |&a, &b| act[a] > act[b]);
-        // self.order_heap.update_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
+        self.order_heap.update_by(var, |&a, &b| self.activity[a] > self.activity[b]);
+        // self.order_heap.update_by(var, |&a, &b| match self.activity[a].total_cmp(&self.activity[b]) {
         //     Ordering::Less => false,
         //     Ordering::Equal => a.0 < b.0,
         //     Ordering::Greater => true,
@@ -102,10 +100,9 @@ impl VarOrder {
     }
 
     pub fn pick_branching_variable(&mut self, assignment: &VarVec<LBool>) -> Option<Var> {
-        let ref act = self.activity;
         self.order_heap
-            .sorted_iter_by(|&a, &b| act[a] > act[b])
-            // .sorted_iter_by(|&a, &b| match act[a].total_cmp(&act[b]) {
+            .sorted_iter_by(|&a, &b| self.activity[a] > self.activity[b])
+            // .sorted_iter_by(|&a, &b| match self.activity[a].total_cmp(&self.activity[b]) {
             //     Ordering::Less => false,
             //     Ordering::Equal => a.0 < b.0,
             //     Ordering::Greater => true,
