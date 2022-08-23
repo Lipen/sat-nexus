@@ -221,14 +221,14 @@ impl<K: Idx, V> IndexMut<&K> for IdxVec<K, V> {
 #[derive(Debug)]
 pub struct IdxHeap<K: Idx> {
     heap: Vec<K>,
-    index: IdxVec<K, usize>,
+    index: Vec<usize>,
 }
 
 impl<K: Idx> IdxHeap<K> {
     pub fn new() -> Self {
         Self {
             heap: Vec::new(),
-            index: IdxVec::new(),
+            index: Vec::new(),
         }
     }
 
@@ -240,12 +240,12 @@ impl<K: Idx> IdxHeap<K> {
     }
 
     pub fn contains(&self, key: &K) -> bool {
-        key.idx() < self.index.vec.len() && self.index[key] != usize::MAX
+        key.idx() < self.index.len() && self.index[key.idx()] != usize::MAX
     }
 
     pub fn clear(&mut self) {
         self.heap.clear();
-        self.index.vec.clear();
+        self.index.clear();
     }
 
     pub fn parent(&self, i: usize) -> usize {
@@ -272,10 +272,7 @@ impl<K: Idx + Ord> IdxHeap<K> {
         // a.cmp(b) == Ordering::Less
     }
 
-    pub fn insert(&mut self, key: K)
-    where
-        K: Copy,
-    {
+    pub fn insert(&mut self, key: K) -> bool {
         self.insert_by(key, Self::ord_cmp)
     }
     pub fn pop(&mut self) -> Option<K> {
@@ -300,14 +297,31 @@ impl<K: Idx + Ord> IdxHeap<K> {
 }
 
 impl<K: Idx> IdxHeap<K> {
-    /// Constructor from [`Vec<K>`][Vec].
+    /// Given a vector of keys, create a new heap with those keys, using
+    /// the given comparison function to determine the order of the keys.
+    ///
+    /// The first thing we do is create a new heap with the given keys.
+    /// We then iterate over the keys in reverse order, calling `sift_down_by`
+    /// on each key. This is the same as calling `sift_down` on each key,
+    /// except that we pass in the comparison function as an argument.
+    ///
+    /// **Arguments:**
+    ///
+    /// * `from`: The vector to heapify.
+    /// * `cmp`: A function that takes two elements of the heap and
+    /// returns true if the first element is less than the second element.
+    ///
+    /// **Returns:**
+    ///
+    /// * A min-heap, if the comparator (`cmp`) is "less-than".
+    /// * A max-heap, if the comparator (`cmp`) is "greater-than".
     pub fn heapify_by<F>(from: Vec<K>, cmp: F) -> Self
     where
         F: Fn(&K, &K) -> bool,
     {
         let mut this = Self {
             heap: from,
-            index: IdxVec::new(),
+            index: Vec::new(),
         };
         for i in (0..this.len()).rev() {
             this.sift_down_by(i, &cmp);
@@ -320,18 +334,25 @@ impl<K: Idx> IdxHeap<K> {
     /// - Min-heap, when "less-than" comparator (`cmp`) is used: `cmp = |&a, &b| a < b`.
     /// - Max-heap, when "greater-than" comparator (`cmp`) is used: `cmp = |&a, &b| a > b`.
     ///
-    /// Panics if `key` is already in the heap.
-    pub fn insert_by<F>(&mut self, key: K, cmp: F)
+    /// Returns `false` if `key` is already in the heap.
+    pub fn insert_by<F>(&mut self, key: K, cmp: F) -> bool
     where
-        K: Copy,
         F: Fn(&K, &K) -> bool,
     {
-        // TODO: call `update_by` instead of panicking when `key` is already present.
-        assert!(!self.contains(&key));
-        let i = self.heap.len();
-        self.heap.push(key);
-        self.index.init_by(key, || usize::MAX);
-        self.sift_up_by(i, cmp);
+        if !self.contains(&key) {
+            let i = self.heap.len();
+            {
+                let new_len = key.idx() + 1;
+                if new_len > self.index.len() {
+                    self.index.resize_with(new_len, || usize::MAX);
+                }
+            }
+            self.heap.push(key);
+            self.sift_up_by(i, cmp);
+            true
+        } else {
+            false
+        }
     }
 
     /// Remove the top item from the heap.
@@ -349,24 +370,26 @@ impl<K: Idx> IdxHeap<K> {
             None
         } else {
             let res = self.heap.swap_remove(0);
-            // self.index.remove(res.idx());
-            self.index[&res] = usize::MAX;
+            self.index[res.idx()] = usize::MAX;
             if !self.heap.is_empty() {
-                self.index[&self.heap[0]] = 0;
+                self.index[self.heap[0].idx()] = 0;
                 self.sift_down_by(0, cmp);
             }
             Some(res)
         }
     }
 
-    /// Update the value (`key`) in the heap.
+    /// Update the value (`key`) in the heap using the provided comparator (`cmp`).
     ///
     /// Panics if `key` is not present in the heap.
     pub fn update_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
-        let i = self.index[key];
+        let i = self.index[key.idx()];
+        if i == usize::MAX {
+            panic!("The `key` is missing from the heap");
+        }
         self.sift_down_by(i, &cmp);
         self.sift_up_by(i, cmp);
     }
@@ -374,14 +397,14 @@ impl<K: Idx> IdxHeap<K> {
     where
         F: Fn(&K, &K) -> bool,
     {
-        let i = self.index[key];
+        let i = self.index[key.idx()];
         self.sift_up_by(i, cmp);
     }
     pub fn increase_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
-        let i = self.index[key];
+        let i = self.index[key.idx()];
         self.sift_down_by(i, cmp);
     }
 
@@ -392,14 +415,14 @@ impl<K: Idx> IdxHeap<K> {
         while i > 0 {
             let p = self.parent(i);
             if cmp(&self.heap[i], &self.heap[p]) {
-                self.index[&self.heap[p]] = i;
+                self.index[self.heap[p].idx()] = i;
                 self.heap.swap(i, p);
                 i = p;
             } else {
                 break;
             }
         }
-        self.index[&self.heap[i]] = i;
+        self.index[self.heap[i].idx()] = i;
     }
 
     fn sift_down_by<F>(&mut self, mut i: usize, cmp: F)
@@ -419,14 +442,14 @@ impl<K: Idx> IdxHeap<K> {
             };
 
             if cmp(&self.heap[c], &self.heap[i]) {
-                self.index[&self.heap[c]] = i;
+                self.index[self.heap[c].idx()] = i;
                 self.heap.swap(c, i);
                 i = c;
             } else {
                 break;
             }
         }
-        self.index[&self.heap[i]] = i;
+        self.index[self.heap[i].idx()] = i;
     }
 
     pub fn sorted_iter_by<F>(&mut self, cmp: F) -> IdxHeapSortedIter<K, F>

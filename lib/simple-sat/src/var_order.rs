@@ -70,14 +70,12 @@ impl VarOrder {
     pub fn insert_var_order(&mut self, var: Var) {
         let time_insert_var_order_start = Instant::now();
 
-        if !self.order_heap.contains(&var) {
-            self.order_heap.insert_by(var, |&a, &b| self.activity[a] > self.activity[b]);
-            // self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
-            //     Ordering::Less => false,
-            //     Ordering::Equal => a.0 < b.0,
-            //     Ordering::Greater => true,
-            // });
-        }
+        self.order_heap.insert_by(var, |&a, &b| self.activity[a] > self.activity[b]);
+        // self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
+        //     Ordering::Less => false,
+        //     Ordering::Equal => a.0 < b.0,
+        //     Ordering::Greater => true,
+        // });
 
         let time_insert_var_order = time_insert_var_order_start.elapsed();
         self.time_insert_var_order += time_insert_var_order;
