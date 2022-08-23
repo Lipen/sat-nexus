@@ -251,7 +251,7 @@ impl<K: Idx + Ord> IdxHeap<K> {
         // a.cmp(b) == Ordering::Less
     }
 
-    pub fn insert(&mut self, key: K) -> bool {
+    pub fn insert(&mut self, key: K) {
         self.insert_by(key, Self::ord_cmp)
     }
     pub fn pop(&mut self) -> Option<K> {
@@ -296,19 +296,16 @@ impl<K: Idx> IdxHeap<K> {
     /// - Min-heap, when "less-than" comparator (`cmp`) is used: `cmp = |&a, &b| a < b`.
     /// - Max-heap, when "greater-than" comparator (`cmp`) is used: `cmp = |&a, &b| a > b`.
     ///
-    /// Returns `false` if `key` is already in the heap, without inserting it again.
-    pub fn insert_by<F>(&mut self, key: K, cmp: F) -> bool
+    /// Panics if `key` is already in the heap.
+    pub fn insert_by<F>(&mut self, key: K, cmp: F)
     where
         F: Fn(&K, &K) -> bool,
     {
-        if !self.index.contains_key(key.idx()) {
-            let i = self.heap.len();
-            self.heap.push(key);
-            self.sift_up_by(i, cmp);
-            true
-        } else {
-            false
-        }
+        // TODO: call `update_by` instead of panicking when `key` is already present.
+        assert!(!self.index.contains_key(key.idx()));
+        let i = self.heap.len();
+        self.heap.push(key);
+        self.sift_up_by(i, cmp);
     }
 
     /// Remove the top item from the heap.
