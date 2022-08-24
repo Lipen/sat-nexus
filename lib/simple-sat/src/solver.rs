@@ -1,10 +1,11 @@
+use std::io::BufRead;
 use std::mem;
 use std::path::Path;
 use std::ptr;
 use std::time::{Duration, Instant};
 
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+// use rand::{Rng, SeedableRng};
 use tap::Tap;
 use tracing::{debug, info};
 
@@ -15,7 +16,7 @@ use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::utils::luby;
 use crate::utils::parse_dimacs_clause;
-use crate::utils::read_lines;
+use crate::utils::read_maybe_gzip;
 use crate::var::Var;
 use crate::var_order::VarOrder;
 use crate::watch::{WatchList, Watcher};
@@ -39,7 +40,7 @@ pub struct Solver {
     qhead: usize,
     ok: bool,
     next_var: u32,
-    rng: StdRng,
+    // rng: StdRng,
     // Statistics
     num_clauses: usize,
     num_learnts: usize,
@@ -72,7 +73,7 @@ impl Solver {
             qhead: 0,
             ok: true,
             next_var: 0,
-            rng: StdRng::seed_from_u64(42),
+            // rng: StdRng::seed_from_u64(42),
             num_clauses: 0,
             num_learnts: 0,
             decisions: 0,
@@ -96,7 +97,7 @@ impl Solver {
     {
         let mut solver = Self::new();
 
-        for line in read_lines(path).unwrap().flatten() {
+        for line in read_maybe_gzip(path).unwrap().lines().flatten() {
             if line.starts_with('c') {
                 // println!("Skipping comment '{}'", s);
                 continue;

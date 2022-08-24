@@ -1,19 +1,31 @@
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
-use std::io::BufRead;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use flate2::read::GzDecoder;
 use itertools::Itertools;
 
 use crate::lit::Lit;
 
-pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+pub fn get_extension(path: &Path) -> Option<&str> {
+    path.extension().and_then(OsStr::to_str)
+}
+
+pub fn read_maybe_gzip<P>(path: P) -> io::Result<Box<dyn BufRead>>
 where
     P: AsRef<Path>,
 {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
+    let path = path.as_ref();
+    let file = File::open(path)?;
+    let capacity = 128 * 1024;
+    if get_extension(path).unwrap() == "gz" {
+        Ok(Box::new(BufReader::with_capacity(capacity, GzDecoder::new(file))))
+    } else {
+        Ok(Box::new(BufReader::with_capacity(capacity, file)))
+    }
 }
 
 pub fn parse_dimacs_clause(s: &str) -> Vec<Lit> {
