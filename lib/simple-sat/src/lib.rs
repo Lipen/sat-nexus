@@ -2,7 +2,7 @@ pub mod solver;
 
 pub mod clause;
 pub mod cref;
-pub mod index_map;
+pub mod idx;
 pub mod lbool;
 pub mod lit;
 pub mod utils;

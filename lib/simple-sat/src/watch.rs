@@ -1,7 +1,7 @@
 use std::ops::IndexMut;
 
 use crate::cref::ClauseRef;
-use crate::index_map::LitVec;
+use crate::idx::LitVec;
 use crate::lit::Lit;
 use crate::var::Var;
 

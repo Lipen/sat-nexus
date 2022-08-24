@@ -10,7 +10,7 @@ use tracing::{debug, info};
 
 use crate::clause::Clause;
 use crate::cref::ClauseRef;
-use crate::index_map::VarVec;
+use crate::idx::VarVec;
 use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::utils::luby;
@@ -745,9 +745,7 @@ impl Solver {
 
 #[cfg(test)]
 mod tests {
-    use crate::lbool::LBool;
-    use crate::lit::Lit;
-    use crate::solver::Solver;
+    use super::*;
 
     #[test]
     fn test_correctness() {

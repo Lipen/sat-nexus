@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use tracing::info;
 
-use crate::index_map::{VarHeap, VarVec};
+use crate::idx::{VarHeap, VarVec};
 use crate::lbool::LBool;
 use crate::var::Var;
 

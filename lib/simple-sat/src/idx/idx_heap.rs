@@ -1,246 +1,8 @@
-#![allow(dead_code)]
-
-use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
-use std::ops::{Index, IndexMut};
-use std::slice;
+use std::ops::Index;
 
-use crate::lit::Lit;
-use crate::var::Var;
-
-pub type VarMap<V> = IdxMap<Var, V>;
-pub type LitMap<V> = IdxMap<Lit, V>;
-pub type VarVec<V> = IdxVec<Var, V>;
-pub type LitVec<V> = IdxVec<Lit, V>;
-pub type VarHeap = IdxHeap<Var>;
-
-// ==========================================
-
-pub trait Idx {
-    fn idx(&self) -> usize;
-}
-
-impl Idx for Var {
-    fn idx(&self) -> usize {
-        self.0 as usize
-    }
-}
-
-impl Idx for Lit {
-    fn idx(&self) -> usize {
-        self.0 as usize
-    }
-}
-
-impl<I> Idx for I
-where
-    I: num_traits::NumCast,
-{
-    fn idx(&self) -> usize {
-        self.to_usize().unwrap()
-    }
-}
-
-// ==========================================
-
-pub struct IdxMap<K: Idx, V> {
-    map: vec_map::VecMap<V>,
-    phantom: PhantomData<K>,
-}
-
-impl<K: Idx, V> IdxMap<K, V> {
-    pub fn new() -> Self {
-        Self {
-            map: vec_map::VecMap::new(),
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<K: Idx, V> Default for IdxMap<K, V> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<K: Idx, V> Debug for IdxMap<K, V>
-where
-    V: Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_map().entries(self.map.iter()).finish()
-    }
-}
-
-impl<K: Idx, V> IdxMap<K, V> {
-    pub fn insert(&mut self, k: impl Borrow<K>, v: V) -> Option<V> {
-        self.map.insert(k.borrow().idx(), v)
-    }
-
-    pub fn remove(&mut self, k: impl Borrow<K>) -> Option<V> {
-        self.map.remove(k.borrow().idx())
-    }
-
-    pub fn get(&self, k: impl Borrow<K>) -> Option<&V> {
-        self.map.get(k.borrow().idx())
-    }
-    pub fn get_mut(&mut self, k: impl Borrow<K>) -> Option<&mut V> {
-        self.map.get_mut(k.borrow().idx())
-    }
-
-    pub fn iter(&self) -> vec_map::Iter<'_, V> {
-        self.map.iter()
-    }
-    pub fn iter_mut(&mut self) -> vec_map::IterMut<V> {
-        self.map.iter_mut()
-    }
-}
-
-// map[key]
-impl<K: Idx, V> Index<K> for IdxMap<K, V> {
-    type Output = V;
-
-    fn index(&self, k: K) -> &Self::Output {
-        self.map.index(k.idx())
-    }
-}
-// map[&key]
-impl<K: Idx, V> Index<&K> for IdxMap<K, V> {
-    type Output = V;
-
-    fn index(&self, k: &K) -> &Self::Output {
-        self.map.index(k.idx())
-    }
-}
-
-// map[key] = (value)
-impl<K: Idx, V> IndexMut<K> for IdxMap<K, V> {
-    fn index_mut(&mut self, k: K) -> &mut Self::Output {
-        self.map.index_mut(k.idx())
-    }
-}
-// map[&key] = (value)
-impl<K: Idx, V> IndexMut<&K> for IdxMap<K, V> {
-    fn index_mut(&mut self, k: &K) -> &mut Self::Output {
-        self.map.index_mut(k.idx())
-    }
-}
-
-// ==========================================
-
-pub struct IdxVec<K: Idx, V> {
-    vec: Vec<V>,
-    phantom: PhantomData<K>,
-}
-
-impl<K: Idx, V> IdxVec<K, V> {
-    pub const fn new() -> Self {
-        Self {
-            vec: Vec::new(),
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<K: Idx, V> Default for IdxVec<K, V> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<K: Idx, V> From<Vec<V>> for IdxVec<K, V> {
-    fn from(vec: Vec<V>) -> Self {
-        Self { vec, phantom: PhantomData }
-    }
-}
-
-impl<K: Idx, V> Debug for IdxVec<K, V>
-where
-    V: Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_list().entries(self.vec.iter()).finish()
-    }
-}
-
-impl<K: Idx, V> IdxVec<K, V> {
-    pub fn init(&mut self, k: &K)
-    where
-        V: Default,
-    {
-        self.init_by(k, Default::default)
-    }
-
-    pub fn init_by<F>(&mut self, k: &K, f: F)
-    where
-        F: FnMut() -> V,
-    {
-        let new_len = k.idx() + 1;
-        if new_len > self.vec.len() {
-            self.vec.resize_with(new_len, f);
-        }
-    }
-
-    pub fn contains_key(&self, k: &K) -> bool {
-        k.idx() < self.vec.len()
-    }
-
-    pub fn clear(&mut self) {
-        self.vec.clear();
-    }
-
-    pub fn get(&self, k: &K) -> Option<&V> {
-        self.vec.get(k.idx())
-    }
-    pub fn get_mut(&mut self, k: &K) -> Option<&mut V> {
-        self.vec.get_mut(k.idx())
-    }
-
-    pub fn push(&mut self, v: V) {
-        self.vec.push(v);
-    }
-
-    pub fn iter(&self) -> slice::Iter<V> {
-        self.vec.iter()
-    }
-    pub fn iter_mut(&mut self) -> slice::IterMut<V> {
-        self.vec.iter_mut()
-    }
-}
-
-// vec[key]
-impl<K: Idx, V> Index<K> for IdxVec<K, V> {
-    type Output = V;
-
-    fn index(&self, k: K) -> &Self::Output {
-        self.vec.index(k.idx())
-    }
-}
-// vec[&key]
-impl<K: Idx, V> Index<&K> for IdxVec<K, V> {
-    type Output = V;
-
-    fn index(&self, k: &K) -> &Self::Output {
-        self.vec.index(k.idx())
-    }
-}
-
-// vec[key] = (value)
-impl<K: Idx, V> IndexMut<K> for IdxVec<K, V> {
-    fn index_mut(&mut self, k: K) -> &mut Self::Output {
-        self.vec.index_mut(k.idx())
-    }
-}
-// vec[&key] = (value)
-impl<K: Idx, V> IndexMut<&K> for IdxVec<K, V> {
-    fn index_mut(&mut self, k: &K) -> &mut Self::Output {
-        self.vec.index_mut(k.idx())
-    }
-}
-
-// ==========================================
+use super::idx_vec::IdxVec;
+use super::Idx;
 
 #[derive(Debug)]
 pub struct IdxHeap<K: Idx> {
@@ -518,8 +280,6 @@ impl<K: Idx> Index<usize> for IdxHeap<K> {
     }
 }
 
-// ==========================================
-
 pub struct IdxHeapSortedIter<'a, K: Idx, F>
 where
     F: Fn(&K, &K) -> bool,
@@ -551,8 +311,6 @@ where
         self.heap.len()
     }
 }
-
-// ==========================================
 
 pub struct IdxHeapIntoSortedIter<K: Idx, F>
 where
@@ -586,11 +344,15 @@ where
     }
 }
 
-// ==========================================
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    impl Idx for u32 {
+        fn idx(&self) -> usize {
+            *self as usize
+        }
+    }
 
     #[test]
     fn test_min_heap_insert_by() {
