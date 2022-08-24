@@ -12,3 +12,7 @@ data/
 stuff/
 _*.rs
 *.txt
+*.svg
+*.png
+perf.data
+perf.data.old
