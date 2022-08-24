@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::ops::Index;
 
 use super::idx_vec::IdxVec;
 use super::Idx;
@@ -272,13 +271,7 @@ impl<K: Idx> IdxHeap<K> {
     }
 }
 
-impl<K: Idx> Index<usize> for IdxHeap<K> {
-    type Output = K;
-
-    fn index(&self, i: usize) -> &Self::Output {
-        self.heap.index(i)
-    }
-}
+// ==========================================
 
 pub struct IdxHeapSortedIter<'a, K: Idx, F>
 where
@@ -312,6 +305,8 @@ where
     }
 }
 
+// ==========================================
+
 pub struct IdxHeapIntoSortedIter<K: Idx, F>
 where
     F: Fn(&K, &K) -> bool,
@@ -343,6 +338,8 @@ where
         self.heap.len()
     }
 }
+
+// ==========================================
 
 #[cfg(test)]
 mod tests {
