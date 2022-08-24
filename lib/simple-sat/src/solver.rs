@@ -99,10 +99,10 @@ impl Solver {
         let lines = read_lines(path).unwrap();
         for line in lines {
             if let Ok(s) = line {
-                if s.starts_with("c") {
+                if s.starts_with('c') {
                     // println!("Skipping comment '{}'", s);
                     continue;
-                } else if s.starts_with("p") {
+                } else if s.starts_with('p') {
                     debug!("Skipping header '{}'", s);
                     continue;
                 }
