@@ -96,19 +96,16 @@ impl Solver {
     {
         let mut solver = Self::new();
 
-        let lines = read_lines(path).unwrap();
-        for line in lines {
-            if let Ok(s) = line {
-                if s.starts_with('c') {
-                    // println!("Skipping comment '{}'", s);
-                    continue;
-                } else if s.starts_with('p') {
-                    debug!("Skipping header '{}'", s);
-                    continue;
-                }
-                let lits = parse_dimacs_clause(&s);
-                solver.add_clause(&lits);
+        for line in read_lines(path).unwrap().flatten() {
+            if line.starts_with('c') {
+                // println!("Skipping comment '{}'", s);
+                continue;
+            } else if line.starts_with('p') {
+                debug!("Skipping header '{}'", line);
+                continue;
             }
+            let lits = parse_dimacs_clause(&line);
+            solver.add_clause(&lits);
         }
 
         solver
