@@ -57,7 +57,24 @@ impl<K: Idx, V> IdxMap<K, V> {
             phantom: PhantomData,
         }
     }
+}
 
+impl<K: Idx, V> Default for IdxMap<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K: Idx, V> Debug for IdxMap<K, V>
+where
+    V: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_map().entries(self.map.iter()).finish()
+    }
+}
+
+impl<K: Idx, V> IdxMap<K, V> {
     pub fn insert(&mut self, k: impl Borrow<K>, v: V) -> Option<V> {
         self.map.insert(k.borrow().idx(), v)
     }
@@ -78,15 +95,6 @@ impl<K: Idx, V> IdxMap<K, V> {
     }
     pub fn iter_mut(&mut self) -> vec_map::IterMut<V> {
         self.map.iter_mut()
-    }
-}
-
-impl<K: Idx, V> Debug for IdxMap<K, V>
-where
-    V: Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_map().entries(self.map.iter()).finish()
     }
 }
 
@@ -134,7 +142,30 @@ impl<K: Idx, V> IdxVec<K, V> {
             phantom: PhantomData,
         }
     }
+}
 
+impl<K: Idx, V> Default for IdxVec<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K: Idx, V> From<Vec<V>> for IdxVec<K, V> {
+    fn from(vec: Vec<V>) -> Self {
+        Self { vec, phantom: PhantomData }
+    }
+}
+
+impl<K: Idx, V> Debug for IdxVec<K, V>
+where
+    V: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.vec.iter()).finish()
+    }
+}
+
+impl<K: Idx, V> IdxVec<K, V> {
     pub fn init(&mut self, k: &K)
     where
         V: Default,
@@ -176,21 +207,6 @@ impl<K: Idx, V> IdxVec<K, V> {
     }
     pub fn iter_mut(&mut self) -> slice::IterMut<V> {
         self.vec.iter_mut()
-    }
-}
-
-impl<K: Idx, V> From<Vec<V>> for IdxVec<K, V> {
-    fn from(vec: Vec<V>) -> Self {
-        Self { vec, phantom: PhantomData }
-    }
-}
-
-impl<K: Idx, V> Debug for IdxVec<K, V>
-where
-    V: Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_list().entries(self.vec.iter()).finish()
     }
 }
 
@@ -239,7 +255,15 @@ impl<K: Idx> IdxHeap<K> {
             index: IdxVec::new(),
         }
     }
+}
 
+impl<K: Idx> Default for IdxHeap<K> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K: Idx> IdxHeap<K> {
     pub fn len(&self) -> usize {
         self.heap.len()
     }
@@ -297,10 +321,13 @@ impl<K: Idx + Ord> IdxHeap<K> {
         self.sift_down_by(i, Self::ord_cmp)
     }
 
-    fn into_sorted_iter(self) -> IdxHeapIntoSortedIter<K, fn(&K, &K) -> bool> {
+    pub fn sorted_iter(&mut self) -> IdxHeapSortedIter<K, fn(&K, &K) -> bool> {
+        self.sorted_iter_by(Self::ord_cmp)
+    }
+    pub fn into_sorted_iter(self) -> IdxHeapIntoSortedIter<K, fn(&K, &K) -> bool> {
         self.into_sorted_iter_by(Self::ord_cmp)
     }
-    fn into_sorted_vec(self) -> Vec<K> {
+    pub fn into_sorted_vec(self) -> Vec<K> {
         self.into_sorted_vec_by(Self::ord_cmp)
     }
 }
