@@ -23,6 +23,10 @@ impl Clause {
     pub fn len(&self) -> usize {
         self.lits.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.lits.is_empty()
+    }
 }
 
 impl Index<usize> for Clause {
