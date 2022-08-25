@@ -158,6 +158,13 @@ impl Solver {
         var
     }
 
+    pub fn value_var(&self, var: Var) -> LBool {
+        self.assignment.value_var(var)
+    }
+    pub fn value(&self, lit: Lit) -> LBool {
+        self.assignment.value(lit)
+    }
+
     pub fn var_data(&self, var: Var) -> &VarData {
         &self.var_data[var]
     }
