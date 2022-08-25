@@ -11,7 +11,7 @@ pub struct ClauseAllocator {
 }
 
 impl ClauseAllocator {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             clauses: Vec::new(),
             num_clauses: 0,

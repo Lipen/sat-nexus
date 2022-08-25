@@ -10,7 +10,7 @@ pub struct IdxHeap<K: Idx> {
 }
 
 impl<K: Idx> IdxHeap<K> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             heap: Vec::new(),
             index: IdxVec::new(),

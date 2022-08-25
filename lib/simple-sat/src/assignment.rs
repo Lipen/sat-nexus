@@ -11,7 +11,7 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { assignment: VarVec::new() }
     }
 }
