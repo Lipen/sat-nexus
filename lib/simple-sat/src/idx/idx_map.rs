@@ -76,14 +76,14 @@ impl<K: Idx, V> Index<&K> for IdxMap<K, V> {
     }
 }
 
-// map[key] = (value)
+// &mut map[key]
 impl<K: Idx, V> IndexMut<K> for IdxMap<K, V> {
     fn index_mut(&mut self, k: K) -> &mut Self::Output {
         self.map.index_mut(k.idx())
     }
 }
 
-// map[&key] = (value)
+// &mut map[&key]
 impl<K: Idx, V> IndexMut<&K> for IdxMap<K, V> {
     fn index_mut(&mut self, k: &K) -> &mut Self::Output {
         self.map.index_mut(k.idx())

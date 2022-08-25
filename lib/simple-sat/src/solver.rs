@@ -1,15 +1,15 @@
 use std::io::BufRead;
 use std::mem;
 use std::path::Path;
-use std::ptr;
 use std::time::{Duration, Instant};
 
 // use rand::rngs::StdRng;
 // use rand::{Rng, SeedableRng};
+use crate::assignment::Assignment;
 use tap::Tap;
 use tracing::{debug, info};
 
-use crate::clause::Clause;
+use crate::clause_allocator::ClauseAllocator;
 use crate::cref::ClauseRef;
 use crate::idx::VarVec;
 use crate::lbool::LBool;
@@ -29,9 +29,9 @@ pub struct VarData {
 
 #[derive(Debug)]
 pub struct Solver {
-    clauses: Vec<Clause>,
+    ca: ClauseAllocator,
     watchlist: WatchList,
-    assignment: VarVec<LBool>, // {var: value}
+    assignment: Assignment,
     var_data: VarVec<VarData>, // {var: {reason,level}}
     pub var_order: VarOrder,
     // seen: Vec<bool>,
@@ -42,8 +42,6 @@ pub struct Solver {
     next_var: u32,
     // rng: StdRng,
     // Statistics
-    num_clauses: usize,
-    num_learnts: usize,
     decisions: usize,
     propagations: usize,
     conflicts: usize,
@@ -62,9 +60,9 @@ pub struct Solver {
 impl Solver {
     pub fn new() -> Self {
         Self {
-            clauses: vec![],
+            ca: ClauseAllocator::new(),
             watchlist: WatchList::new(),
-            assignment: VarVec::new(),
+            assignment: Assignment::new(),
             var_data: VarVec::new(),
             var_order: VarOrder::new(),
             // seen: Vec::new(),
@@ -74,8 +72,6 @@ impl Solver {
             ok: true,
             next_var: 0,
             // rng: StdRng::seed_from_u64(42),
-            num_clauses: 0,
-            num_learnts: 0,
             decisions: 0,
             propagations: 0,
             conflicts: 0,
@@ -116,11 +112,11 @@ impl Solver {
         self.next_var as _
     }
     pub fn num_clauses(&self) -> usize {
-        self.num_clauses
+        self.ca.num_clauses
         // self.clauses.iter().filter(|x| !x.learnt).count()
     }
     pub fn num_learnts(&self) -> usize {
-        self.num_learnts
+        self.ca.num_learnts
         // self.clauses.iter().filter(|x| x.learnt).count()
     }
     pub fn num_decisions(&self) -> usize {
@@ -144,7 +140,7 @@ impl Solver {
         self.watchlist.init(var);
 
         // Assignment
-        self.assignment.push(LBool::Undef);
+        self.assignment.assignment.push(LBool::Undef);
 
         // Reason/level
         self.var_data.push(VarData { reason: None, level: 0 });
@@ -160,13 +156,6 @@ impl Solver {
 
         // println!("Solver::new_var -> {:?}", v);
         var
-    }
-
-    pub fn value_var(&self, var: Var) -> LBool {
-        self.assignment[var]
-    }
-    pub fn value(&self, lit: Lit) -> LBool {
-        self.value_var(lit.var()) ^ lit.negated()
     }
 
     pub fn var_data(&self, var: Var) -> &VarData {
@@ -227,8 +216,8 @@ impl Solver {
 
         // TODO: handle unit clauses (better)
 
-        let cref = self.alloc(lits.to_vec(), false);
-        let clause = self.clause(cref);
+        let cref = self.ca.alloc(lits.to_vec(), false);
+        let clause = self.ca.clause(cref);
         if clause.len() >= 2 {
             self.attach_clause(cref);
         } else {
@@ -241,24 +230,8 @@ impl Solver {
         self.ok
     }
 
-    fn clause(&self, cref: ClauseRef) -> &Clause {
-        &self.clauses[cref]
-    }
-
-    fn alloc(&mut self, lits: Vec<Lit>, learnt: bool) -> ClauseRef {
-        let clause = Clause::new(lits, learnt);
-        let cref = ClauseRef(self.clauses.len());
-        self.clauses.push(clause);
-        if learnt {
-            self.num_learnts += 1;
-        } else {
-            self.num_clauses += 1;
-        }
-        cref
-    }
-
     fn attach_clause(&mut self, cref: ClauseRef) {
-        let clause = self.clause(cref);
+        let clause = self.ca.clause(cref);
         debug_assert!(clause.len() >= 2, "Clause must have at least 2 literals");
         let a = clause[0];
         let b = clause[1];
@@ -363,9 +336,9 @@ impl Solver {
                     );
                 } else {
                     // Learn a clause
-                    let cref = self.alloc(lemma, true);
+                    let cref = self.ca.alloc(lemma, true);
                     self.attach_clause(cref);
-                    let lemma = self.clause(cref);
+                    let lemma = self.ca.clause(cref);
                     let asserting_literal = lemma[0];
                     self.unchecked_enqueue(asserting_literal, Some(cref));
                 }
@@ -439,32 +412,7 @@ impl Solver {
     }
 
     fn pick_branching_variable(&mut self) -> Option<Var> {
-        // Fixed-order strategy
-        // for i in 0..self.num_vars() {
-        //     let var = Var(i as _);
-        //     if self.value_var(var).is_none() {
-        //         // println!("Solver::pick_branching_variable(): found unassigned {:?} for i = {}", lit, i);
-        //         return Some(var);
-        //     }
-        // }
-        // None
-
-        // Activity-based strategy
         self.var_order.pick_branching_variable(&self.assignment)
-
-        // let mut next = None;
-        // while next.is_none() || self.value_var(next.unwrap()).is_some() {
-        //     // if let Some((var, activity)) = self.order_heap.pop() {
-        //     //     debug!("next = {:?} with activity = {}", var, activity);
-        //     let ref act = self.activity;
-        //     if let Some(var) = self.order_heap.pop_by(|a, b| act[a] > act[b]) {
-        //         next = Some(var);
-        //     } else {
-        //         next = None;
-        //         break;
-        //     }
-        // }
-        // next
     }
 
     /// If the literal is unassigned, assign it;
@@ -481,25 +429,9 @@ impl Solver {
     /// A boolean indicating whether the enqueue was successful.
     fn enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) -> bool {
         // println!("Solver::enqueue(lit = {:?}, reason = {:?})", lit, reason);
-        // match self.value(lit) {
-        //     None => {
-        //         // TODO: inline
-        //         self.unchecked_enqueue(lit, reason);
-        //         true
-        //     }
-        //     Some(true) => {
-        //         // existing consistent assignment => do nothing
-        //         info!("existing consistent assignment of {:?}", lit);
-        //         true
-        //     }
-        //     Some(false) => {
-        //         // conflict
-        //         false
-        //     }
-        // }
-        match self.value(lit) {
+        match self.assignment.value(lit) {
             LBool::Undef => {
-                // TODO: inline
+                // new fact
                 self.unchecked_enqueue(lit, reason);
                 true
             }
@@ -516,7 +448,7 @@ impl Solver {
     }
 
     fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
-        debug_assert_eq!(self.value(lit), LBool::Undef);
+        debug_assert_eq!(self.assignment.value(lit), LBool::Undef);
 
         self.assignment[lit.var()] = LBool::from(!lit.negated());
         self.var_data[lit.var()] = VarData {
@@ -574,7 +506,7 @@ impl Solver {
                     // }
 
                     // Try to avoid inspecting the clause:
-                    if self.value(w.blocker) == LBool::True {
+                    if self.assignment.value(w.blocker) == LBool::True {
                         // println!("blocker {:?} is satisfied", w.blocker);
                         // self.watchlist.insert(false_literal, w);
                         *j = w;
@@ -582,19 +514,15 @@ impl Solver {
                         continue;
                     }
 
-                    let clause = self.clause(w.cref);
+                    let clause = self.ca.clause_mut(w.cref);
 
                     // Make sure the false literal is at index 1:
                     if clause[0] == false_literal {
                         // println!("swapping {:?} and {:?}", w.clause[0], w.clause[1]);
-                        // Rc::get_mut(&mut w.clause).unwrap().lits.swap(0, 1);
-                        // FIXME: unsafe!
-                        // unsafe {
-                        let p = clause.lits.as_ptr() as *mut Lit;
-                        ptr::swap(p, p.add(1));
-                        // *p = *p.add(1);
-                        // *p.add(1) = false_literal;
-                        // }
+                        let p = clause.lits.as_mut_ptr();
+                        // ptr::swap(p, p.add(1));
+                        *p = *p.add(1);
+                        *p.add(1) = false_literal;
                     }
                     debug_assert_eq!(clause[1], false_literal, "clause[1] must be false_literal");
 
@@ -605,7 +533,7 @@ impl Solver {
                         cref: w.cref,
                         blocker: first,
                     };
-                    if self.value(first) == LBool::True {
+                    if self.assignment.value(first) == LBool::True {
                         // self.watchlist.insert(false_literal, w);
                         *j = w;
                         j = j.add(1);
@@ -615,15 +543,11 @@ impl Solver {
                     // Find the non-falsified literal:
                     for i in 2..clause.len() {
                         let other = clause[i];
-                        if self.value(other) != LBool::False {
-                            // Rc::get_mut(&mut w.clause).unwrap().lits.swap(1, i);
-                            // FIXME: unsafe!
-                            // unsafe {
-                            let p = clause.lits.as_ptr() as *mut Lit;
-                            ptr::swap(p.add(1), p.add(i));
-                            // *p.add(1) = other;
-                            // *p.add(i) = false_literal;
-                            // }
+                        if self.assignment.value(other) != LBool::False {
+                            let p = clause.lits.as_mut_ptr();
+                            // ptr::swap(p.add(1), p.add(i));
+                            *p.add(1) = other;
+                            *p.add(i) = false_literal;
                             self.watchlist.insert(other, w);
                             continue 'watches;
                         }
@@ -632,7 +556,7 @@ impl Solver {
                     // self.watchlist.insert(false_literal, w);
                     *j = w;
                     j = j.add(1);
-                    match self.value(first) {
+                    match self.assignment.value(first) {
                         LBool::Undef => {
                             // unit
                             // debug!("unit {:?} with reason {:?}", first, w.clause);
@@ -674,15 +598,14 @@ impl Solver {
         let mut index = self.trail.len();
 
         loop {
-            // let clause = self.clause(confl);
-            let clause = &self.clauses[confl];
+            let clause = self.ca.clause(confl);
 
             // TODO: if conflict.learnt() { bump clause activity for 'conflict' }
 
             let start_index = if confl == conflict { 0 } else { 1 };
             for j in start_index..clause.len() {
                 let q = clause[j];
-                debug_assert_eq!(self.value(q), LBool::False);
+                debug_assert_eq!(self.assignment.value(q), LBool::False);
 
                 if !seen[q.var()] && self.level(q.var()) > 0 {
                     seen[q.var()] = true;

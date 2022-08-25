@@ -42,19 +42,19 @@ impl<K: Idx> IdxHeap<K> {
         self.index.clear();
     }
 
-    pub fn parent(&self, i: usize) -> usize {
-        (i - 1) >> 1
-    }
-    pub fn left(&self, i: usize) -> usize {
-        2 * i + 1
-    }
-    pub fn right(&self, i: usize) -> usize {
-        2 * i + 2
-    }
-
     /// Peek the top item in the heap.
     pub fn peek(&self) -> Option<&K> {
         self.heap.get(0)
+    }
+
+    fn parent(&self, i: usize) -> usize {
+        (i - 1) >> 1
+    }
+    fn left(&self, i: usize) -> usize {
+        2 * i + 1
+    }
+    fn right(&self, i: usize) -> usize {
+        2 * i + 2
     }
 }
 
@@ -66,6 +66,16 @@ impl<K: Idx + Ord> IdxHeap<K> {
         // a.cmp(b) == Ordering::Less
     }
 
+    fn sift_up(&mut self, i: usize) {
+        self.sift_up_by(i, Self::ord_cmp)
+    }
+    fn sift_down(&mut self, i: usize) {
+        self.sift_down_by(i, Self::ord_cmp)
+    }
+
+    pub fn heapify(&mut self, from: Vec<K>) -> Self {
+        Self::heapify_by(from, Self::ord_cmp)
+    }
     pub fn insert(&mut self, key: K) -> bool {
         self.insert_by(key, Self::ord_cmp)
     }
@@ -74,12 +84,6 @@ impl<K: Idx + Ord> IdxHeap<K> {
     }
     pub fn update(&mut self, key: K) {
         self.update_by(key, Self::ord_cmp)
-    }
-    fn sift_up(&mut self, i: usize) {
-        self.sift_up_by(i, Self::ord_cmp)
-    }
-    fn sift_down(&mut self, i: usize) {
-        self.sift_down_by(i, Self::ord_cmp)
     }
 
     pub fn sorted_iter(&mut self) -> IdxHeapSortedIter<K, fn(&K, &K) -> bool> {
@@ -94,6 +98,50 @@ impl<K: Idx + Ord> IdxHeap<K> {
 }
 
 impl<K: Idx> IdxHeap<K> {
+    fn sift_up_by<F>(&mut self, mut i: usize, cmp: F)
+    where
+        F: Fn(&K, &K) -> bool,
+    {
+        while i > 0 {
+            let p = self.parent(i);
+            if cmp(&self.heap[i], &self.heap[p]) {
+                self.index[&self.heap[p]] = i;
+                self.heap.swap(i, p);
+                i = p;
+            } else {
+                break;
+            }
+        }
+        self.index[&self.heap[i]] = i;
+    }
+
+    fn sift_down_by<F>(&mut self, mut i: usize, cmp: F)
+    where
+        F: Fn(&K, &K) -> bool,
+    {
+        loop {
+            let l = self.left(i);
+            if l >= self.heap.len() {
+                break;
+            }
+            let r = self.right(i);
+            let c = if r < self.heap.len() && cmp(&self.heap[r], &self.heap[l]) {
+                r
+            } else {
+                l
+            };
+
+            if cmp(&self.heap[c], &self.heap[i]) {
+                self.index[&self.heap[c]] = i;
+                self.heap.swap(c, i);
+                i = c;
+            } else {
+                break;
+            }
+        }
+        self.index[&self.heap[i]] = i;
+    }
+
     /// Given a vector of keys, create a new heap with those keys, using
     /// the given comparison function to determine the order of the keys.
     ///
@@ -199,50 +247,6 @@ impl<K: Idx> IdxHeap<K> {
     {
         let i = self.index[key];
         self.sift_down_by(i, cmp);
-    }
-
-    fn sift_up_by<F>(&mut self, mut i: usize, cmp: F)
-    where
-        F: Fn(&K, &K) -> bool,
-    {
-        while i > 0 {
-            let p = self.parent(i);
-            if cmp(&self.heap[i], &self.heap[p]) {
-                self.index[&self.heap[p]] = i;
-                self.heap.swap(i, p);
-                i = p;
-            } else {
-                break;
-            }
-        }
-        self.index[&self.heap[i]] = i;
-    }
-
-    fn sift_down_by<F>(&mut self, mut i: usize, cmp: F)
-    where
-        F: Fn(&K, &K) -> bool,
-    {
-        loop {
-            let l = self.left(i);
-            if l >= self.heap.len() {
-                break;
-            }
-            let r = self.right(i);
-            let c = if r < self.heap.len() && cmp(&self.heap[r], &self.heap[l]) {
-                r
-            } else {
-                l
-            };
-
-            if cmp(&self.heap[c], &self.heap[i]) {
-                self.index[&self.heap[c]] = i;
-                self.heap.swap(c, i);
-                i = c;
-            } else {
-                break;
-            }
-        }
-        self.index[&self.heap[i]] = i;
     }
 
     pub fn sorted_iter_by<F>(&mut self, cmp: F) -> IdxHeapSortedIter<K, F>

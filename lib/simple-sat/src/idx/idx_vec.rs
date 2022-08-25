@@ -103,14 +103,14 @@ impl<K: Idx, V> Index<&K> for IdxVec<K, V> {
     }
 }
 
-// vec[key] = (value)
+// &mut vec[key]
 impl<K: Idx, V> IndexMut<K> for IdxVec<K, V> {
     fn index_mut(&mut self, k: K) -> &mut Self::Output {
         self.vec.index_mut(k.idx())
     }
 }
 
-// vec[&key] = (value)
+// &mut vec[&key]
 impl<K: Idx, V> IndexMut<&K> for IdxVec<K, V> {
     fn index_mut(&mut self, k: &K) -> &mut Self::Output {
         self.vec.index_mut(k.idx())

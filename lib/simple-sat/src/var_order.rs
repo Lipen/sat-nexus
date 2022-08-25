@@ -2,8 +2,8 @@ use std::time::{Duration, Instant};
 
 use tracing::info;
 
+use crate::assignment::Assignment;
 use crate::idx::{VarHeap, VarVec};
-use crate::lbool::LBool;
 use crate::var::Var;
 
 #[derive(Debug)]
@@ -101,7 +101,7 @@ impl VarOrder {
         self.num_update_var_order += 1;
     }
 
-    pub fn pick_branching_variable(&mut self, assignment: &VarVec<LBool>) -> Option<Var> {
+    pub fn pick_branching_variable(&mut self, assignment: &Assignment) -> Option<Var> {
         self.order_heap
             .sorted_iter_by(|&a, &b| self.activity[a] > self.activity[b])
             // .sorted_iter_by(|&a, &b| match self.activity[a].total_cmp(&self.activity[b]) {
