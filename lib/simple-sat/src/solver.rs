@@ -370,14 +370,6 @@ impl Solver {
                         self.num_clauses(),
                         self.num_vars()
                     );
-                    // info!("Restart");
-                    // info!("  vars:         {}", self.num_vars());
-                    // info!("  clauses:      {}", self.num_clauses());
-                    // info!("  learnts:      {}", self.num_learnts());
-                    // info!("  decisions:    {}", self.num_decisions());
-                    // info!("  propagations: {}", self.num_propagations());
-                    // info!("  conflicts:    {}", self.num_conflicts());
-                    // info!("  restarts:     {}", self.num_restarts());
                     return None;
                 }
 
