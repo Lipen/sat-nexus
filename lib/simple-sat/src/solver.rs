@@ -116,12 +116,12 @@ impl Solver {
         self.next_var as _
     }
     pub fn num_clauses(&self) -> usize {
-        // self.num_clauses
-        self.clauses.iter().filter(|x| !x.learnt).count()
+        self.num_clauses
+        // self.clauses.iter().filter(|x| !x.learnt).count()
     }
     pub fn num_learnts(&self) -> usize {
-        // self.num_learnts
-        self.clauses.iter().filter(|x| x.learnt).count()
+        self.num_learnts
+        // self.clauses.iter().filter(|x| x.learnt).count()
     }
     pub fn num_decisions(&self) -> usize {
         self.decisions
@@ -249,6 +249,11 @@ impl Solver {
         let clause = Clause::new(lits, learnt);
         let cref = ClauseRef(self.clauses.len());
         self.clauses.push(clause);
+        if learnt {
+            self.num_learnts += 1;
+        } else {
+            self.num_clauses += 1;
+        }
         cref
     }
 
@@ -282,7 +287,7 @@ impl Solver {
             current_restarts += 1;
             let time_search = time_search_start.elapsed();
             self.time_search += time_search;
-            info!("Search #{} done in {:?}", current_restarts, time_search);
+            debug!("Search #{} done in {:?}", current_restarts, time_search);
         }
 
         self.backtrack(0);
@@ -307,12 +312,12 @@ impl Solver {
     /// [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
     /// and [`None`] if it is unknown yet (for example, a restart occurred).
     fn search(&mut self, num_confl: usize) -> Option<bool> {
-        info!("Solver::search(num_confl = {})", num_confl);
+        debug!("Solver::search(num_confl = {})", num_confl);
         assert!(self.ok);
 
         let mut current_conflicts = 0;
 
-        info!(". level restarts conflicts learnts clauses vars");
+        // info!(". level restarts conflicts learnts clauses vars");
 
         // CDCL loop
         loop {
@@ -346,9 +351,11 @@ impl Solver {
                     // Learn a unit clause
                     self.unchecked_enqueue(lemma[0], None);
                     info!(
-                        "u {} {} {} {} {} {}",
+                        "unit @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
                         self.decision_level(),
                         self.num_restarts(),
+                        self.num_decisions(),
+                        self.num_propagations(),
                         self.num_conflicts(),
                         self.num_learnts(),
                         self.num_clauses(),
@@ -380,9 +387,11 @@ impl Solver {
                     let time_restart = time_restart_start.elapsed();
                     self.time_restart += time_restart;
                     info!(
-                        "r {} {} {} {} {} {}",
+                        "restart @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
                         self.decision_level(),
                         self.num_restarts(),
+                        self.num_decisions(),
+                        self.num_propagations(),
                         self.num_conflicts(),
                         self.num_learnts(),
                         self.num_clauses(),
