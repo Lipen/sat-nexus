@@ -230,6 +230,14 @@ impl Solver {
         self.watchlist.insert(b, Watcher { cref, blocker: a });
     }
 
+    fn enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) -> bool {
+        self.assignment.enqueue(lit, reason)
+    }
+
+    fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
+        self.assignment.unchecked_enqueue(lit, reason)
+    }
+
     pub fn solve(&mut self) -> bool {
         info!("Solver::solve()");
 
@@ -383,18 +391,6 @@ impl Solver {
             self.var_order.var_decay_activity();
         }
         true
-    }
-
-    fn pick_branching_variable(&mut self) -> Option<Var> {
-        self.var_order.pick_branching_variable(&self.assignment)
-    }
-
-    fn enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) -> bool {
-        self.assignment.enqueue(lit, reason)
-    }
-
-    fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
-        self.assignment.unchecked_enqueue(lit, reason)
     }
 
     fn propagate(&mut self) -> Option<ClauseRef> {
@@ -578,6 +574,10 @@ impl Solver {
         // let lemma = Rc::new(Clause { lits: lemma });
         // println!("Solver::analyze() -> ({:?}, {})", lemma, bt_level);
         (lemma, bt_level)
+    }
+
+    fn pick_branching_variable(&mut self) -> Option<Var> {
+        self.var_order.pick_branching_variable(&self.assignment)
     }
 }
 
