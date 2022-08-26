@@ -422,17 +422,17 @@ impl Solver {
                 let mut j = begin;
 
                 'watches: while i < end {
-                    let w = *i;
+                    let Watcher { cref, blocker } = *i;
                     i = i.add(1);
 
                     // Try to avoid inspecting the clause:
-                    if self.assignment.value(w.blocker) == LBool::True {
-                        *j = w;
+                    if self.assignment.value(blocker) == LBool::True {
+                        *j = Watcher { cref, blocker };
                         j = j.add(1);
                         continue;
                     }
 
-                    let clause = self.ca.clause_mut(w.cref);
+                    let clause = self.ca.clause_mut(cref);
 
                     // Make sure the false literal is at index 1:
                     if clause[0] == false_literal {
@@ -444,13 +444,8 @@ impl Solver {
                     // If the first literal is `true`, then the clause is already satisfied
                     // TODO: let first = w.clause[0] & w.clause[1] ^ false_literal;
                     let first = clause[0];
-                    let prev_blocker = w.blocker;
-                    let w = Watcher {
-                        cref: w.cref,
-                        blocker: first,
-                    };
-                    if first != prev_blocker && self.assignment.value(first) == LBool::True {
-                        *j = w;
+                    if first != blocker && self.assignment.value(first) == LBool::True {
+                        *j = Watcher { cref, blocker: first };
                         j = j.add(1);
                         continue;
                     }
@@ -461,21 +456,21 @@ impl Solver {
                         if self.assignment.value(other) != LBool::False {
                             clause[1] = other;
                             clause[i] = false_literal;
-                            self.watchlist.insert(other, w);
+                            self.watchlist.insert(other, Watcher { cref, blocker: first });
                             continue 'watches;
                         }
                     }
 
-                    *j = w;
+                    *j = Watcher { cref, blocker: first };
                     j = j.add(1);
                     match self.assignment.value(first) {
                         LBool::Undef => {
                             // unit
-                            self.assignment.unchecked_enqueue(first, Some(w.cref));
+                            self.assignment.unchecked_enqueue(first, Some(cref));
                         }
                         LBool::False => {
                             // conflict
-                            conflict = Some(w.cref);
+                            conflict = Some(cref);
                             self.assignment.qhead = self.assignment.trail.len();
                             // Copy the remaining watches:
                             while i < end {
