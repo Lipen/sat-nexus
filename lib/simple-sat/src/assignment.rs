@@ -115,4 +115,14 @@ impl Assignment {
         };
         self.trail.push(lit);
     }
+
+    pub fn dequeue(&mut self) -> Option<Lit> {
+        if self.qhead < self.trail.len() {
+            let p = self.trail[self.qhead];
+            self.qhead += 1;
+            Some(p)
+        } else {
+            None
+        }
+    }
 }

@@ -401,9 +401,7 @@ impl Solver {
             ((b as usize) - (a as usize)) / mem::size_of::<T>()
         }
 
-        while self.assignment.qhead < self.assignment.trail.len() {
-            let p = self.assignment.trail[self.assignment.qhead];
-            self.assignment.qhead += 1;
+        while let Some(p) = self.assignment.dequeue() {
             self.propagations += 1;
             let false_literal = !p;
 
