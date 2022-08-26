@@ -3,18 +3,18 @@ use std::mem;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-// use rand::rngs::StdRng;
-// use rand::{Rng, SeedableRng};
-use crate::assignment::Assignment;
-use tap::Tap;
 use tracing::{debug, info};
 
+// use rand::rngs::StdRng;
+// use rand::{Rng, SeedableRng};
+use crate::assignment::{Assignment, VarData};
 use crate::clause_allocator::ClauseAllocator;
 use crate::cref::ClauseRef;
 use crate::idx::VarVec;
 use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::utils::luby;
+use crate::utils::measure_time;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
 use crate::var::Var;
@@ -22,22 +22,12 @@ use crate::var_order::VarOrder;
 use crate::watch::{WatchList, Watcher};
 
 #[derive(Debug)]
-pub struct VarData {
-    reason: Option<ClauseRef>,
-    level: usize,
-}
-
-#[derive(Debug)]
 pub struct Solver {
     ca: ClauseAllocator,
     watchlist: WatchList,
     assignment: Assignment,
-    var_data: VarVec<VarData>, // {var: {reason,level}}
     pub var_order: VarOrder,
     // seen: Vec<bool>,
-    trail: Vec<Lit>,
-    trail_lim: Vec<usize>,
-    qhead: usize,
     ok: bool,
     next_var: u32,
     // rng: StdRng,
@@ -63,12 +53,8 @@ impl Solver {
             ca: ClauseAllocator::new(),
             watchlist: WatchList::new(),
             assignment: Assignment::new(),
-            var_data: VarVec::new(),
             var_order: VarOrder::new(),
             // seen: Vec::new(),
-            trail: vec![],
-            trail_lim: vec![],
-            qhead: 0,
             ok: true,
             next_var: 0,
             // rng: StdRng::seed_from_u64(42),
@@ -143,7 +129,7 @@ impl Solver {
         self.assignment.assignment.push(LBool::Undef);
 
         // Reason/level
-        self.var_data.push(VarData { reason: None, level: 0 });
+        self.assignment.var_data.push(VarData { reason: None, level: 0 });
 
         // Seen
         // self.seen.push(false);
@@ -166,21 +152,20 @@ impl Solver {
     }
 
     pub fn var_data(&self, var: Var) -> &VarData {
-        &self.var_data[var]
+        self.assignment.var_data(var)
     }
     pub fn reason(&self, var: Var) -> Option<ClauseRef> {
-        self.var_data(var).reason
+        self.assignment.reason(var)
     }
     pub fn level(&self, var: Var) -> usize {
-        self.var_data(var).level
+        self.assignment.level(var)
     }
 
     pub fn decision_level(&self) -> usize {
-        self.trail_lim.len()
+        self.assignment.decision_level()
     }
-
     fn new_decision_level(&mut self) {
-        self.trail_lim.push(self.trail.len());
+        self.assignment.new_decision_level()
     }
 
     fn backtrack(&mut self, level: usize) {
@@ -188,15 +173,15 @@ impl Solver {
         debug!("backtrack from {} to {}", self.decision_level(), level);
         debug_assert!(level == 0 || self.decision_level() > level); // actually, assert is not needed
         if self.decision_level() > level {
-            for i in (self.trail_lim[level]..self.trail.len()).rev() {
-                let var = self.trail[i].var();
+            for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
+                let var = self.assignment.trail[i].var();
                 self.assignment[var] = LBool::Undef;
                 self.var_order.insert_var_order(var);
                 // TODO: phase saving
             }
-            self.qhead = self.trail_lim[level];
-            self.trail.truncate(self.trail_lim[level]);
-            self.trail_lim.truncate(level);
+            self.assignment.qhead = self.assignment.trail_lim[level];
+            self.assignment.trail.truncate(self.assignment.trail_lim[level]);
+            self.assignment.trail_lim.truncate(level);
         }
         // self.qhead = std::cmp::min(self.qhead, self.trail.len())
         let time_backtrack = time_backtrack_start.elapsed();
@@ -229,8 +214,7 @@ impl Solver {
             self.attach_clause(cref);
         } else {
             assert_eq!(clause.len(), 1);
-            // info!("adding unit clause: {:?}", clause);
-            if !self.enqueue(clause[0], None) {
+            if !self.assignment.enqueue(clause[0], None) {
                 self.ok = false;
             }
         }
@@ -295,166 +279,122 @@ impl Solver {
         debug!("Solver::search(num_confl = {})", num_confl);
         assert!(self.ok);
 
-        let mut current_conflicts = 0;
-
-        // info!(". level restarts conflicts learnts clauses vars");
+        let confl_limit = self.conflicts + num_confl;
 
         // CDCL loop
         loop {
-            let time_propagate_start = Instant::now();
-            // let props = self.num_propagations();
-            if let Some(conflict) = self.propagate().tap(|_| {
-                let time_propagate = time_propagate_start.elapsed();
-                self.time_propagate += time_propagate;
-                // println!("Done {} props in {:?}", self.num_propagations() - props, time_propagate);
-            }) {
-                // Conflict
-                current_conflicts += 1;
-                self.conflicts += 1;
+            // Propagate, analyze, backtrack:
+            if !self.propagate_analyze_backtrack() {
+                return Some(false);
+            }
 
-                if self.decision_level() == 0 {
-                    // conflict on root level => UNSAT
-                    info!("UNSAT");
-                    return Some(false);
-                }
-
-                let time_analyze_start = Instant::now();
-                let (lemma, backtrack_level) = self.analyze(conflict);
-                let time_analyze = time_analyze_start.elapsed();
-                self.time_analyze += time_analyze;
-                // println!("analyzed conflict in {:?}", time_analyze);
-                self.backtrack(backtrack_level);
-
-                let time_learn_start = Instant::now();
-                assert!(lemma.len() > 0);
-                if lemma.len() == 1 {
-                    // Learn a unit clause
-                    self.unchecked_enqueue(lemma[0], None);
-                    info!(
-                        "unit @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
-                        self.decision_level(),
-                        self.num_restarts(),
-                        self.num_decisions(),
-                        self.num_propagations(),
-                        self.num_conflicts(),
-                        self.num_learnts(),
-                        self.num_clauses(),
-                        self.num_vars()
-                    );
-                } else {
-                    // Learn a clause
-                    let cref = self.ca.alloc(lemma, true);
-                    self.attach_clause(cref);
-                    let lemma = self.ca.clause(cref);
-                    let asserting_literal = lemma[0];
-                    self.unchecked_enqueue(asserting_literal, Some(cref));
-                }
-                let time_learn = time_learn_start.elapsed();
-                self.time_learn += time_learn;
-
-                self.var_order.var_decay_activity();
-            } else {
-                // NO conflict
-
-                // TODO: budget
-                // TODO: inprocessing
-
-                // Restart:
-                if num_confl > 0 && current_conflicts >= num_confl {
-                    self.restarts += 1;
-                    let time_restart_start = Instant::now();
+            // Restart:
+            if num_confl > 0 && self.conflicts >= confl_limit {
+                self.restarts += 1;
+                info!(
+                    "restart @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
+                    self.decision_level(),
+                    self.num_restarts(),
+                    self.num_decisions(),
+                    self.num_propagations(),
+                    self.num_conflicts(),
+                    self.num_learnts(),
+                    self.num_clauses(),
+                    self.num_vars()
+                );
+                let (time_restart, _) = measure_time(|| {
                     self.backtrack(0);
-                    let time_restart = time_restart_start.elapsed();
-                    self.time_restart += time_restart;
-                    info!(
-                        "restart @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
-                        self.decision_level(),
-                        self.num_restarts(),
-                        self.num_decisions(),
-                        self.num_propagations(),
-                        self.num_conflicts(),
-                        self.num_learnts(),
-                        self.num_clauses(),
-                        self.num_vars()
-                    );
-                    return None;
-                }
+                });
+                self.time_restart += time_restart;
+                return None;
+            }
 
-                // Make a decision:
-                self.decisions += 1;
-                let time_pick_decision_var_start = Instant::now();
-                let time_decision_start = Instant::now();
-                if let Some(var) = self.pick_branching_variable().tap(|_| {
-                    let time_pick_decision_var = time_pick_decision_var_start.elapsed();
-                    self.time_pick_decision_var += time_pick_decision_var;
-                }) {
-                    // let decision = Lit::new(var, self.rng.gen()); // random phase
-                    let decision = Lit::new(var, false); // always positive phase
-                    self.new_decision_level();
-                    self.unchecked_enqueue(decision, None);
-                    let time_decision = time_decision_start.elapsed();
-                    self.time_decision += time_decision;
-                    debug!(
-                        "Made a decision {:?} = {}{:?} in {:?}",
-                        decision,
-                        if decision.negated() { "-" } else { "+" },
-                        decision.var(),
-                        time_decision,
-                    );
-                } else {
-                    // SAT
-                    info!("SAT");
-                    return Some(true);
-                }
+            // Make a decision:
+            self.decisions += 1;
+            let time_decision_start = Instant::now();
+            if let Some(var) = {
+                let (time_pick_decision_var, var) = measure_time(|| self.pick_branching_variable());
+                self.time_pick_decision_var += time_pick_decision_var;
+                var
+            } {
+                // let decision = Lit::new(var, self.rng.gen()); // random phase
+                let decision = Lit::new(var, false); // always positive phase
+                self.new_decision_level();
+                self.unchecked_enqueue(decision, None);
+                let time_decision = time_decision_start.elapsed();
+                self.time_decision += time_decision;
+            } else {
+                // SAT
+                info!("SAT");
+                return Some(true);
             }
         }
+    }
+
+    fn propagate_analyze_backtrack(&mut self) -> bool {
+        while let Some(conflict) = {
+            let (time_propagate, res) = measure_time(|| self.propagate());
+            self.time_propagate += time_propagate;
+            res
+        } {
+            self.conflicts += 1;
+
+            if self.decision_level() == 0 {
+                // conflict on root level => UNSAT
+                info!("UNSAT");
+                return false;
+            }
+
+            // Analyze the conflict:
+            let (time_analyze, (lemma, backtrack_level)) = measure_time(|| self.analyze(conflict));
+            self.time_analyze += time_analyze;
+
+            // Backjump:
+            self.backtrack(backtrack_level);
+
+            // Add the learnt clause:
+            let time_learn_start = Instant::now();
+            assert!(lemma.len() > 0);
+            if lemma.len() == 1 {
+                // Learn a unit clause
+                self.assignment.unchecked_enqueue(lemma[0], None);
+                info!(
+                    "unit @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
+                    self.decision_level(),
+                    self.num_restarts(),
+                    self.num_decisions(),
+                    self.num_propagations(),
+                    self.num_conflicts(),
+                    self.num_learnts(),
+                    self.num_clauses(),
+                    self.num_vars()
+                );
+            } else {
+                // Learn a clause
+                let cref = self.ca.alloc(lemma, true);
+                self.attach_clause(cref);
+                let lemma = self.ca.clause(cref);
+                let asserting_literal = lemma[0];
+                self.assignment.unchecked_enqueue(asserting_literal, Some(cref));
+            }
+            let time_learn = time_learn_start.elapsed();
+            self.time_learn += time_learn;
+
+            self.var_order.var_decay_activity();
+        }
+        true
     }
 
     fn pick_branching_variable(&mut self) -> Option<Var> {
         self.var_order.pick_branching_variable(&self.assignment)
     }
 
-    /// If the literal is unassigned, assign it;
-    /// if it's already assigned, do nothing;
-    /// if it's assigned to false (conflict), return false.
-    ///
-    /// **Arguments:**
-    ///
-    /// * `lit`: The literal to be assigned.
-    /// * `reason`: the reason for the assignment of lit.
-    ///
-    /// **Returns:**
-    ///
-    /// A boolean indicating whether the enqueue was successful.
     fn enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) -> bool {
-        // println!("Solver::enqueue(lit = {:?}, reason = {:?})", lit, reason);
-        match self.assignment.value(lit) {
-            LBool::Undef => {
-                // new fact
-                self.unchecked_enqueue(lit, reason);
-                true
-            }
-            LBool::True => {
-                // existing consistent assignment => do nothing
-                info!("existing consistent assignment of {:?}", lit);
-                true
-            }
-            LBool::False => {
-                // conflict
-                false
-            }
-        }
+        self.assignment.enqueue(lit, reason)
     }
 
     fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
-        debug_assert_eq!(self.assignment.value(lit), LBool::Undef);
-
-        self.assignment[lit.var()] = LBool::from(!lit.negated());
-        self.var_data[lit.var()] = VarData {
-            reason,
-            level: self.decision_level(),
-        };
-        self.trail.push(lit);
+        self.assignment.unchecked_enqueue(lit, reason)
     }
 
     fn propagate(&mut self) -> Option<ClauseRef> {
@@ -465,21 +405,11 @@ impl Solver {
             ((b as usize) - (a as usize)) / mem::size_of::<T>()
         }
 
-        while self.qhead < self.trail.len() {
-            let p = self.trail[self.qhead];
-            self.qhead += 1;
-            // debug!("propagating {:?}", p);
+        while self.assignment.qhead < self.assignment.trail.len() {
+            let p = self.assignment.trail[self.assignment.qhead];
+            self.assignment.qhead += 1;
             self.propagations += 1;
-
-            // // Skip the propagation when the conflict was already found:
-            // if conflict.is_some() {
-            //     continue;
-            // }
-
             let false_literal = !p;
-
-            // let ws = self.watchlist.lookup(false_literal);
-            // let ws = std::mem::replace(ws, Vec::with_capacity(ws.len()));
 
             unsafe {
                 let watchers = self.watchlist.lookup(false_literal);
@@ -491,23 +421,12 @@ impl Solver {
                 let mut i = begin;
                 let mut j = begin;
 
-                // 'watches: for w in ws {
                 'watches: while i < end {
                     let w = *i;
                     i = i.add(1);
 
-                    // // Re-insert the watch, if a conflict has already been found:
-                    // if conflict.is_some() {
-                    //     // self.watchlist.insert(false_literal, w);
-                    //     *j = w.clone();
-                    //     j = j.add(1);
-                    //     continue;
-                    // }
-
                     // Try to avoid inspecting the clause:
                     if self.assignment.value(w.blocker) == LBool::True {
-                        // println!("blocker {:?} is satisfied", w.blocker);
-                        // self.watchlist.insert(false_literal, w);
                         *j = w;
                         j = j.add(1);
                         continue;
@@ -517,23 +436,20 @@ impl Solver {
 
                     // Make sure the false literal is at index 1:
                     if clause[0] == false_literal {
-                        // println!("swapping {:?} and {:?}", w.clause[0], w.clause[1]);
-                        let p = clause.lits.as_mut_ptr();
-                        // ptr::swap(p, p.add(1));
-                        *p = *p.add(1);
-                        *p.add(1) = false_literal;
+                        clause[0] = clause[1];
+                        clause[1] = false_literal;
                     }
                     debug_assert_eq!(clause[1], false_literal, "clause[1] must be false_literal");
 
-                    // If the 0th literal is `true`, then the clause is already satisfied
+                    // If the first literal is `true`, then the clause is already satisfied
                     // TODO: let first = w.clause[0] & w.clause[1] ^ false_literal;
                     let first = clause[0];
+                    let prev_blocker = w.blocker;
                     let w = Watcher {
                         cref: w.cref,
                         blocker: first,
                     };
-                    if self.assignment.value(first) == LBool::True {
-                        // self.watchlist.insert(false_literal, w);
+                    if first != prev_blocker && self.assignment.value(first) == LBool::True {
                         *j = w;
                         j = j.add(1);
                         continue;
@@ -543,30 +459,25 @@ impl Solver {
                     for i in 2..clause.len() {
                         let other = clause[i];
                         if self.assignment.value(other) != LBool::False {
-                            let p = clause.lits.as_mut_ptr();
-                            // ptr::swap(p.add(1), p.add(i));
-                            *p.add(1) = other;
-                            *p.add(i) = false_literal;
+                            clause[1] = other;
+                            clause[i] = false_literal;
                             self.watchlist.insert(other, w);
                             continue 'watches;
                         }
                     }
 
-                    // self.watchlist.insert(false_literal, w);
                     *j = w;
                     j = j.add(1);
                     match self.assignment.value(first) {
                         LBool::Undef => {
                             // unit
-                            // debug!("unit {:?} with reason {:?}", first, w.clause);
-                            self.unchecked_enqueue(first, Some(w.cref));
+                            self.assignment.unchecked_enqueue(first, Some(w.cref));
                         }
                         LBool::False => {
                             // conflict
-                            // debug!("conflict {:?}", w.clause);
                             conflict = Some(w.cref);
-                            self.qhead = self.trail.len();
-                            // TODO: copy the remaining watches here
+                            self.assignment.qhead = self.assignment.trail.len();
+                            // Copy the remaining watches:
                             while i < end {
                                 *j = *i;
                                 j = j.add(1);
@@ -594,7 +505,7 @@ impl Solver {
         let mut seen = VarVec::from(vec![false; self.num_vars()]);
         let mut counter: u32 = 0; // number of literals in the conflicting clause on the current decision level
         let mut confl = conflict;
-        let mut index = self.trail.len();
+        let mut index = self.assignment.trail.len();
 
         loop {
             let clause = self.ca.clause(confl);
@@ -624,11 +535,11 @@ impl Solver {
             // Select next clause to look at:
             loop {
                 index -= 1;
-                if seen[self.trail[index].var()] {
+                if seen[self.assignment.trail[index].var()] {
                     break;
                 }
             }
-            let p = self.trail[index];
+            let p = self.assignment.trail[index];
             seen[p.var()] = false; // TODO: why do we need to un-seen p?
             counter -= 1;
             if counter == 0 {
