@@ -1,4 +1,5 @@
 use std::ops::{Index, IndexMut};
+use std::slice::SliceIndex;
 
 use crate::lit::Lit;
 
@@ -27,17 +28,23 @@ impl Clause {
     }
 }
 
-impl Index<usize> for Clause {
-    type Output = Lit;
+impl<I> Index<I> for Clause
+where
+    I: SliceIndex<[Lit]>,
+{
+    type Output = I::Output;
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.lits[index]
+    fn index(&self, index: I) -> &Self::Output {
+        self.lits.index(index)
     }
 }
 
-impl IndexMut<usize> for Clause {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.lits[index]
+impl<I> IndexMut<I> for Clause
+where
+    I: SliceIndex<[Lit]>,
+{
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        self.lits.index_mut(index)
     }
 }
 
