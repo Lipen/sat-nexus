@@ -488,16 +488,21 @@ impl Solver {
                 break;
             }
             confl = self.reason(p.var()).unwrap();
-            // debug_assert_eq!(p, clause[0]); // FIXME: failing
+            // debug_assert_eq!(clause[0], p); // FIXME: failing
         }
 
-        // FIXME: this is temporary, because we are going to use `seen` during minimization,
-        //  and we cannot reuse this code *after* the minimization, because `lemma` will be shorter.
-        // for lit in lemma.iter() {
-        //     seen[lit.var().index()] = false;
-        // }
+        // Save learnt literals for later usage:
+        let analyze_to_clear = lemma.clone();
 
-        // TODO: minimize
+        // Minimize the learnt clause:
+        // Note: currently, only "local" minimization (i.e. not "recursive") is implemented
+        lemma.retain(|&lit| !self.lit_redundant_basic(lit, &seen));
+
+        // Clear the `seen` vector:
+        for lit in analyze_to_clear {
+            seen[lit.var()] = false;
+        }
+        debug_assert!(seen.iter().all(|&x| !x));
 
         // Find the correct backtrack level:
         let bt_level = if lemma.len() == 1 {
@@ -522,6 +527,23 @@ impl Solver {
 
         self.time_analyze += time_analyze_start.elapsed();
         (lemma, bt_level)
+    }
+
+    fn lit_redundant_basic(&self, lit: Lit, seen: &VarVec<bool>) -> bool {
+        match self.reason(lit.var()) {
+            None => false,
+            Some(cref) => {
+                let clause = self.ca.clause(cref);
+                debug_assert_eq!(clause[0], !lit);
+                for &x in &clause[1..] {
+                    let v = x.var();
+                    if !seen[v] && self.level(v) > 0 {
+                        return false;
+                    }
+                }
+                true
+            }
+        }
     }
 
     fn backtrack(&mut self, level: usize) {
