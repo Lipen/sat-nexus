@@ -62,11 +62,6 @@ fn main() {
         100.0 * solver.time_restart.as_secs_f64() / time_total.as_secs_f64(),
     );
     println!(
-        "time pick_dec:   {:?} ({:.2}%)",
-        solver.time_pick_decision_var,
-        100.0 * solver.time_pick_decision_var.as_secs_f64() / time_total.as_secs_f64(),
-    );
-    println!(
         "time decision:   {:?} ({:.2}%)",
         solver.time_decision,
         100.0 * solver.time_decision.as_secs_f64() / time_total.as_secs_f64(),

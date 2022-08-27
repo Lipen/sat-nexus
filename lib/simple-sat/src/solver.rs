@@ -42,7 +42,6 @@ pub struct Solver {
     pub time_analyze: Duration,
     pub time_backtrack: Duration,
     pub time_restart: Duration,
-    pub time_pick_decision_var: Duration,
     pub time_decision: Duration,
 }
 
@@ -66,7 +65,6 @@ impl Solver {
             time_analyze: Duration::new(0, 0),
             time_backtrack: Duration::new(0, 0),
             time_restart: Duration::new(0, 0),
-            time_pick_decision_var: Duration::new(0, 0),
             time_decision: Duration::new(0, 0),
         }
     }
@@ -216,9 +214,22 @@ impl Solver {
         self.assignment.unchecked_enqueue(lit, reason)
     }
 
-    pub fn solve(&mut self) -> bool {
-        info!("Solver::solve()");
+    fn report(&self, stage: &'static str) {
+        info!(
+            "{} lvl={} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
+            stage,
+            self.decision_level(),
+            self.num_restarts(),
+            self.num_decisions(),
+            self.num_propagations(),
+            self.num_conflicts(),
+            self.num_learnts(),
+            self.num_clauses(),
+            self.num_vars()
+        );
+    }
 
+    pub fn solve(&mut self) -> bool {
         // If the solver is already in UNSAT state, return early.
         if !self.ok {
             return false;
@@ -262,7 +273,6 @@ impl Solver {
     /// [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
     /// and [`None`] if it is unknown yet (for example, a restart occurred).
     fn search(&mut self, num_confl: usize) -> Option<bool> {
-        debug!("Solver::search(num_confl = {})", num_confl);
         assert!(self.ok);
 
         let confl_limit = self.conflicts + num_confl;
@@ -277,17 +287,7 @@ impl Solver {
             // Restart:
             if num_confl > 0 && self.conflicts >= confl_limit {
                 self.restarts += 1;
-                info!(
-                    "restart @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
-                    self.decision_level(),
-                    self.num_restarts(),
-                    self.num_decisions(),
-                    self.num_propagations(),
-                    self.num_conflicts(),
-                    self.num_learnts(),
-                    self.num_clauses(),
-                    self.num_vars()
-                );
+                self.report("restart");
                 let (time_restart, _) = measure_time(|| {
                     self.backtrack(0);
                 });
@@ -296,20 +296,7 @@ impl Solver {
             }
 
             // Make a decision:
-            self.decisions += 1;
-            let time_decision_start = Instant::now();
-            if let Some(var) = {
-                let (time_pick_decision_var, var) = measure_time(|| self.pick_branching_variable());
-                self.time_pick_decision_var += time_pick_decision_var;
-                var
-            } {
-                // let decision = Lit::new(var, self.rng.gen()); // random phase
-                let decision = Lit::new(var, false); // always positive phase
-                self.new_decision_level();
-                self.unchecked_enqueue(decision, None);
-                let time_decision = time_decision_start.elapsed();
-                self.time_decision += time_decision;
-            } else {
+            if !self.decide() {
                 // SAT
                 info!("SAT");
                 return Some(true);
@@ -338,17 +325,7 @@ impl Solver {
             if lemma.len() == 1 {
                 // Learn a unit clause
                 self.assignment.unchecked_enqueue(lemma[0], None);
-                info!(
-                    "unit @{} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
-                    self.decision_level(),
-                    self.num_restarts(),
-                    self.num_decisions(),
-                    self.num_propagations(),
-                    self.num_conflicts(),
-                    self.num_learnts(),
-                    self.num_clauses(),
-                    self.num_vars()
-                );
+                self.report("unit");
             } else {
                 // Learn a clause
                 let cref = self.ca.alloc(lemma, true);
@@ -565,6 +542,25 @@ impl Solver {
         }
 
         self.time_backtrack += time_backtrack_start.elapsed();
+    }
+
+    fn decide(&mut self) -> bool {
+        let time_decision_start = Instant::now();
+        let ok = if let Some(var) = self.pick_branching_variable() {
+            // let decision = Lit::new(var, self.rng.gen()); // random phase
+            let decision = Lit::new(var, false); // always positive phase
+
+            self.decisions += 1;
+            self.new_decision_level();
+            self.unchecked_enqueue(decision, None);
+
+            true
+        } else {
+            false
+        };
+        let time_decision = time_decision_start.elapsed();
+        self.time_decision += time_decision;
+        ok
     }
 
     fn pick_branching_variable(&mut self) -> Option<Var> {
