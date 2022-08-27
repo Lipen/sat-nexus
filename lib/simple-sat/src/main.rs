@@ -2,6 +2,8 @@ use std::env;
 use std::path::Path;
 use std::time::Instant;
 
+use num_format::{Locale, ToFormattedString};
+
 use simple_sat::solver::Solver;
 
 fn main() {
@@ -21,14 +23,15 @@ fn main() {
     let mut solver = Solver::from_file(Path::new(path));
     let time_create = time_start.elapsed();
     let res = solver.solve();
+    let format = &Locale::en;
     println!("Solver returned: {:?}", res);
-    println!("vars:         {}", solver.num_vars());
-    println!("clauses:      {}", solver.num_clauses());
-    println!("learnts:      {}", solver.num_learnts());
-    println!("decisions:    {}", solver.num_decisions());
-    println!("propagations: {}", solver.num_propagations());
-    println!("conflicts:    {}", solver.num_conflicts());
-    println!("restarts:     {}", solver.num_restarts());
+    println!("vars:         {}", solver.num_vars().to_formatted_string(format));
+    println!("clauses:      {}", solver.num_clauses().to_formatted_string(format));
+    println!("learnts:      {}", solver.num_learnts().to_formatted_string(format));
+    println!("decisions:    {}", solver.num_decisions().to_formatted_string(format));
+    println!("propagations: {}", solver.num_propagations().to_formatted_string(format));
+    println!("conflicts:    {}", solver.num_conflicts().to_formatted_string(format));
+    println!("restarts:     {}", solver.num_restarts().to_formatted_string(format));
     let time_total = time_start.elapsed();
     println!("time total:      {:?}", time_total);
     println!(
