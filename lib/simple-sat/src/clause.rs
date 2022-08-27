@@ -23,6 +23,10 @@ impl Clause {
         &self.lits
     }
 
+    pub fn learnt(&self) -> bool {
+        self.learnt
+    }
+
     pub fn len(&self) -> usize {
         self.lits.len()
     }
