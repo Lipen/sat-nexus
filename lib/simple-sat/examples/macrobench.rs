@@ -68,7 +68,7 @@ fn main() -> color_eyre::Result<()> {
     let results = results.tap_mut(|rs| rs.sort_by_key(|r| r.time_total));
 
     // Print the results:
-    for result in results {
+    for result in results.iter() {
         println!("Result for {}: {:#?}", result.path.display(), result);
     }
 
