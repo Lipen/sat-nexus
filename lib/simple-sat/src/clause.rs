@@ -5,8 +5,8 @@ use crate::lit::Lit;
 
 #[derive(Debug, Clone)]
 pub struct Clause {
-    pub(crate) lits: Vec<Lit>,
-    pub(crate) learnt: bool,
+    lits: Vec<Lit>,
+    learnt: bool,
 }
 
 impl Clause {
@@ -17,6 +17,10 @@ impl Clause {
     pub fn from_lits(lits: &[i32]) -> Self {
         let lits = lits.iter().map(|&lit| Lit::from_lit(lit)).collect();
         Self::new(lits, false)
+    }
+
+    pub fn lits(&self) -> &[Lit] {
+        &self.lits
     }
 
     pub fn len(&self) -> usize {
