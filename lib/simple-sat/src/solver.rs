@@ -41,7 +41,6 @@ pub struct Solver {
     pub time_propagate: Duration,
     pub time_analyze: Duration,
     pub time_backtrack: Duration,
-    pub time_learn: Duration,
     pub time_restart: Duration,
     pub time_pick_decision_var: Duration,
     pub time_decision: Duration,
@@ -66,7 +65,6 @@ impl Solver {
             time_propagate: Duration::new(0, 0),
             time_analyze: Duration::new(0, 0),
             time_backtrack: Duration::new(0, 0),
-            time_learn: Duration::new(0, 0),
             time_restart: Duration::new(0, 0),
             time_pick_decision_var: Duration::new(0, 0),
             time_decision: Duration::new(0, 0),
@@ -166,26 +164,6 @@ impl Solver {
     }
     fn new_decision_level(&mut self) {
         self.assignment.new_decision_level()
-    }
-
-    fn backtrack(&mut self, level: usize) {
-        let time_backtrack_start = Instant::now();
-        debug!("backtrack from {} to {}", self.decision_level(), level);
-        debug_assert!(level == 0 || self.decision_level() > level); // actually, assert is not needed
-        if self.decision_level() > level {
-            for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
-                let var = self.assignment.trail[i].var();
-                self.assignment[var] = LBool::Undef;
-                self.var_order.insert_var_order(var);
-                // TODO: phase saving
-            }
-            self.assignment.qhead = self.assignment.trail_lim[level];
-            self.assignment.trail.truncate(self.assignment.trail_lim[level]);
-            self.assignment.trail_lim.truncate(level);
-        }
-        // self.qhead = std::cmp::min(self.qhead, self.trail.len())
-        let time_backtrack = time_backtrack_start.elapsed();
-        self.time_backtrack += time_backtrack;
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
@@ -340,11 +318,7 @@ impl Solver {
     }
 
     fn propagate_analyze_backtrack(&mut self) -> bool {
-        while let Some(conflict) = {
-            let (time_propagate, res) = measure_time(|| self.propagate());
-            self.time_propagate += time_propagate;
-            res
-        } {
+        while let Some(conflict) = self.propagate() {
             self.conflicts += 1;
 
             if self.decision_level() == 0 {
@@ -354,14 +328,12 @@ impl Solver {
             }
 
             // Analyze the conflict:
-            let (time_analyze, (lemma, backtrack_level)) = measure_time(|| self.analyze(conflict));
-            self.time_analyze += time_analyze;
+            let (lemma, backtrack_level) = self.analyze(conflict);
 
             // Backjump:
             self.backtrack(backtrack_level);
 
             // Add the learnt clause:
-            let time_learn_start = Instant::now();
             assert!(lemma.len() > 0);
             if lemma.len() == 1 {
                 // Learn a unit clause
@@ -385,8 +357,6 @@ impl Solver {
                 let asserting_literal = lemma[0];
                 self.assignment.unchecked_enqueue(asserting_literal, Some(cref));
             }
-            let time_learn = time_learn_start.elapsed();
-            self.time_learn += time_learn;
 
             self.var_order.var_decay_activity();
         }
@@ -394,6 +364,8 @@ impl Solver {
     }
 
     fn propagate(&mut self) -> Option<ClauseRef> {
+        let time_propagate_start = Instant::now();
+
         let mut conflict = None;
 
         #[inline]
@@ -481,14 +453,16 @@ impl Solver {
             }
         }
 
+        self.time_propagate += time_propagate_start.elapsed();
         conflict
     }
 
     /// Returns learnt clause and backtrack level.
     fn analyze(&mut self, conflict: ClauseRef) -> (Vec<Lit>, usize) {
         debug!("analyze conflict: {:?}", conflict);
-
         debug_assert!(self.decision_level() > 0);
+
+        let time_analyze_start = Instant::now();
 
         let mut lemma = Vec::new();
         let mut seen = VarVec::from(vec![false; self.num_vars()]);
@@ -569,9 +543,28 @@ impl Solver {
             // self.level(w.var())
         };
 
-        // let lemma = Rc::new(Clause { lits: lemma });
-        // println!("Solver::analyze() -> ({:?}, {})", lemma, bt_level);
+        self.time_analyze += time_analyze_start.elapsed();
         (lemma, bt_level)
+    }
+
+    fn backtrack(&mut self, level: usize) {
+        debug!("backtrack from {} to {}", self.decision_level(), level);
+
+        let time_backtrack_start = Instant::now();
+
+        if self.decision_level() > level {
+            for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
+                let var = self.assignment.trail[i].var();
+                self.assignment[var] = LBool::Undef;
+                self.var_order.insert_var_order(var);
+                // TODO: phase saving
+            }
+            self.assignment.qhead = self.assignment.trail_lim[level];
+            self.assignment.trail.truncate(self.assignment.trail_lim[level]);
+            self.assignment.trail_lim.truncate(level);
+        }
+
+        self.time_backtrack += time_backtrack_start.elapsed();
     }
 
     fn pick_branching_variable(&mut self) -> Option<Var> {
