@@ -5,17 +5,26 @@ use std::ops::{Index, IndexMut};
 
 #[derive(Debug)]
 pub struct ClauseAllocator {
+    /// All clauses (original and learnt).
     clauses: Vec<Clause>,
-    pub(crate) num_clauses: usize,
-    pub(crate) num_learnts: usize,
+    /// References for learnt clauses.
+    learnts: Vec<ClauseRef>,
+}
+
+impl ClauseAllocator {
+    pub fn num_clauses(&self) -> usize {
+        self.clauses.len()
+    }
+    pub fn num_learnts(&self) -> usize {
+        self.learnts.len()
+    }
 }
 
 impl ClauseAllocator {
     pub const fn new() -> Self {
         Self {
             clauses: Vec::new(),
-            num_clauses: 0,
-            num_learnts: 0,
+            learnts: Vec::new(),
         }
     }
 }
@@ -48,9 +57,7 @@ impl ClauseAllocator {
         let cref = ClauseRef(self.clauses.len());
         self.clauses.push(clause);
         if learnt {
-            self.num_learnts += 1;
-        } else {
-            self.num_clauses += 1;
+            self.learnts.push(cref);
         }
         cref
     }

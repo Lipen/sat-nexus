@@ -95,12 +95,11 @@ impl Solver {
         self.next_var as _
     }
     pub fn num_clauses(&self) -> usize {
-        self.ca.num_clauses
-        // self.clauses.iter().filter(|x| !x.learnt).count()
+        // Note: `ca.num_clauses()` returns the number of ALL clauses (both original and learnt).
+        self.ca.num_clauses() - self.ca.num_learnts()
     }
     pub fn num_learnts(&self) -> usize {
-        self.ca.num_learnts
-        // self.clauses.iter().filter(|x| x.learnt).count()
+        self.ca.num_learnts()
     }
     pub fn num_decisions(&self) -> usize {
         self.decisions
