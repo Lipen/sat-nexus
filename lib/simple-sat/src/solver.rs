@@ -8,6 +8,7 @@ use tracing::{debug, info};
 // use rand::rngs::StdRng;
 // use rand::{Rng, SeedableRng};
 use crate::assignment::{Assignment, VarData};
+use crate::clause::Clause;
 use crate::clause_allocator::ClauseAllocator;
 use crate::cref::ClauseRef;
 use crate::idx::VarVec;
@@ -155,6 +156,13 @@ impl Solver {
     }
     pub fn level(&self, var: Var) -> usize {
         self.assignment.level(var)
+    }
+
+    pub fn clause(&self, cref: ClauseRef) -> &Clause {
+        self.ca.clause(cref)
+    }
+    pub fn clause_mut(&mut self, cref: ClauseRef) -> &mut Clause {
+        self.ca.clause_mut(cref)
     }
 
     pub fn decision_level(&self) -> usize {
