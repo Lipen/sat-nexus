@@ -34,6 +34,12 @@ impl VarOrder {
     }
 }
 
+impl Default for VarOrder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VarOrder {
     pub(crate) fn push_zero_activity(&mut self) {
         self.activity.push(0.0);

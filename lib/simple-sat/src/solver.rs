@@ -69,7 +69,15 @@ impl Solver {
             time_decision: Duration::new(0, 0),
         }
     }
+}
 
+impl Default for Solver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Solver {
     pub fn from_file<P>(path: P) -> Self
     where
         P: AsRef<Path>,
