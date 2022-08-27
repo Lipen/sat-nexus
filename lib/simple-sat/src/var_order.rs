@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use tracing::info;
+use tracing::debug;
 
 use crate::assignment::Assignment;
 use crate::idx::{VarHeap, VarVec};
@@ -59,7 +59,7 @@ impl VarOrder {
     }
 
     pub fn var_rescale_activity(&mut self) {
-        info!("Rescaling activity");
+        debug!("Rescaling activity");
         // Decrease the increment value:
         self.var_inc *= 1e-100;
         // Decrease all activities:
