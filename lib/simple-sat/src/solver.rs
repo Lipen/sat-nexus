@@ -532,7 +532,7 @@ impl Solver {
                 break;
             }
             reason = self.reason(p.var()).unwrap();
-            // debug_assert_eq!(clause[0], p); // FIXME: failing
+            debug_assert_eq!(self.clause(reason)[0], p);
         }
 
         // Save learnt literals for later usage:
