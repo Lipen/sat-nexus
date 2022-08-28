@@ -514,7 +514,7 @@ impl Solver {
                 }
             }
 
-            // Select next literal to look at:
+            // Select next clause (`reason`) to look at:
             // let &p = self.assignment.trail.iter().rfind(|p| seen[p.var()]).unwrap();
             loop {
                 index -= 1;
