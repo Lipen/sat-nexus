@@ -36,7 +36,7 @@ use crate::watch::{WatchList, Watcher};
 /// * `decisions`: The number of decisions made by the solver.
 /// * `propagations`: The number of times a unit clause was found and propagated.
 /// * `conflicts`: The number of conflicts encountered so far.
-/// * `restarts`: The number of restarts,
+/// * `restarts`: The number of restarts.
 /// * `time_search`: The total time spent in the search function.
 /// * `time_propagate`: The time spent in the propagate function.
 /// * `time_analyze`: The time spent in conflict analysis.
