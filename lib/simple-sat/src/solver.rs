@@ -603,8 +603,11 @@ impl Solver {
         if self.decision_level() > level {
             for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
                 let var = self.assignment.trail[i].var();
+                // Phase saving:
                 self.polarity[var] = !self.assignment.value_var(var).bool().expect("must be assigned");
+                // Unassign the variable:
                 self.assignment.unassign(var);
+                // Put the variable into the order heap:
                 self.var_order.insert_var_order(var);
             }
             self.assignment.qhead = self.assignment.trail_lim[level];
