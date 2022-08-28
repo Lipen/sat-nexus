@@ -604,7 +604,7 @@ impl Solver {
         if self.decision_level() > level {
             for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
                 let var = self.assignment.trail[i].var();
-                self.assignment[var] = LBool::Undef;
+                self.assignment.assign(var, LBool::Undef);
                 self.var_order.insert_var_order(var);
                 // TODO: phase saving
             }

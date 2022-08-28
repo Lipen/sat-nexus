@@ -114,6 +114,6 @@ impl VarOrder {
             //     Ordering::Equal => a.0 < b.0,
             //     Ordering::Greater => true,
             // })
-            .find(|&var| assignment[var].is_undef())
+            .find(|&var| assignment.value_var(var).is_undef())
     }
 }

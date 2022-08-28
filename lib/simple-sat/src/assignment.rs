@@ -1,5 +1,3 @@
-use std::ops::{Index, IndexMut};
-
 use tracing::info;
 
 use crate::cref::ClauseRef;
@@ -35,28 +33,15 @@ impl Assignment {
     }
 }
 
-// assignment[var]
-impl Index<Var> for Assignment {
-    type Output = LBool;
-
-    fn index(&self, var: Var) -> &Self::Output {
-        self.assignment.index(var)
-    }
-}
-
-// &mut assignment[var]
-impl IndexMut<Var> for Assignment {
-    fn index_mut(&mut self, var: Var) -> &mut Self::Output {
-        self.assignment.index_mut(var)
-    }
-}
-
 impl Assignment {
     pub fn value_var(&self, var: Var) -> LBool {
         self.assignment[var]
     }
     pub fn value(&self, lit: Lit) -> LBool {
         self.assignment[lit.var()] ^ lit.negated()
+    }
+    pub fn assign(&mut self, var: Var, value: LBool) {
+        self.assignment[var] = value;
     }
 
     pub fn var_data(&self, var: Var) -> &VarData {
@@ -74,6 +59,17 @@ impl Assignment {
     }
     pub fn new_decision_level(&mut self) {
         self.trail_lim.push(self.trail.len());
+    }
+
+    pub fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
+        debug_assert_eq!(self.value(lit), LBool::Undef);
+
+        self.assignment[lit.var()] = LBool::from(!lit.negated());
+        self.var_data[lit.var()] = VarData {
+            reason,
+            level: self.decision_level(),
+        };
+        self.trail.push(lit);
     }
 
     /// If the literal is unassigned, assign it;
@@ -103,17 +99,6 @@ impl Assignment {
                 false
             }
         }
-    }
-
-    pub fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
-        debug_assert_eq!(self.value(lit), LBool::Undef);
-
-        self.assignment[lit.var()] = LBool::from(!lit.negated());
-        self.var_data[lit.var()] = VarData {
-            reason,
-            level: self.decision_level(),
-        };
-        self.trail.push(lit);
     }
 
     pub fn dequeue(&mut self) -> Option<Lit> {
