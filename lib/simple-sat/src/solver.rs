@@ -606,7 +606,6 @@ impl Solver {
                 self.polarity[var] = !self.assignment.value_var(var).bool().expect("must be assigned");
                 self.assignment.unassign(var);
                 self.var_order.insert_var_order(var);
-                // TODO: phase saving
             }
             self.assignment.qhead = self.assignment.trail_lim[level];
             self.assignment.trail.truncate(self.assignment.trail_lim[level]);
