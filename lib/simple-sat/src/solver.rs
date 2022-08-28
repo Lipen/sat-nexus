@@ -271,6 +271,11 @@ impl Solver {
             return false;
         }
 
+        // Make sure to start from the 0th level:
+        if self.decision_level() > 0 {
+            self.backtrack(0);
+        }
+
         let restart_init = 100; // MiniSat: 100
         let restart_inc = 2.0; // MiniSat: 2.0
 
@@ -287,7 +292,6 @@ impl Solver {
             debug!("Search #{} done in {:?}", current_restarts, time_search);
         }
 
-        self.backtrack(0);
         status.unwrap()
     }
 
@@ -310,6 +314,7 @@ impl Solver {
     /// - [`None`] if it is unknown yet (for example, a restart occurred).
     fn search(&mut self, num_confl: usize) -> Option<bool> {
         assert!(self.ok);
+        assert_eq!(self.decision_level(), 0);
 
         let confl_limit = self.conflicts + num_confl;
 
