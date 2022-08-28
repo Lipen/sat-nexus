@@ -60,11 +60,6 @@ fn main() {
         100.0 * solver.time_backtrack.as_secs_f64() / time_total.as_secs_f64(),
     );
     println!(
-        "time restart:    {:?} ({:.2}%)",
-        solver.time_restart,
-        100.0 * solver.time_restart.as_secs_f64() / time_total.as_secs_f64(),
-    );
-    println!(
         "time decide:     {:?} ({:.2}%)",
         solver.time_decide,
         100.0 * solver.time_decide.as_secs_f64() / time_total.as_secs_f64(),

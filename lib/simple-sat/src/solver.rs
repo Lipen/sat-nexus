@@ -15,7 +15,6 @@ use crate::idx::VarVec;
 use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::utils::luby;
-use crate::utils::measure_time;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
 use crate::var::Var;
@@ -41,7 +40,6 @@ use crate::watch::{WatchList, Watcher};
 /// * `time_propagate`: The time spent in the propagate function.
 /// * `time_analyze`: The time spent in conflict analysis.
 /// * `time_backtrack`: The time spent backtracking.
-/// * `time_restart`: The time spent restarting the solver.
 /// * `time_decide`: The time spent making a decision.
 #[derive(Debug)]
 pub struct Solver {
@@ -64,7 +62,6 @@ pub struct Solver {
     pub time_propagate: Duration,
     pub time_analyze: Duration,
     pub time_backtrack: Duration,
-    pub time_restart: Duration,
     pub time_decide: Duration,
 }
 
@@ -88,7 +85,6 @@ impl Solver {
             time_propagate: Duration::new(0, 0),
             time_analyze: Duration::new(0, 0),
             time_backtrack: Duration::new(0, 0),
-            time_restart: Duration::new(0, 0),
             time_decide: Duration::new(0, 0),
         }
     }
@@ -328,10 +324,7 @@ impl Solver {
             if num_confl > 0 && self.conflicts >= confl_limit {
                 self.restarts += 1;
                 self.report("restart");
-                let (time_restart, _) = measure_time(|| {
-                    self.backtrack(0);
-                });
-                self.time_restart += time_restart;
+                self.backtrack(0);
                 return None;
             }
 
