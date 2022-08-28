@@ -34,6 +34,10 @@ impl Clause {
     pub fn is_empty(&self) -> bool {
         self.lits.is_empty()
     }
+
+    pub fn iter(&self) -> std::slice::Iter<Lit> {
+        self.lits.iter()
+    }
 }
 
 impl<I> Index<I> for Clause
