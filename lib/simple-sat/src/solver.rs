@@ -30,6 +30,7 @@ use crate::watch::{WatchList, Watcher};
 /// * `watchlist`: A list of clauses that are watched by a variable.
 /// * `assignment`: The current assignment of the solver.
 /// * `var_order`: The variable order heuristic.
+/// * `polarity`: The phase saving heuristic.
 /// * `ok`: This is a boolean that indicates whether the solver is in a state where it can continue solving.
 /// * `next_var`: The next variable to be assigned.
 /// * `decisions`: The number of decisions made by the solver.
@@ -48,6 +49,7 @@ pub struct Solver {
     watchlist: WatchList,
     assignment: Assignment,
     pub var_order: VarOrder,
+    polarity: VarVec<bool>, // `pol=true` => negated lit; `false` => positive
     // seen: Vec<bool>,
     ok: bool,
     next_var: u32,
@@ -73,6 +75,7 @@ impl Solver {
             watchlist: WatchList::new(),
             assignment: Assignment::new(),
             var_order: VarOrder::new(),
+            polarity: VarVec::new(),
             // seen: Vec::new(),
             ok: true,
             next_var: 0,
@@ -162,6 +165,9 @@ impl Solver {
 
         // Reason/level
         self.assignment.var_data.push(VarData { reason: None, level: 0 });
+
+        // Polarity
+        self.polarity.push(true); // default phase is "negated=true"
 
         // Seen
         // self.seen.push(false);
@@ -604,6 +610,7 @@ impl Solver {
         if self.decision_level() > level {
             for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
                 let var = self.assignment.trail[i].var();
+                self.polarity[var] = !self.assignment.value_var(var).bool().expect("must be assigned");
                 self.assignment.assign(var, LBool::Undef);
                 self.var_order.insert_var_order(var);
                 // TODO: phase saving
@@ -625,8 +632,7 @@ impl Solver {
     fn decide(&mut self) -> bool {
         let time_decision_start = Instant::now();
         let ok = if let Some(var) = self.pick_branching_variable() {
-            // let decision = Lit::new(var, self.rng.gen()); // random phase
-            let decision = Lit::new(var, false); // always positive phase
+            let decision = self.pick_phase(var);
 
             debug!(
                 "Made a decision = {:?} = {}{:?}",
@@ -650,6 +656,15 @@ impl Solver {
 
     fn pick_branching_variable(&mut self) -> Option<Var> {
         self.var_order.pick_branching_variable(&self.assignment)
+    }
+
+    fn pick_phase(&mut self, var: Var) -> Lit {
+        // let sign = self.rng.gen(); // random phase
+        // let sign = false; // always positive phase
+        // let sign = true; // always negative phase
+        let sign = self.polarity[var];
+
+        Lit::new(var, sign)
     }
 }
 
