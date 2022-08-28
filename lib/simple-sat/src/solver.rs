@@ -42,7 +42,7 @@ use crate::watch::{WatchList, Watcher};
 /// * `time_analyze`: The time spent in conflict analysis.
 /// * `time_backtrack`: The time spent backtracking.
 /// * `time_restart`: The time spent restarting the solver.
-/// * `time_decision`: The time spent in the decision heuristic.
+/// * `time_decide`: The time spent making a decision.
 #[derive(Debug)]
 pub struct Solver {
     ca: ClauseAllocator,
@@ -65,7 +65,7 @@ pub struct Solver {
     pub time_analyze: Duration,
     pub time_backtrack: Duration,
     pub time_restart: Duration,
-    pub time_decision: Duration,
+    pub time_decide: Duration,
 }
 
 impl Solver {
@@ -89,7 +89,7 @@ impl Solver {
             time_analyze: Duration::new(0, 0),
             time_backtrack: Duration::new(0, 0),
             time_restart: Duration::new(0, 0),
-            time_decision: Duration::new(0, 0),
+            time_decide: Duration::new(0, 0),
         }
     }
 }
@@ -630,7 +630,7 @@ impl Solver {
     /// - `true`, if successfully made a decision,
     /// - `false`, if there are no unassigned variables (SAT).
     fn decide(&mut self) -> bool {
-        let time_decision_start = Instant::now();
+        let time_decide_start = Instant::now();
         let ok = if let Some(var) = self.pick_branching_variable() {
             let decision = self.pick_phase(var);
 
@@ -649,8 +649,7 @@ impl Solver {
         } else {
             false
         };
-        let time_decision = time_decision_start.elapsed();
-        self.time_decision += time_decision;
+        self.time_decide += time_decide_start.elapsed();
         ok
     }
 

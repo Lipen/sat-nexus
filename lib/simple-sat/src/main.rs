@@ -65,9 +65,9 @@ fn main() {
         100.0 * solver.time_restart.as_secs_f64() / time_total.as_secs_f64(),
     );
     println!(
-        "time decision:   {:?} ({:.2}%)",
-        solver.time_decision,
-        100.0 * solver.time_decision.as_secs_f64() / time_total.as_secs_f64(),
+        "time decide:     {:?} ({:.2}%)",
+        solver.time_decide,
+        100.0 * solver.time_decide.as_secs_f64() / time_total.as_secs_f64(),
     );
     println!(
         "time insert_var_order: {:?} ({:.2}%) [{} times]",
