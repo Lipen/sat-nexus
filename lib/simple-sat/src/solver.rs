@@ -22,6 +22,26 @@ use crate::var::Var;
 use crate::var_order::VarOrder;
 use crate::watch::{WatchList, Watcher};
 
+/// CDCL SAT solver.
+///
+/// **Properties:**
+///
+/// * `ca`: The clause allocator.
+/// * `watchlist`: A list of clauses that are watched by a variable.
+/// * `assignment`: The current assignment of the solver.
+/// * `var_order`: The variable order heuristic.
+/// * `ok`: This is a boolean that indicates whether the solver is in a state where it can continue solving.
+/// * `next_var`: The next variable to be assigned.
+/// * `decisions`: The number of decisions made by the solver.
+/// * `propagations`: The number of times a unit clause was found and propagated.
+/// * `conflicts`: The number of conflicts encountered so far.
+/// * `restarts`: The number of restarts,
+/// * `time_search`: The total time spent in the search function.
+/// * `time_propagate`: The time spent in the propagate function.
+/// * `time_analyze`: The time spent in conflict analysis.
+/// * `time_backtrack`: The time spent backtracking.
+/// * `time_restart`: The time spent restarting the solver.
+/// * `time_decision`: The time spent in the decision heuristic.
 #[derive(Debug)]
 pub struct Solver {
     ca: ClauseAllocator,
@@ -99,29 +119,37 @@ impl Solver {
         solver
     }
 
+    /// Number of variables.
     pub fn num_vars(&self) -> usize {
         self.next_var as _
     }
+    /// Number of original clauses.
     pub fn num_clauses(&self) -> usize {
         // Note: `ca.num_clauses()` returns the number of ALL clauses (both original and learnt).
         self.ca.num_clauses() - self.ca.num_learnts()
     }
+    /// Number of learnt clauses.
     pub fn num_learnts(&self) -> usize {
         self.ca.num_learnts()
     }
+    /// Number of decisions.
     pub fn num_decisions(&self) -> usize {
         self.decisions
     }
+    /// Number of propagations.
     pub fn num_propagations(&self) -> usize {
         self.propagations
     }
+    /// Number of conflicts.
     pub fn num_conflicts(&self) -> usize {
         self.conflicts
     }
+    /// Number of restarts.
     pub fn num_restarts(&self) -> usize {
         self.restarts
     }
 
+    /// Allocate a new variable.
     pub fn new_var(&mut self) -> Var {
         let var = Var(self.next_var);
         self.next_var += 1;
@@ -148,21 +176,27 @@ impl Solver {
         var
     }
 
+    /// Value of the variable.
     pub fn value_var(&self, var: Var) -> LBool {
         self.assignment.value_var(var)
     }
+    /// Value of the literal.
     pub fn value(&self, lit: Lit) -> LBool {
         self.assignment.value(lit)
     }
 
-    pub fn var_data(&self, var: Var) -> &VarData {
-        self.assignment.var_data(var)
-    }
+    /// The reason clause for `var`.
     pub fn reason(&self, var: Var) -> Option<ClauseRef> {
         self.assignment.reason(var)
     }
+    /// The decision level on which `var` was assigned.
     pub fn level(&self, var: Var) -> usize {
         self.assignment.level(var)
+    }
+
+    /// The current decision level.
+    pub fn decision_level(&self) -> usize {
+        self.assignment.decision_level()
     }
 
     pub fn clause(&self, cref: ClauseRef) -> &Clause {
@@ -170,13 +204,6 @@ impl Solver {
     }
     pub fn clause_mut(&mut self, cref: ClauseRef) -> &mut Clause {
         self.ca.clause_mut(cref)
-    }
-
-    pub fn decision_level(&self) -> usize {
-        self.assignment.decision_level()
-    }
-    fn new_decision_level(&mut self) {
-        self.assignment.new_decision_level()
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
@@ -219,14 +246,6 @@ impl Solver {
         let b = clause[1];
         self.watchlist.insert(a, Watcher { cref, blocker: b });
         self.watchlist.insert(b, Watcher { cref, blocker: a });
-    }
-
-    fn enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) -> bool {
-        self.assignment.enqueue(lit, reason)
-    }
-
-    fn unchecked_enqueue(&mut self, lit: Lit, reason: Option<ClauseRef>) {
-        self.assignment.unchecked_enqueue(lit, reason)
     }
 
     fn report(&self, stage: &'static str) {
@@ -470,7 +489,7 @@ impl Solver {
             let start_index = if confl == conflict { 0 } else { 1 };
             for j in start_index..clause.len() {
                 let q = clause[j];
-                debug_assert_eq!(self.assignment.value(q), LBool::False);
+                debug_assert_eq!(self.value(q), LBool::False);
 
                 if !seen[q.var()] && self.level(q.var()) > 0 {
                     seen[q.var()] = true;
@@ -588,8 +607,8 @@ impl Solver {
             let decision = Lit::new(var, false); // always positive phase
 
             self.decisions += 1;
-            self.new_decision_level();
-            self.unchecked_enqueue(decision, None);
+            self.assignment.new_decision_level();
+            self.assignment.unchecked_enqueue(decision, None);
 
             true
         } else {
