@@ -350,6 +350,7 @@ impl Solver {
 
             // Analyze the conflict:
             let (lemma, backtrack_level) = self.analyze(conflict);
+            debug!("Learnt {:?}", lemma);
 
             // Backjump:
             self.backtrack(backtrack_level);
@@ -385,7 +386,7 @@ impl Solver {
         }
 
         while let Some(p) = self.assignment.dequeue() {
-            debug!("Propagating {:?}", p);
+            // debug!("Propagating {:?}", p);
             self.propagations += 1;
             let false_literal = !p;
 
@@ -444,10 +445,12 @@ impl Solver {
                     match self.assignment.value(first) {
                         LBool::Undef => {
                             // unit
+                            debug!("Propagated unit {:?} with reason {:?} = {:?}", first, cref, self.clause(cref));
                             self.assignment.unchecked_enqueue(first, Some(cref));
                         }
                         LBool::False => {
                             // conflict
+                            debug!("Found conflict: {:?} = {:?}", cref, self.clause(cref));
                             conflict = Some(cref);
                             self.assignment.qhead = self.assignment.trail.len();
                             // Copy the remaining watches:
@@ -471,23 +474,28 @@ impl Solver {
 
     /// Returns learnt clause and backtrack level.
     fn analyze(&mut self, conflict: ClauseRef) -> (Vec<Lit>, usize) {
-        debug!("analyze conflict: {:?} = {:?}", conflict, self.clause(conflict).lits());
+        debug!(
+            "Analyze conflict @{}: {:?} = {:?}",
+            self.decision_level(),
+            conflict,
+            self.clause(conflict)
+        );
         debug_assert!(self.decision_level() > 0);
 
         let time_analyze_start = Instant::now();
 
         let mut lemma = Vec::new();
         let mut seen = VarVec::from(vec![false; self.num_vars()]);
-        let mut counter: u32 = 0; // number of literals in the conflicting clause on the current decision level
-        let mut confl = conflict;
+        let mut active: u32 = 0; // number of literals in the conflicting clause on the current decision level
+        let mut reason = conflict;
         let mut index = self.assignment.trail.len();
 
         loop {
-            let clause = self.ca.clause(confl);
+            let clause = self.ca.clause(reason);
 
             // TODO: if conflict.learnt() { bump clause activity for 'conflict' }
 
-            let start_index = if confl == conflict { 0 } else { 1 };
+            let start_index = if reason == conflict { 0 } else { 1 };
             for j in start_index..clause.len() {
                 let q = clause[j];
                 debug_assert_eq!(self.value(q), LBool::False);
@@ -502,12 +510,13 @@ impl Solver {
                         lemma.push(q);
                     } else {
                         debug_assert_eq!(self.level(q.var()), self.decision_level());
-                        counter += 1;
+                        active += 1;
                     }
                 }
             }
 
-            // Select next clause to look at:
+            // Select next literal to look at:
+            // let &p = self.assignment.trail.iter().rfind(|p| seen[p.var()]).unwrap();
             loop {
                 index -= 1;
                 if seen[self.assignment.trail[index].var()] {
@@ -515,14 +524,15 @@ impl Solver {
                 }
             }
             let p = self.assignment.trail[index];
-            seen[p.var()] = false; // TODO: why do we need to un-seen p?
-            counter -= 1;
-            if counter == 0 {
+            debug_assert_eq!(self.level(p.var()), self.decision_level());
+            seen[p.var()] = false;
+            active -= 1;
+            if active == 0 {
                 // Prepend the asserting literal:
                 lemma.insert(0, !p);
                 break;
             }
-            confl = self.reason(p.var()).unwrap();
+            reason = self.reason(p.var()).unwrap();
             // debug_assert_eq!(clause[0], p); // FIXME: failing
         }
 
