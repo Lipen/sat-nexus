@@ -295,7 +295,7 @@ impl Solver {
     /// and then it calls `backtrack` to backtrack to a lower decision level.
     /// If no conflict is found, it calls `pick_branching_variable` to pick a new variable
     /// to branch on, and then it calls `new_decision_level` to create a new decision level,
-    /// and enqueues the new decision.
+    /// and enqueues the new decision via `unchecked_enqueue`.
     ///
     /// **Arguments:**
     ///
@@ -303,9 +303,9 @@ impl Solver {
     ///
     /// **Returns:**
     ///
-    /// [`Some(true)`][Some] if the formula is satisfiable (no more unassigned variables),
-    /// [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
-    /// and [`None`] if it is unknown yet (for example, a restart occurred).
+    /// - [`Some(true)`][Some] if the formula is satisfiable (no more unassigned variables),
+    /// - [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
+    /// - [`None`] if it is unknown yet (for example, a restart occurred).
     fn search(&mut self, num_confl: usize) -> Option<bool> {
         assert!(self.ok);
 
@@ -338,6 +338,12 @@ impl Solver {
         }
     }
 
+    /// Propagate and then if there is a conflict, analyze it, backtrack, and add the learnt clause.
+    ///
+    /// **Returns:**
+    ///
+    /// - `false`, if a conflict on root level was found (UNSAT),
+    /// - `true`, otherwise.
     fn propagate_analyze_backtrack(&mut self) -> bool {
         while let Some(conflict) = self.propagate() {
             self.conflicts += 1;
@@ -539,7 +545,7 @@ impl Solver {
         let analyze_to_clear = lemma.clone();
 
         // Minimize the learnt clause:
-        // Note: currently, only "local" minimization (i.e. not "recursive") is implemented
+        // Note: currently, only "local" minimization (i.e. not "recursive") is implemented.
         lemma.retain(|&lit| !self.lit_redundant_basic(lit, &seen));
 
         // Clear the `seen` vector:
@@ -610,6 +616,12 @@ impl Solver {
         self.time_backtrack += time_backtrack_start.elapsed();
     }
 
+    /// If there is a variable that is unassigned, then pick it and assign.
+    ///
+    /// **Returns:**
+    ///
+    /// - `true`, if successfully made a decision,
+    /// - `false`, if there are no unassigned variables (SAT).
     fn decide(&mut self) -> bool {
         let time_decision_start = Instant::now();
         let ok = if let Some(var) = self.pick_branching_variable() {
