@@ -66,15 +66,14 @@ impl VarOrder {
 
     pub fn var_rescale_activity(&mut self) {
         debug!("Rescaling activity");
+
         // Decrease the increment value:
         self.var_inc *= 1e-100;
+
         // Decrease all activities:
         for a in self.activity.iter_mut() {
             *a *= 1e-100;
-            // *a /= self.var_inc;
         }
-        // Decrease the increment value:
-        // self.var_inc = 1.0;
     }
 
     pub fn insert_var_order(&mut self, var: Var) {
