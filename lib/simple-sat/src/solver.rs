@@ -209,12 +209,20 @@ impl Solver {
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
-        assert_eq!(self.decision_level(), 0);
+        // assert_eq!(self.decision_level(), 0);
         assert!(!lits.is_empty());
 
         // If the solver is already in UNSAT state, we do not need to add new clause.
         if !self.ok {
             return false;
+        }
+
+        // FIXME: actually, this (backtracking to 0th level) has to be done at the end of `solve`,
+        //        but currently it is not possible, since we are not saving the model.
+        //  Thus, in order to support incremental solving, we backtrack here.
+        //  Hopefully, this is going to improve once we implement the model saving.
+        if self.decision_level() > 0 {
+            self.backtrack(0);
         }
 
         // Note: We assume that the clause does not have duplicates or tautologies.
