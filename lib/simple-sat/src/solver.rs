@@ -385,6 +385,7 @@ impl Solver {
         }
 
         while let Some(p) = self.assignment.dequeue() {
+            debug!("Propagating {:?}", p);
             self.propagations += 1;
             let false_literal = !p;
 
@@ -470,7 +471,7 @@ impl Solver {
 
     /// Returns learnt clause and backtrack level.
     fn analyze(&mut self, conflict: ClauseRef) -> (Vec<Lit>, usize) {
-        debug!("analyze conflict: {:?}", conflict);
+        debug!("analyze conflict: {:?} = {:?}", conflict, self.clause(conflict).lits());
         debug_assert!(self.decision_level() > 0);
 
         let time_analyze_start = Instant::now();
@@ -605,6 +606,13 @@ impl Solver {
         let ok = if let Some(var) = self.pick_branching_variable() {
             // let decision = Lit::new(var, self.rng.gen()); // random phase
             let decision = Lit::new(var, false); // always positive phase
+
+            debug!(
+                "Made a decision = {:?} = {}{:?}",
+                decision,
+                if decision.negated() { "-" } else { "+" },
+                decision.var()
+            );
 
             self.decisions += 1;
             self.assignment.new_decision_level();
