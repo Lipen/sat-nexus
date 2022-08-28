@@ -13,6 +13,14 @@ impl LBool {
     pub const fn is_undef(self) -> bool {
         (self as u8) > 1
     }
+
+    pub const fn bool(self) -> Option<bool> {
+        match self {
+            LBool::False => Some(false),
+            LBool::True => Some(true),
+            LBool::Undef => None,
+        }
+    }
 }
 
 impl From<bool> for LBool {
