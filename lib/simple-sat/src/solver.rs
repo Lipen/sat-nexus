@@ -604,7 +604,7 @@ impl Solver {
             for i in (self.assignment.trail_lim[level]..self.assignment.trail.len()).rev() {
                 let var = self.assignment.trail[i].var();
                 self.polarity[var] = !self.assignment.value_var(var).bool().expect("must be assigned");
-                self.assignment.assign(var, LBool::Undef);
+                self.assignment.unassign(var);
                 self.var_order.insert_var_order(var);
                 // TODO: phase saving
             }

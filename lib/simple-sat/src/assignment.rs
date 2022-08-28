@@ -43,6 +43,9 @@ impl Assignment {
     pub fn assign(&mut self, var: Var, value: LBool) {
         self.assignment[var] = value;
     }
+    pub fn unassign(&mut self, var: Var) {
+        self.assignment[var] = LBool::Undef;
+    }
 
     pub fn var_data(&self, var: Var) -> &VarData {
         &self.var_data[var]
