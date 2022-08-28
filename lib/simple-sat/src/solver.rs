@@ -496,8 +496,7 @@ impl Solver {
             // TODO: if conflict.learnt() { bump clause activity for 'conflict' }
 
             let start_index = if reason == conflict { 0 } else { 1 };
-            for j in start_index..clause.len() {
-                let q = clause[j];
+            for &q in &clause[start_index..] {
                 debug_assert_eq!(self.value(q), LBool::False);
 
                 if !seen[q.var()] && self.level(q.var()) > 0 {
