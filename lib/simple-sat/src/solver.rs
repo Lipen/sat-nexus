@@ -671,13 +671,15 @@ impl Solver {
 mod tests {
     use super::*;
 
+    use test_log::test;
+
     #[test]
     fn test_correctness() {
         let mut solver = Solver::new();
 
         let tie = Lit::new(solver.new_var(), false);
         let shirt = Lit::new(solver.new_var(), false);
-        println!("TIE = {:?}, SHIRT = {:?}", tie, shirt);
+        info!("TIE = {:?}, SHIRT = {:?}", tie, shirt);
         solver.add_clause(&[-tie, shirt]);
         solver.add_clause(&[tie, shirt]);
         solver.add_clause(&[-tie, -shirt]);
