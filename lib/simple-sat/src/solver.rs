@@ -236,13 +236,14 @@ impl Solver {
 
         // TODO: handle unit clauses (better)
 
-        let cref = self.ca.alloc(lits.to_vec(), false);
-        let clause = self.ca.clause(cref);
-        if clause.len() >= 2 {
+        if lits.len() >= 2 {
+            let cref = self.ca.alloc(lits.to_vec(), false);
             self.attach_clause(cref);
         } else {
-            assert_eq!(clause.len(), 1);
-            if !self.assignment.enqueue(clause[0], None) {
+            assert_eq!(lits.len(), 1);
+            assert_eq!(self.decision_level(), 0);
+            if !self.assignment.enqueue(lits[0], None) {
+                // Conflict on 0th level => UNSAT
                 self.ok = false;
             }
         }
