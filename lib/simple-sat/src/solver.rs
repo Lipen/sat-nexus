@@ -258,7 +258,7 @@ impl Solver {
         self.watchlist.insert(b, Watcher { cref, blocker: a });
     }
 
-    fn report(&self, stage: &'static str) {
+    fn report(&self, stage: &str) {
         info!(
             "{} lvl={} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
             stage,
