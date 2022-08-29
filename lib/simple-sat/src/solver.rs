@@ -324,7 +324,7 @@ impl Solver {
         assert!(self.ok);
         assert_eq!(self.decision_level(), 0);
 
-        let confl_limit = self.conflicts + num_confl;
+        let confl_limit = if num_confl > 0 { self.conflicts + num_confl } else { usize::MAX };
 
         // CDCL loop
         loop {
@@ -334,7 +334,7 @@ impl Solver {
             }
 
             // Restart:
-            if num_confl > 0 && self.conflicts >= confl_limit {
+            if self.conflicts >= confl_limit {
                 self.restarts += 1;
                 self.report("restart");
                 self.backtrack(0);
