@@ -380,6 +380,7 @@ impl Solver {
             assert!(lemma.len() > 0);
             if lemma.len() == 1 {
                 // Learn a unit clause
+                debug_assert_eq!(self.decision_level(), 0);
                 self.assignment.unchecked_enqueue(lemma[0], None);
                 self.report("unit");
             } else {
