@@ -23,6 +23,7 @@ fn main() {
     let mut solver = Solver::from_file(Path::new(path));
     let time_create = time_start.elapsed();
     let res = solver.solve();
+    let time_total = time_start.elapsed();
     let format = &Locale::en;
     println!("Solver returned: {:?}", res);
     println!("vars:         {}", solver.num_vars().to_formatted_string(format));
@@ -32,7 +33,6 @@ fn main() {
     println!("propagations: {}", solver.num_propagations().to_formatted_string(format));
     println!("conflicts:    {}", solver.num_conflicts().to_formatted_string(format));
     println!("restarts:     {}", solver.num_restarts().to_formatted_string(format));
-    let time_total = time_start.elapsed();
     println!("time total:      {:?}", time_total);
     println!(
         "time create:     {:?} ({:.2}%)",
