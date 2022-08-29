@@ -403,6 +403,7 @@ impl Solver {
         }
 
         while let Some(p) = self.assignment.dequeue() {
+            debug_assert_eq!(self.level(p.var()), self.decision_level());
             // debug!("Propagating {:?}", p);
             self.propagations += 1;
             let false_literal = !p;
