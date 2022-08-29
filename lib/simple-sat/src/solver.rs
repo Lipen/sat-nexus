@@ -381,11 +381,10 @@ impl Solver {
                 self.report("unit");
             } else {
                 // Learn a clause
+                let asserting_literal = lemma[0];
                 let cref = self.ca.alloc(lemma, true);
                 self.attach_clause(cref);
-                let lemma = self.ca.clause(cref);
-                let asserting_literal = lemma[0];
-                self.assignment.unchecked_enqueue(asserting_literal, Some(cref));
+                self.assignment.enqueue(asserting_literal, Some(cref));
             }
 
             self.var_order.var_decay_activity();
