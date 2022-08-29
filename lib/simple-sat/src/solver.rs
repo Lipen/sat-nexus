@@ -124,8 +124,7 @@ impl Solver {
     }
     /// Number of original clauses.
     pub fn num_clauses(&self) -> usize {
-        // Note: `ca.num_clauses()` returns the number of ALL clauses (both original and learnt).
-        self.ca.num_clauses() - self.ca.num_learnts()
+        self.ca.num_clauses()
     }
     /// Number of learnt clauses.
     pub fn num_learnts(&self) -> usize {

@@ -5,15 +5,18 @@ use std::ops::{Index, IndexMut};
 
 #[derive(Debug)]
 pub struct ClauseAllocator {
-    /// All clauses (original and learnt).
-    clauses: Vec<Clause>,
-    /// References for learnt clauses.
+    /// Clause database: all clauses (original and learnt).
+    db: Vec<Clause>,
+    /// Original clauses.
+    clauses: Vec<ClauseRef>,
+    /// Learnt clauses.
     learnts: Vec<ClauseRef>,
 }
 
 impl ClauseAllocator {
     pub const fn new() -> Self {
         Self {
+            db: Vec::new(),
             clauses: Vec::new(),
             learnts: Vec::new(),
         }
@@ -28,11 +31,13 @@ impl ClauseAllocator {
 
     pub fn alloc(&mut self, lits: Vec<Lit>, learnt: bool) -> ClauseRef {
         let clause = Clause::new(lits, learnt);
-        let cref = ClauseRef(self.clauses.len());
-        if clause.learnt() {
+        let cref = ClauseRef(self.db.len());
+        self.db.push(clause);
+        if learnt {
             self.learnts.push(cref);
+        } else {
+            self.clauses.push(cref);
         }
-        self.clauses.push(clause);
         cref
     }
 }
@@ -48,14 +53,14 @@ impl Index<ClauseRef> for ClauseAllocator {
     type Output = Clause;
 
     fn index(&self, cref: ClauseRef) -> &Self::Output {
-        self.clauses.index(cref.0)
+        self.db.index(cref.0)
     }
 }
 
 // &mut ca[cref]
 impl IndexMut<ClauseRef> for ClauseAllocator {
     fn index_mut(&mut self, cref: ClauseRef) -> &mut Self::Output {
-        self.clauses.index_mut(cref.0)
+        self.db.index_mut(cref.0)
     }
 }
 
