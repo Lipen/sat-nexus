@@ -329,7 +329,10 @@ impl Solver {
         // CDCL loop
         loop {
             // Propagate, analyze, backtrack:
+            //  - Returns `true` if everything OK so far
+            //  - Returns `false` if conflict on root level was found (UNSAT)
             if !self.propagate_analyze_backtrack() {
+                info!("UNSAT");
                 return Some(false);
             }
 
@@ -342,8 +345,9 @@ impl Solver {
             }
 
             // Make a decision:
+            //  - Returns `true` if successfully made a decision.
+            //  - Returns `false` if no decision can be made (SAT).
             if !self.decide() {
-                // SAT
                 info!("SAT");
                 return Some(true);
             }
@@ -362,7 +366,6 @@ impl Solver {
 
             if self.decision_level() == 0 {
                 // conflict on root level => UNSAT
-                info!("UNSAT");
                 return false;
             }
 
