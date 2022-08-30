@@ -7,11 +7,18 @@ use crate::lit::Lit;
 pub struct Clause {
     lits: Vec<Lit>,
     learnt: bool,
+    deleted: bool,
+    pub(crate) activity: f64,
 }
 
 impl Clause {
     pub const fn new(lits: Vec<Lit>, learnt: bool) -> Self {
-        Self { lits, learnt }
+        Self {
+            lits,
+            learnt,
+            deleted: false,
+            activity: 0.0,
+        }
     }
 
     pub fn from_lits(lits: &[i32]) -> Self {
@@ -23,8 +30,20 @@ impl Clause {
         &self.lits
     }
 
-    pub fn learnt(&self) -> bool {
+    pub fn is_learnt(&self) -> bool {
         self.learnt
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.deleted
+    }
+
+    pub fn mark_deleted(&mut self) {
+        self.deleted = true;
+    }
+
+    pub fn activity(&self) -> f64 {
+        self.activity
     }
 
     pub fn len(&self) -> usize {

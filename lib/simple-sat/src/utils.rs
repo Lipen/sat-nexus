@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -65,4 +66,8 @@ where
     let time_start = Instant::now();
     let result = f();
     (time_start.elapsed(), result)
+}
+
+pub fn cmp_f64(a: f64, b: f64) -> Ordering {
+    PartialOrd::partial_cmp(&a, &b).unwrap()
 }

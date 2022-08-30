@@ -52,17 +52,28 @@ pub struct Solver {
     ok: bool,
     next_var: u32,
     // rng: StdRng,
-    // Statistics
+    // Statistics:
     decisions: usize,
     propagations: usize,
     conflicts: usize,
     restarts: usize,
-    // Timings
+    // Timings:
     pub time_search: Duration,
     pub time_propagate: Duration,
     pub time_analyze: Duration,
     pub time_backtrack: Duration,
     pub time_decide: Duration,
+    // For `reduce_db`:
+    max_learnts: f64,
+    learntsize_factor: f64,
+    learntsize_inc: f64,
+    learntsize_adjust_cnt: u64,
+    learntsize_adjust_confl: f64,
+    learntsize_adjust_start: f64,
+    learntsize_adjust_inc: f64,
+    // Clause activity:
+    cla_decay: f64,
+    cla_inc: f64,
 }
 
 impl Solver {
@@ -86,6 +97,15 @@ impl Solver {
             time_analyze: Duration::new(0, 0),
             time_backtrack: Duration::new(0, 0),
             time_decide: Duration::new(0, 0),
+            max_learnts: f64::MAX,
+            learntsize_factor: 0.3,
+            learntsize_inc: 1.1,
+            learntsize_adjust_cnt: 0,
+            learntsize_adjust_confl: 0.0,
+            learntsize_adjust_start: 100.0,
+            learntsize_adjust_inc: 1.5,
+            cla_decay: 0.999,
+            cla_inc: 1.0,
         }
     }
 }
@@ -258,6 +278,29 @@ impl Solver {
         self.watchlist.insert(b, Watcher { cref, blocker: a });
     }
 
+    fn cla_decay_activity(&mut self) {
+        self.cla_inc *= 1.0 / self.cla_decay;
+    }
+
+    fn cla_bump_activity(&mut self, cref: ClauseRef) {
+        let clause = self.ca.clause_mut(cref);
+        assert!(clause.is_learnt());
+
+        // Bump clause activity:
+        clause.activity += self.cla_inc;
+
+        // Rescale:
+        if clause.activity > 1e20 {
+            // Decrease the increment value:
+            self.cla_inc *= 1e-20;
+
+            // Decrease all activities:
+            for cref in self.ca.learnts.iter() {
+                self.ca.db[cref.0].activity *= 1e-20;
+            }
+        }
+    }
+
     fn report(&self, stage: &str) {
         info!(
             "{} lvl={} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
@@ -283,6 +326,10 @@ impl Solver {
         if self.decision_level() > 0 {
             self.backtrack(0);
         }
+
+        self.max_learnts = self.num_clauses() as f64 * self.learntsize_factor;
+        self.learntsize_adjust_confl = self.learntsize_adjust_start;
+        self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
 
         let restart_init = 100; // MiniSat: 100
         let restart_inc = 2.0; // MiniSat: 2.0
@@ -344,6 +391,13 @@ impl Solver {
                 return None;
             }
 
+            // Reduce DB:
+            let learnts_limit = self.max_learnts + self.assignment.trail.len() as f64;
+            if self.num_learnts() as f64 >= learnts_limit {
+                self.report("reduce");
+                self.reduce_db();
+            }
+
             // Make a decision:
             //  - Returns `true` if successfully made a decision.
             //  - Returns `false` if no decision can be made (SAT).
@@ -388,10 +442,13 @@ impl Solver {
                 let asserting_literal = lemma[0];
                 let cref = self.ca.alloc(lemma, true);
                 self.attach_clause(cref);
+                self.cla_bump_activity(cref);
                 self.assignment.enqueue(asserting_literal, Some(cref));
             }
 
             self.var_order.var_decay_activity();
+            self.cla_decay_activity();
+            self.update_reduce_db();
         }
         true
     }
@@ -426,14 +483,19 @@ impl Solver {
                     let Watcher { cref, blocker } = *i;
                     i = i.add(1);
 
+                    let clause = self.ca.clause_mut(cref);
+
+                    // Skip the deleted clause:
+                    if clause.is_deleted() {
+                        continue;
+                    }
+
                     // Try to avoid inspecting the clause:
                     if self.assignment.value(blocker) == LBool::True {
                         *j = Watcher { cref, blocker };
                         j = j.add(1);
                         continue;
                     }
-
-                    let clause = self.ca.clause_mut(cref);
 
                     // Make sure the false literal is at index 1:
                     if clause[0] == false_literal {
@@ -515,7 +577,13 @@ impl Solver {
         loop {
             let clause = self.ca.clause(reason);
 
-            // TODO: if conflict.learnt() { bump clause activity for 'conflict' }
+            // Bump `reason` clause activity:
+            if clause.is_learnt() {
+                self.cla_bump_activity(reason);
+            }
+
+            // reborrow (WHAT?)
+            let clause = self.ca.clause(reason);
 
             let start_index = if reason == conflict { 0 } else { 1 };
             for &q in &clause[start_index..] {
@@ -676,6 +744,23 @@ impl Solver {
         let sign = self.polarity[var];
 
         Lit::new(var, sign)
+    }
+
+    fn update_reduce_db(&mut self) {
+        self.learntsize_adjust_cnt -= 1;
+        if self.learntsize_adjust_cnt == 0 {
+            self.learntsize_adjust_confl *= self.learntsize_adjust_inc;
+            self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
+            self.max_learnts *= self.learntsize_inc;
+            info!(
+                "New max_learnts = {}, learntsize_adjust_cnt = {}",
+                self.max_learnts as u64, self.learntsize_adjust_cnt
+            );
+        }
+    }
+
+    fn reduce_db(&mut self) {
+        self.ca.reduce(&self.assignment);
     }
 }
 
