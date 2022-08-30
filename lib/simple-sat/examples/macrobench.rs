@@ -27,6 +27,8 @@ struct TheResult {
     num_decisions: usize,
     num_propagations: usize,
     num_conflicts: usize,
+    num_restarts: usize,
+    num_reduces: usize,
 }
 
 fn round_f64(x: f64, digits: i32) -> f64 {
@@ -68,6 +70,8 @@ fn main() -> color_eyre::Result<()> {
                 num_decisions: solver.num_decisions(),
                 num_propagations: solver.num_propagations(),
                 num_conflicts: solver.num_conflicts(),
+                num_restarts: solver.num_restarts(),
+                num_reduces: solver.num_reduces(),
             };
             println!("{:#?}", result);
 
@@ -98,6 +102,8 @@ fn main() -> color_eyre::Result<()> {
         num_decisions: usize,
         num_propagations: usize,
         num_conflicts: usize,
+        num_restarts: usize,
+        num_reduces: usize,
     }
 
     // Show the table with results:
@@ -112,6 +118,8 @@ fn main() -> color_eyre::Result<()> {
         num_decisions: res.num_decisions,
         num_propagations: res.num_propagations,
         num_conflicts: res.num_conflicts,
+        num_restarts: res.num_restarts,
+        num_reduces: res.num_reduces,
     });
     let table = Table::new(data).with(Style::modern());
     println!("{}", table);
