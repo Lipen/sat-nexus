@@ -191,7 +191,7 @@ impl Solver {
         self.var_order.push_zero_activity();
         self.var_order.insert_var_order(var);
 
-        // TODO: polarity, decision
+        // TODO: decision
 
         // println!("Solver::new_var -> {:?}", v);
         var
