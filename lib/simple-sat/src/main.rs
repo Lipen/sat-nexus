@@ -33,6 +33,7 @@ fn main() {
     println!("propagations: {}", solver.num_propagations().to_formatted_string(format));
     println!("conflicts:    {}", solver.num_conflicts().to_formatted_string(format));
     println!("restarts:     {}", solver.num_restarts().to_formatted_string(format));
+    println!("reduces:      {}", solver.num_reduces().to_formatted_string(format));
     println!("time total:      {:?}", time_total);
     println!(
         "time create:     {:?} ({:.2}%)",
@@ -63,6 +64,16 @@ fn main() {
         "time decide:     {:?} ({:.2}%)",
         solver.time_decide,
         100.0 * solver.time_decide.as_secs_f64() / time_total.as_secs_f64(),
+    );
+    println!(
+        "time restart:     {:?} ({:.2}%)",
+        solver.time_restart,
+        100.0 * solver.time_restart.as_secs_f64() / time_total.as_secs_f64(),
+    );
+    println!(
+        "time reduce:     {:?} ({:.2}%)",
+        solver.time_reduce,
+        100.0 * solver.time_reduce.as_secs_f64() / time_total.as_secs_f64(),
     );
     println!(
         "time insert_var_order: {:?} ({:.2}%) [{} times]",

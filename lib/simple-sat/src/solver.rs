@@ -57,12 +57,15 @@ pub struct Solver {
     propagations: usize,
     conflicts: usize,
     restarts: usize,
+    reduces: usize,
     // Timings:
     pub time_search: Duration,
     pub time_propagate: Duration,
     pub time_analyze: Duration,
     pub time_backtrack: Duration,
     pub time_decide: Duration,
+    pub time_restart: Duration,
+    pub time_reduce: Duration,
     // For `reduce_db`:
     max_learnts: f64,
     learntsize_factor: f64,
@@ -92,11 +95,14 @@ impl Solver {
             propagations: 0,
             conflicts: 0,
             restarts: 0,
+            reduces: 0,
             time_search: Duration::new(0, 0),
             time_propagate: Duration::new(0, 0),
             time_analyze: Duration::new(0, 0),
             time_backtrack: Duration::new(0, 0),
             time_decide: Duration::new(0, 0),
+            time_restart: Duration::new(0, 0),
+            time_reduce: Duration::new(0, 0),
             max_learnts: f64::MAX,
             learntsize_factor: 0.3,
             learntsize_inc: 1.1,
@@ -165,6 +171,10 @@ impl Solver {
     /// Number of restarts.
     pub fn num_restarts(&self) -> usize {
         self.restarts
+    }
+    /// Number of clause database reductions.
+    pub fn num_reduces(&self) -> usize {
+        self.reduces
     }
 
     /// Allocate a new variable.
@@ -303,10 +313,11 @@ impl Solver {
 
     fn report(&self, stage: &str) {
         info!(
-            "{} lvl={} rst={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
+            "{} lvl={} rst={} red={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
             stage,
             self.decision_level(),
             self.num_restarts(),
+            self.num_reduces(),
             self.num_decisions(),
             self.num_propagations(),
             self.num_conflicts(),
@@ -385,16 +396,13 @@ impl Solver {
 
             // Restart:
             if self.conflicts >= confl_limit {
-                self.restarts += 1;
-                self.report("restart");
-                self.backtrack(0);
+                self.restart();
                 return None;
             }
 
             // Reduce DB:
             let learnts_limit = self.max_learnts + self.assignment.trail.len() as f64;
             if self.num_learnts() as f64 >= learnts_limit {
-                self.report("reduce");
                 self.reduce_db();
             }
 
@@ -746,13 +754,21 @@ impl Solver {
         Lit::new(var, sign)
     }
 
+    fn restart(&mut self) {
+        let time_restart_start = Instant::now();
+        self.restarts += 1;
+        self.report("restart");
+        self.backtrack(0);
+        self.time_restart += time_restart_start.elapsed();
+    }
+
     fn update_reduce_db(&mut self) {
         self.learntsize_adjust_cnt -= 1;
         if self.learntsize_adjust_cnt == 0 {
             self.learntsize_adjust_confl *= self.learntsize_adjust_inc;
             self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
             self.max_learnts *= self.learntsize_inc;
-            info!(
+            debug!(
                 "New max_learnts = {}, learntsize_adjust_cnt = {}",
                 self.max_learnts as u64, self.learntsize_adjust_cnt
             );
@@ -760,7 +776,11 @@ impl Solver {
     }
 
     fn reduce_db(&mut self) {
+        let time_reduce_start = Instant::now();
+        self.reduces += 1;
+        self.report("reduce");
         self.ca.reduce(&self.assignment);
+        self.time_reduce += time_reduce_start.elapsed();
     }
 }
 
