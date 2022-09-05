@@ -16,7 +16,6 @@ use crate::idx::VarVec;
 use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::restart::RestartStrategy;
-use crate::utils::luby;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
 use crate::var::Var;
@@ -53,6 +52,7 @@ pub struct Solver {
     pub var_order: VarOrder,
     polarity: VarVec<bool>, // `pol=true` => negated lit; `false` => positive
     // seen: Vec<bool>,
+    pub restart_strategy: RestartStrategy,
     ok: bool,
     next_var: u32,
     // rng: StdRng,
@@ -90,6 +90,7 @@ impl Solver {
             var_order: VarOrder::new(),
             polarity: VarVec::new(),
             // seen: Vec::new(),
+            restart_strategy: RestartStrategy::new(),
             ok: true,
             next_var: 0,
             // rng: StdRng::seed_from_u64(42),
@@ -319,13 +320,16 @@ impl Solver {
         self.learntsize_adjust_confl = self.learntsize_adjust_start;
         self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
 
-        let is_luby = true;
-        let rs = RestartStrategy::new(is_luby);
+        if self.restart_strategy.is_luby {
+            info!("Using Luby restarts");
+        } else {
+            info!("Using exponential restarts");
+        }
 
         let mut status = None;
         let mut current_restarts = 0;
         while status.is_none() {
-            let num_confl = rs.num_confl(current_restarts);
+            let num_confl = self.restart_strategy.num_confl(current_restarts);
             let time_search_start = Instant::now();
             status = self.search(num_confl);
             current_restarts += 1;

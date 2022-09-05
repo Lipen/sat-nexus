@@ -1,18 +1,25 @@
 use crate::utils::luby;
 
+#[derive(Debug)]
 pub struct RestartStrategy {
-    is_luby: bool,
-    restart_init: usize,
-    restart_inc: f64,
+    pub is_luby: bool,
+    pub restart_init: usize,
+    pub restart_inc: f64,
 }
 
 impl RestartStrategy {
-    pub fn new(is_luby: bool) -> Self {
+    pub fn new() -> Self {
         Self {
-            is_luby,
+            is_luby: true,     // Luby restarts
             restart_init: 100, // MiniSat: 100
             restart_inc: 2.0,  // MiniSat: 2.0
         }
+    }
+}
+
+impl Default for RestartStrategy {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

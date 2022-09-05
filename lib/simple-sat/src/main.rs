@@ -1,29 +1,42 @@
-use std::env;
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::Instant;
 
+use clap::Parser;
 use num_format::{Locale, ToFormattedString};
 
 use simple_sat::solver::Solver;
 
+#[derive(Parser)]
+#[clap(author, version)]
+struct Cli {
+    /// Path to input CNF.
+    #[clap(value_name = "PATH")]
+    input: PathBuf,
+
+    /// Use luby restarts.
+    #[clap(long, action = clap::ArgAction::Set, default_value_t = true)]
+    luby: bool,
+}
+
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let args: Vec<String> = env::args().collect();
-    if args.len() <= 1 {
-        panic!("Too few arguments");
-    }
+    let cli = Cli::parse();
+    println!("input = {}", cli.input.display());
 
-    let path = &args[1];
-    // let path = "data/coloring.cnf";
-    // let path = "data/sgen/sgen_sat_n50_s42.cnf";
-    println!("path = {}", path);
-
+    // Initialize the solver from file:
     let time_start = Instant::now();
-    let mut solver = Solver::from_file(Path::new(path));
+    let mut solver = Solver::from_file(&cli.input);
     let time_create = time_start.elapsed();
+
+    // Setup the solver parameters:
+    solver.restart_strategy.is_luby = cli.luby;
+
+    // Solve:
     let res = solver.solve();
     let time_total = time_start.elapsed();
+
+    // Print the result and timings:
     let format = &Locale::en;
     println!("Solver returned: {:?}", res);
     println!("vars:         {}", solver.num_vars().to_formatted_string(format));
