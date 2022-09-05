@@ -6,20 +6,22 @@ use std::time::{Duration, Instant};
 use glob::glob;
 use itertools::Itertools;
 use serde::Serialize;
+use serde_with::serde_as;
+use serde_with::DurationSecondsWithFrac;
 use tabled::{Style, Table, Tabled};
 
 use simple_sat::solver::Solver;
 
-#[serde_with::serde_as]
+#[serde_as]
 #[derive(Debug, Serialize)]
 struct TheResult {
     path: PathBuf,
     res: bool,
-    #[serde_as(as = "serde_with::DurationSecondsWithFrac<f64>")]
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
     time_total: Duration,
-    #[serde_as(as = "serde_with::DurationSecondsWithFrac<f64>")]
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
     time_search: Duration,
-    #[serde_as(as = "serde_with::DurationSecondsWithFrac<f64>")]
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
     time_propagate: Duration,
     num_vars: usize,
     num_clauses: usize,
