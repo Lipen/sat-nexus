@@ -15,6 +15,7 @@ use crate::cref::ClauseRef;
 use crate::idx::VarVec;
 use crate::lbool::LBool;
 use crate::lit::Lit;
+use crate::restart::RestartStrategy;
 use crate::utils::luby;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
@@ -318,14 +319,13 @@ impl Solver {
         self.learntsize_adjust_confl = self.learntsize_adjust_start;
         self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
 
-        let restart_init = 100; // MiniSat: 100
-        let restart_inc = 2.0; // MiniSat: 2.0
+        let is_luby = true;
+        let rs = RestartStrategy::new(is_luby);
 
         let mut status = None;
         let mut current_restarts = 0;
         while status.is_none() {
-            let restart_base = luby(restart_inc, current_restarts);
-            let num_confl = (restart_base * restart_init as f64) as usize;
+            let num_confl = rs.num_confl(current_restarts);
             let time_search_start = Instant::now();
             status = self.search(num_confl);
             current_restarts += 1;
