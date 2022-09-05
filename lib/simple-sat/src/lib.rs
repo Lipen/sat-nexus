@@ -3,6 +3,7 @@ pub mod solver;
 pub mod assignment;
 pub mod clause;
 pub mod clause_allocator;
+pub mod clause_database;
 pub mod cref;
 pub mod idx;
 pub mod lbool;

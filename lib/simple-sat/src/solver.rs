@@ -10,6 +10,7 @@ use tracing::{debug, info};
 use crate::assignment::{Assignment, VarData};
 use crate::clause::Clause;
 use crate::clause_allocator::ClauseAllocator;
+use crate::clause_database::ClauseDatabase;
 use crate::cref::ClauseRef;
 use crate::idx::VarVec;
 use crate::lbool::LBool;
@@ -26,6 +27,7 @@ use crate::watch::{WatchList, Watcher};
 /// **Properties:**
 ///
 /// * `ca`: The clause allocator.
+/// * `db`: The clause database.
 /// * `watchlist`: A list of clauses that are watched by a variable.
 /// * `assignment`: The current assignment of the solver.
 /// * `var_order`: The variable order heuristic.
@@ -44,6 +46,7 @@ use crate::watch::{WatchList, Watcher};
 #[derive(Debug)]
 pub struct Solver {
     ca: ClauseAllocator,
+    db: ClauseDatabase,
     watchlist: WatchList,
     assignment: Assignment,
     pub var_order: VarOrder,
@@ -83,6 +86,7 @@ impl Solver {
     pub fn new() -> Self {
         Self {
             ca: ClauseAllocator::new(),
+            db: ClauseDatabase::new(),
             watchlist: WatchList::new(),
             assignment: Assignment::new(),
             var_order: VarOrder::new(),
@@ -150,11 +154,11 @@ impl Solver {
     }
     /// Number of original clauses.
     pub fn num_clauses(&self) -> usize {
-        self.ca.num_clauses()
+        self.db.num_clauses()
     }
     /// Number of learnt clauses.
     pub fn num_learnts(&self) -> usize {
-        self.ca.num_learnts()
+        self.db.num_learnts()
     }
     /// Number of decisions.
     pub fn num_decisions(&self) -> usize {
@@ -266,7 +270,7 @@ impl Solver {
         // TODO: handle unit clauses (better)
 
         if lits.len() >= 2 {
-            let cref = self.ca.alloc(lits.to_vec(), false);
+            let cref = self.db.add_clause(lits, false, &mut self.ca);
             self.attach_clause(cref);
         } else {
             assert_eq!(lits.len(), 1);
@@ -305,8 +309,8 @@ impl Solver {
             self.cla_inc *= 1e-20;
 
             // Decrease all activities:
-            for cref in self.ca.learnts.iter() {
-                self.ca.db[cref.0].activity *= 1e-20;
+            for &cref in self.db.learnts.iter() {
+                self.ca.clause_mut(cref).activity *= 1e-20;
             }
         }
     }
@@ -448,7 +452,7 @@ impl Solver {
             } else {
                 // Learn a clause
                 let asserting_literal = lemma[0];
-                let cref = self.ca.alloc(lemma, true);
+                let cref = self.db.add_clause(&lemma, true, &mut self.ca);
                 self.attach_clause(cref);
                 self.cla_bump_activity(cref);
                 self.assignment.enqueue(asserting_literal, Some(cref));
@@ -779,7 +783,7 @@ impl Solver {
         let time_reduce_start = Instant::now();
         self.reduces += 1;
         self.report("reduce");
-        self.ca.reduce(&self.assignment);
+        self.db.reduce(&self.assignment, &mut self.ca);
         self.time_reduce += time_reduce_start.elapsed();
     }
 }
