@@ -14,8 +14,8 @@ repos:
       - id: check-merge-conflict
       - id: fix-byte-order-marker
       - id: mixed-line-ending
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
+  - repo: https://github.com/r0x0d/pre-commit-rust
+    rev: v1.0.1
     hooks:
       - id: fmt
-      - id: cargo-check
+      - id: check
