@@ -14,7 +14,7 @@ struct Cli {
     input: PathBuf,
 
     /// Use luby restarts.
-    #[clap(long, action = clap::ArgAction::Set, default_value_t = true)]
+    #[clap(long, action = clap::ArgAction::Set, default_missing_value = "true", default_value_t = true)]
     luby: bool,
 }
 
@@ -22,7 +22,6 @@ fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let cli = Cli::parse();
-    println!("input = {}", cli.input.display());
 
     // Initialize the solver from file:
     let time_start = Instant::now();
