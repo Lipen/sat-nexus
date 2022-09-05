@@ -77,9 +77,6 @@ pub struct Solver {
     learntsize_adjust_confl: f64,
     learntsize_adjust_start: f64,
     learntsize_adjust_inc: f64,
-    // Clause activity:
-    cla_decay: f64,
-    cla_inc: f64,
 }
 
 impl Solver {
@@ -114,8 +111,6 @@ impl Solver {
             learntsize_adjust_confl: 0.0,
             learntsize_adjust_start: 100.0,
             learntsize_adjust_inc: 1.5,
-            cla_decay: 0.999,
-            cla_inc: 1.0,
         }
     }
 }
@@ -292,29 +287,6 @@ impl Solver {
         self.watchlist.insert(b, Watcher { cref, blocker: a });
     }
 
-    fn cla_decay_activity(&mut self) {
-        self.cla_inc *= 1.0 / self.cla_decay;
-    }
-
-    fn cla_bump_activity(&mut self, cref: ClauseRef) {
-        let clause = self.ca.clause_mut(cref);
-        assert!(clause.is_learnt());
-
-        // Bump clause activity:
-        clause.activity += self.cla_inc;
-
-        // Rescale:
-        if clause.activity > 1e20 {
-            // Decrease the increment value:
-            self.cla_inc *= 1e-20;
-
-            // Decrease all activities:
-            for &cref in self.db.learnts.iter() {
-                self.ca.clause_mut(cref).activity *= 1e-20;
-            }
-        }
-    }
-
     fn report(&self, stage: &str) {
         info!(
             "{} lvl={} rst={} red={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
@@ -454,12 +426,12 @@ impl Solver {
                 let asserting_literal = lemma[0];
                 let cref = self.db.add_clause(&lemma, true, &mut self.ca);
                 self.attach_clause(cref);
-                self.cla_bump_activity(cref);
+                self.db.cla_bump_activity(cref, &mut self.ca);
                 self.assignment.enqueue(asserting_literal, Some(cref));
             }
 
             self.var_order.var_decay_activity();
-            self.cla_decay_activity();
+            self.db.cla_decay_activity();
             self.update_reduce_db();
         }
         true
@@ -587,16 +559,10 @@ impl Solver {
         let mut index = self.assignment.trail.len();
 
         loop {
-            let clause = self.ca.clause(reason);
-
             // Bump `reason` clause activity:
-            if clause.is_learnt() {
-                self.cla_bump_activity(reason);
-            }
+            self.db.cla_bump_activity(reason, &mut self.ca);
 
-            // reborrow (WHAT?)
             let clause = self.ca.clause(reason);
-
             let start_index = if reason == conflict { 0 } else { 1 };
             for &q in &clause[start_index..] {
                 debug_assert_eq!(self.value(q), LBool::False);

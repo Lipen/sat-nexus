@@ -11,9 +11,12 @@ use crate::utils::cmp_f64;
 #[derive(Debug)]
 pub struct ClauseDatabase {
     /// Original clauses.
-    pub(crate) clauses: Vec<ClauseRef>,
+    clauses: Vec<ClauseRef>,
     /// Learnt clauses.
-    pub(crate) learnts: Vec<ClauseRef>,
+    learnts: Vec<ClauseRef>,
+    // Clause activity:
+    cla_decay: f64,
+    cla_inc: f64,
 }
 
 impl ClauseDatabase {
@@ -21,6 +24,8 @@ impl ClauseDatabase {
         Self {
             clauses: Vec::new(),
             learnts: Vec::new(),
+            cla_decay: 0.999,
+            cla_inc: 1.0,
         }
     }
 }
@@ -47,6 +52,32 @@ impl ClauseDatabase {
             self.clauses.push(cref);
         }
         cref
+    }
+
+    pub fn cla_decay_activity(&mut self) {
+        self.cla_inc *= 1.0 / self.cla_decay;
+    }
+
+    pub fn cla_bump_activity(&mut self, cref: ClauseRef, ca: &mut ClauseAllocator) {
+        let clause = ca.clause_mut(cref);
+
+        if !clause.is_learnt() {
+            return;
+        }
+
+        // Bump clause activity:
+        clause.activity += self.cla_inc;
+
+        // Rescale:
+        if clause.activity > 1e20 {
+            // Decrease the increment value:
+            self.cla_inc *= 1e-20;
+
+            // Decrease all activities:
+            for &cref in self.learnts.iter() {
+                ca.clause_mut(cref).activity *= 1e-20;
+            }
+        }
     }
 
     pub fn reduce(&mut self, assigns: &Assignment, ca: &mut ClauseAllocator) {
