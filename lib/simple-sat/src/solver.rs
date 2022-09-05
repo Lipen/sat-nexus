@@ -128,6 +128,7 @@ impl Solver {
     where
         P: AsRef<Path>,
     {
+        info!("Initializing solver from '{}'", path.as_ref().display());
         let mut solver = Self::new();
 
         for line in read_maybe_gzip(path).unwrap().lines().flatten() {
