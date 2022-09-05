@@ -33,7 +33,7 @@ jobs:
           cache-on-failure: true
 
       - name: Build all
-        run: cargo build --workspace --verbose
+        run: cargo build --workspace
 
       - name: Build and install MiniSat shared library (libminisat.so)
         working-directory: lib/minisat-sys/vendor/minisat
@@ -73,7 +73,7 @@ jobs:
             /usr/local/lib/libcadical.so
 
       - name: Test all
-        run: cargo test --workspace --verbose
+        run: cargo test --workspace
 
   build-windows:
     name: Build and test on Windows
@@ -96,7 +96,7 @@ jobs:
           cache-on-failure: true
 
       - name: Build all
-        run: cargo build --workspace --verbose
+        run: cargo build --workspace
 
       - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
@@ -146,7 +146,7 @@ jobs:
           path: libs/
 
       - name: Test all
-        run: cargo test --workspace --verbose
+        run: cargo test --workspace
 
   fmt:
     name: Rustfmt
