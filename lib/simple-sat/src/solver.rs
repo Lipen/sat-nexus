@@ -3,7 +3,7 @@ use std::mem;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 // use rand::rngs::StdRng;
 // use rand::{Rng, SeedableRng};
@@ -243,7 +243,12 @@ impl Solver {
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
         // assert_eq!(self.decision_level(), 0);
-        assert!(!lits.is_empty());
+
+        if lits.is_empty() {
+            warn!("Empty clause");
+            self.ok = false;
+            return false;
+        }
 
         // If the solver is already in UNSAT state, we do not need to add new clause.
         if !self.ok {
