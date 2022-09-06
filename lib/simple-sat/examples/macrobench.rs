@@ -56,7 +56,8 @@ fn main() -> color_eyre::Result<()> {
         .map(|path| {
             println!("==> Solving '{}'...", path.display());
             let time_total_start = Instant::now();
-            let mut solver = Solver::from_file(&path);
+            let mut solver = Solver::default();
+            solver.init_from_file(&path);
             let res = solver.solve();
             let time_total = time_total_start.elapsed();
 

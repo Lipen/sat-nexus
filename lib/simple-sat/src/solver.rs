@@ -15,6 +15,7 @@ use crate::cref::ClauseRef;
 use crate::idx::VarVec;
 use crate::lbool::LBool;
 use crate::lit::Lit;
+use crate::options::{Options, DEFAULT_OPTIONS};
 use crate::restart::RestartStrategy;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
@@ -52,7 +53,7 @@ pub struct Solver {
     pub var_order: VarOrder,
     polarity: VarVec<bool>, // `pol=true` => negated lit; `false` => positive
     // seen: Vec<bool>,
-    pub restart_strategy: RestartStrategy,
+    restart_strategy: RestartStrategy,
     ok: bool,
     next_var: u32,
     // rng: StdRng,
@@ -81,7 +82,7 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new() -> Self {
+    pub fn new(options: Options) -> Self {
         Self {
             ca: ClauseAllocator::new(),
             db: ClauseDatabase::new(),
@@ -90,7 +91,11 @@ impl Solver {
             var_order: VarOrder::new(),
             polarity: VarVec::new(),
             // seen: Vec::new(),
-            restart_strategy: RestartStrategy::new(),
+            restart_strategy: RestartStrategy {
+                is_luby: options.is_luby,
+                restart_init: options.restart_init,
+                restart_inc: options.restart_inc,
+            },
             ok: true,
             next_var: 0,
             // rng: StdRng::seed_from_u64(42),
@@ -107,30 +112,28 @@ impl Solver {
             time_restart: Duration::new(0, 0),
             time_reduce: Duration::new(0, 0),
             max_learnts: f64::MAX,
-            learntsize_factor: 0.3,
-            learntsize_inc: 1.1,
+            learntsize_factor: options.learntsize_factor,
+            learntsize_inc: options.learntsize_inc,
             learntsize_adjust_cnt: 0,
             learntsize_adjust_confl: 0.0,
-            learntsize_adjust_start: 100.0,
-            learntsize_adjust_inc: 1.5,
+            learntsize_adjust_start: options.learntsize_adjust_start,
+            learntsize_adjust_inc: options.learntsize_adjust_inc,
         }
     }
 }
 
 impl Default for Solver {
     fn default() -> Self {
-        Self::new()
+        Self::new(DEFAULT_OPTIONS)
     }
 }
 
 impl Solver {
-    pub fn from_file<P>(path: P) -> Self
+    pub fn init_from_file<P>(&mut self, path: P)
     where
         P: AsRef<Path>,
     {
         info!("Initializing solver from '{}'", path.as_ref().display());
-        let mut solver = Self::new();
-
         for line in read_maybe_gzip(path).unwrap().lines().flatten() {
             if line.starts_with('c') {
                 // println!("Skipping comment '{}'", s);
@@ -140,10 +143,8 @@ impl Solver {
                 continue;
             }
             let lits = parse_dimacs_clause(&line);
-            solver.add_clause(&lits);
+            self.add_clause(&lits);
         }
-
-        solver
     }
 
     /// Number of variables.
@@ -767,7 +768,7 @@ mod tests {
 
     #[test]
     fn test_correctness() {
-        let mut solver = Solver::new();
+        let mut solver = Solver::default();
 
         let tie = Lit::new(solver.new_var(), false);
         let shirt = Lit::new(solver.new_var(), false);

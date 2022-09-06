@@ -4,6 +4,8 @@ use std::time::Instant;
 use clap::Parser;
 use num_format::{Locale, ToFormattedString};
 
+use simple_sat::options::Options;
+use simple_sat::options::DEFAULT_OPTIONS;
 use simple_sat::solver::Solver;
 
 #[derive(Parser)]
@@ -14,7 +16,9 @@ struct Cli {
     input: PathBuf,
 
     /// Use luby restarts.
-    #[clap(long, action = clap::ArgAction::Set, default_missing_value = "true", default_value_t = true)]
+    #[clap(long, action = clap::ArgAction::Set)]
+    #[clap(default_missing_value = "true")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.is_luby)]
     luby: bool,
 }
 
@@ -23,13 +27,15 @@ fn main() {
 
     let cli = Cli::parse();
 
-    // Initialize the solver from file:
+    // Setup the solver:
     let time_start = Instant::now();
-    let mut solver = Solver::from_file(&cli.input);
+    let options = Options {
+        is_luby: cli.luby,
+        ..DEFAULT_OPTIONS
+    };
+    let mut solver = Solver::new(options);
+    solver.init_from_file(&cli.input);
     let time_create = time_start.elapsed();
-
-    // Setup the solver parameters:
-    solver.restart_strategy.is_luby = cli.luby;
 
     // Solve:
     let res = solver.solve();
