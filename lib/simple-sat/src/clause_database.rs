@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use tracing::info;
+use tracing::debug;
 
 use crate::assignment::Assignment;
 use crate::clause_allocator::ClauseAllocator;
@@ -120,6 +120,6 @@ impl ClauseDatabase {
         });
 
         let removed = learnts_before_remove - self.learnts.len();
-        info!("Removed {} clauses of {}", removed, learnts_before_remove);
+        debug!("Removed {} clauses of {}", removed, learnts_before_remove);
     }
 }
