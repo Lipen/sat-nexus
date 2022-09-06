@@ -84,6 +84,7 @@ impl Solver {
             restart_inc: options.restart_inc,
         };
         let learning_strategy = LearningStrategy {
+            min_learnts_limit: options.min_learnts_limit,
             learntsize_factor: options.learntsize_factor,
             learntsize_inc: options.learntsize_inc,
             learntsize_adjust_start: options.learntsize_adjust_start,

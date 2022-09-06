@@ -2,6 +2,7 @@ use tracing::debug;
 
 #[derive(Debug)]
 pub struct LearningStrategy {
+    pub min_learnts_limit: usize,
     pub learntsize_factor: f64,
     pub learntsize_inc: f64,
     pub learntsize_adjust_start: f64,
@@ -31,7 +32,7 @@ impl LearningGuard {
     }
 
     pub fn reset(&mut self, num_clauses: usize) {
-        self.max_learnts = num_clauses as f64 * self.strategy.learntsize_factor;
+        self.max_learnts = (num_clauses as f64 * self.strategy.learntsize_factor).max(self.strategy.min_learnts_limit as f64);
         self.learntsize_adjust_confl = self.strategy.learntsize_adjust_start;
         self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
     }
