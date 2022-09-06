@@ -132,8 +132,11 @@ impl Solver {
     {
         info!("Initializing solver from '{}'", path.as_ref().display());
         for line in read_maybe_gzip(path).unwrap().lines().flatten() {
-            if line.starts_with('c') {
-                // println!("Skipping comment '{}'", s);
+            if line.is_empty() {
+                debug!("Skipping empty line");
+                continue;
+            } else if line.starts_with('c') {
+                debug!("Skipping comment '{}'", line);
                 continue;
             } else if line.starts_with('p') {
                 debug!("Skipping header '{}'", line);
