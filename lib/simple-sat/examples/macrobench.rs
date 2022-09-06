@@ -43,7 +43,8 @@ fn main() -> color_eyre::Result<()> {
     let mut benchmarks = Vec::new();
 
     // Add benchmarks from `data` folder:
-    for e in glob("./data/easy/*.cnf.gz")? {
+    let s = "./data/easy/*.cnf.gz";
+    for e in glob(s)? {
         let path = e?;
         benchmarks.push(path);
     }
