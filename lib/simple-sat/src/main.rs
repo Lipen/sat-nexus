@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
+use clap::AppSettings;
 use clap::Parser;
 use num_format::{Locale, ToFormattedString};
 
@@ -8,18 +9,61 @@ use simple_sat::options::Options;
 use simple_sat::options::DEFAULT_OPTIONS;
 use simple_sat::solver::Solver;
 
+const HEADING_RESTART: &'static str = "RESTART OPTIONS";
+const HEADING_REDUCE_DB: &'static str = "REDUCE-DB OPTIONS";
+
 #[derive(Parser)]
 #[clap(author, version)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 struct Cli {
     /// Path to input CNF.
     #[clap(value_name = "PATH")]
     input: PathBuf,
 
     /// Use luby restarts.
-    #[clap(long, action = clap::ArgAction::Set)]
-    #[clap(default_missing_value = "true")]
+    #[clap(help_heading = HEADING_RESTART)]
+    #[clap(long, value_name = "BOOL")]
+    #[clap(action = clap::ArgAction::Set)]
+    // #[clap(default_missing_value = "true")]
     #[clap(default_value_t = DEFAULT_OPTIONS.is_luby)]
     luby: bool,
+
+    /// Base number of conflicts between restarts.
+    #[clap(help_heading = HEADING_RESTART)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.restart_init)]
+    restart_init: usize,
+
+    /// Increment value for the number of conflicts between restarts.
+    #[clap(help_heading = HEADING_RESTART)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.restart_inc)]
+    restart_inc: f64,
+
+    #[clap(help_heading = HEADING_REDUCE_DB)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.min_learnts_limit)]
+    min_learnts_limit: usize,
+
+    #[clap(help_heading = HEADING_REDUCE_DB)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_factor)]
+    learntsize_factor: f64,
+
+    #[clap(help_heading = HEADING_REDUCE_DB)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_inc)]
+    learntsize_inc: f64,
+
+    #[clap(help_heading = HEADING_REDUCE_DB)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_adjust_start)]
+    learntsize_adjust_start: f64,
+
+    #[clap(help_heading = HEADING_REDUCE_DB)]
+    #[clap(long, value_name = "NUM")]
+    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_adjust_inc)]
+    learntsize_adjust_inc: f64,
 }
 
 fn main() {
@@ -31,7 +75,14 @@ fn main() {
     let time_start = Instant::now();
     let options = Options {
         is_luby: cli.luby,
-        ..DEFAULT_OPTIONS
+        restart_init: cli.restart_init,
+        restart_inc: cli.restart_inc,
+        min_learnts_limit: cli.min_learnts_limit,
+        learntsize_factor: cli.learntsize_factor,
+        learntsize_inc: cli.learntsize_inc,
+        learntsize_adjust_start: cli.learntsize_adjust_start,
+        learntsize_adjust_inc: cli.learntsize_adjust_inc,
+        // ..DEFAULT_OPTIONS
     };
     let mut solver = Solver::new(options);
     solver.init_from_file(&cli.input);
