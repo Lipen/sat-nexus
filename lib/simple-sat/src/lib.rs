@@ -7,6 +7,7 @@ pub mod clause_database;
 pub mod cref;
 pub mod idx;
 pub mod lbool;
+pub mod learning;
 pub mod lit;
 pub mod options;
 pub mod restart;

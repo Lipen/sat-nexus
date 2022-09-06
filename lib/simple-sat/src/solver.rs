@@ -14,8 +14,10 @@ use crate::clause_database::ClauseDatabase;
 use crate::cref::ClauseRef;
 use crate::idx::VarVec;
 use crate::lbool::LBool;
+use crate::learning::{LearningGuard, LearningStrategy};
 use crate::lit::Lit;
-use crate::options::{Options, DEFAULT_OPTIONS};
+use crate::options::Options;
+use crate::options::DEFAULT_OPTIONS;
 use crate::restart::RestartStrategy;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
@@ -53,7 +55,8 @@ pub struct Solver {
     pub var_order: VarOrder,
     polarity: VarVec<bool>, // `pol=true` => negated lit; `false` => positive
     // seen: Vec<bool>,
-    restart_strategy: RestartStrategy,
+    pub restart_strategy: RestartStrategy,
+    pub learning_guard: LearningGuard,
     ok: bool,
     next_var: u32,
     // rng: StdRng,
@@ -71,18 +74,22 @@ pub struct Solver {
     pub time_decide: Duration,
     pub time_restart: Duration,
     pub time_reduce: Duration,
-    // For `reduce_db`:
-    max_learnts: f64,
-    learntsize_factor: f64,
-    learntsize_inc: f64,
-    learntsize_adjust_cnt: u64,
-    learntsize_adjust_confl: f64,
-    learntsize_adjust_start: f64,
-    learntsize_adjust_inc: f64,
 }
 
 impl Solver {
     pub fn new(options: Options) -> Self {
+        let restart_strategy = RestartStrategy {
+            is_luby: options.is_luby,
+            restart_init: options.restart_init,
+            restart_inc: options.restart_inc,
+        };
+        let learning_strategy = LearningStrategy {
+            learntsize_factor: options.learntsize_factor,
+            learntsize_inc: options.learntsize_inc,
+            learntsize_adjust_start: options.learntsize_adjust_start,
+            learntsize_adjust_inc: options.learntsize_adjust_inc,
+        };
+        let learning_guard = LearningGuard::new(learning_strategy);
         Self {
             ca: ClauseAllocator::new(),
             db: ClauseDatabase::new(),
@@ -91,11 +98,8 @@ impl Solver {
             var_order: VarOrder::new(),
             polarity: VarVec::new(),
             // seen: Vec::new(),
-            restart_strategy: RestartStrategy {
-                is_luby: options.is_luby,
-                restart_init: options.restart_init,
-                restart_inc: options.restart_inc,
-            },
+            restart_strategy,
+            learning_guard,
             ok: true,
             next_var: 0,
             // rng: StdRng::seed_from_u64(42),
@@ -111,13 +115,6 @@ impl Solver {
             time_decide: Duration::new(0, 0),
             time_restart: Duration::new(0, 0),
             time_reduce: Duration::new(0, 0),
-            max_learnts: f64::MAX,
-            learntsize_factor: options.learntsize_factor,
-            learntsize_inc: options.learntsize_inc,
-            learntsize_adjust_cnt: 0,
-            learntsize_adjust_confl: 0.0,
-            learntsize_adjust_start: options.learntsize_adjust_start,
-            learntsize_adjust_inc: options.learntsize_adjust_inc,
         }
     }
 }
@@ -318,9 +315,8 @@ impl Solver {
             self.backtrack(0);
         }
 
-        self.max_learnts = self.num_clauses() as f64 * self.learntsize_factor;
-        self.learntsize_adjust_confl = self.learntsize_adjust_start;
-        self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
+        // Reset the limits for reduceDB:
+        self.learning_guard.reset(self.num_clauses());
 
         if self.restart_strategy.is_luby {
             info!("Using Luby restarts");
@@ -383,8 +379,8 @@ impl Solver {
             }
 
             // Reduce DB:
-            let learnts_limit = self.max_learnts + self.assignment.trail.len() as f64;
-            if self.num_learnts() as f64 >= learnts_limit {
+            let learnts_limit = self.learning_guard.limit(self.assignment.trail.len());
+            if self.num_learnts() >= learnts_limit {
                 self.reduce_db();
             }
 
@@ -438,7 +434,7 @@ impl Solver {
 
             self.var_order.var_decay_activity();
             self.db.cla_decay_activity();
-            self.update_reduce_db();
+            self.learning_guard.bump();
         }
         true
     }
@@ -738,19 +734,6 @@ impl Solver {
         self.time_restart += time_restart_start.elapsed();
     }
 
-    fn update_reduce_db(&mut self) {
-        self.learntsize_adjust_cnt -= 1;
-        if self.learntsize_adjust_cnt == 0 {
-            self.learntsize_adjust_confl *= self.learntsize_adjust_inc;
-            self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
-            self.max_learnts *= self.learntsize_inc;
-            debug!(
-                "New max_learnts = {}, learntsize_adjust_cnt = {}",
-                self.max_learnts as u64, self.learntsize_adjust_cnt
-            );
-        }
-    }
-
     fn reduce_db(&mut self) {
         let time_reduce_start = Instant::now();
         self.reduces += 1;
@@ -762,9 +745,9 @@ impl Solver {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use test_log::test;
+
+    use super::*;
 
     #[test]
     fn test_correctness() {
