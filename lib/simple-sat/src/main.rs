@@ -93,18 +93,6 @@ fn main() {
         solver.time_reduce,
         100.0 * solver.time_reduce.as_secs_f64() / time_total.as_secs_f64(),
     );
-    println!(
-        "time insert_var_order: {:?} ({:.2}%) [{} times]",
-        solver.var_order.time_insert_var_order,
-        100.0 * solver.var_order.time_insert_var_order.as_secs_f64() / time_total.as_secs_f64(),
-        solver.var_order.num_insert_var_order,
-    );
-    println!(
-        "time update_var_order: {:?} ({:.2}%) [{} times]",
-        solver.var_order.time_update_var_order,
-        100.0 * solver.var_order.time_update_var_order.as_secs_f64() / time_total.as_secs_f64(),
-        solver.var_order.num_update_var_order,
-    );
 
     println!("All done in {:?}", time_start.elapsed());
 }

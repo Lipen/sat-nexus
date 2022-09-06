@@ -52,7 +52,7 @@ pub struct Solver {
     db: ClauseDatabase,
     watchlist: WatchList,
     assignment: Assignment,
-    pub var_order: VarOrder,
+    var_order: VarOrder,
     polarity: VarVec<bool>, // `pol=true` => negated lit; `false` => positive
     // seen: Vec<bool>,
     pub restart_strategy: RestartStrategy,

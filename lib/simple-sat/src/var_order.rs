@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use tracing::debug;
 
 use crate::assignment::Assignment;
@@ -12,11 +10,6 @@ pub struct VarOrder {
     order_heap: VarHeap,
     var_decay: f64,
     var_inc: f64,
-    // Timings
-    pub time_insert_var_order: Duration,
-    pub num_insert_var_order: usize,
-    pub time_update_var_order: Duration,
-    pub num_update_var_order: usize,
 }
 
 impl VarOrder {
@@ -26,10 +19,6 @@ impl VarOrder {
             order_heap: VarHeap::new(),
             var_decay: 0.95,
             var_inc: 1.0,
-            time_insert_var_order: Duration::new(0, 0),
-            num_insert_var_order: 0,
-            time_update_var_order: Duration::new(0, 0),
-            num_update_var_order: 0,
         }
     }
 }
@@ -77,33 +66,21 @@ impl VarOrder {
     }
 
     pub fn insert_var_order(&mut self, var: Var) {
-        let time_insert_var_order_start = Instant::now();
-
         self.order_heap.insert_by(var, |&a, &b| self.activity[a] > self.activity[b]);
         // self.order_heap.insert_by(var, |&a, &b| match act[a].total_cmp(&act[b]) {
         //     Ordering::Less => false,
         //     Ordering::Equal => a.0 < b.0,
         //     Ordering::Greater => true,
         // });
-
-        let time_insert_var_order = time_insert_var_order_start.elapsed();
-        self.time_insert_var_order += time_insert_var_order;
-        self.num_insert_var_order += 1;
     }
 
     pub fn update_var_order(&mut self, var: Var) {
-        let time_update_var_order_start = Instant::now();
-
         self.order_heap.update_by(var, |&a, &b| self.activity[a] > self.activity[b]);
         // self.order_heap.update_by(var, |&a, &b| match self.activity[a].total_cmp(&self.activity[b]) {
         //     Ordering::Less => false,
         //     Ordering::Equal => a.0 < b.0,
         //     Ordering::Greater => true,
         // });
-
-        let time_update_var_order = time_update_var_order_start.elapsed();
-        self.time_update_var_order += time_update_var_order;
-        self.num_update_var_order += 1;
     }
 
     pub fn pick_branching_variable(&mut self, assignment: &Assignment) -> Option<Var> {
