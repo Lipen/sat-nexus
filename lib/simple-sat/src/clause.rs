@@ -1,6 +1,8 @@
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
 
+use crate::assignment::Assignment;
+use crate::lbool::LBool;
 use crate::lit::Lit;
 
 #[derive(Debug, Clone)]
@@ -56,6 +58,10 @@ impl Clause {
 
     pub fn iter(&self) -> std::slice::Iter<Lit> {
         self.lits.iter()
+    }
+
+    pub fn is_satisfied(&self, assignment: &Assignment) -> bool {
+        self.lits.iter().any(|&lit| assignment.value(lit) == LBool::True)
     }
 }
 
