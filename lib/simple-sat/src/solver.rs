@@ -710,7 +710,7 @@ impl Solver {
     }
 
     fn backtrack(&mut self, level: usize) {
-        debug!("backtrack from {} to {}", self.decision_level(), level);
+        debug!("Backtrack from {} to {}", self.decision_level(), level);
 
         let time_backtrack_start = Instant::now();
 
