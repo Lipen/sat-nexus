@@ -1,8 +1,10 @@
+use std::fmt::{Display, Formatter};
 use std::io::BufRead;
 use std::mem;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use serde_with::SerializeDisplay;
 use tracing::{debug, info, warn};
 
 // use rand::rngs::StdRng;
@@ -19,11 +21,40 @@ use crate::lit::Lit;
 use crate::options::Options;
 use crate::options::DEFAULT_OPTIONS;
 use crate::restart::RestartStrategy;
+use crate::utils::measure_time;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
 use crate::var::Var;
 use crate::var_order::VarOrder;
 use crate::watch::{WatchList, Watcher};
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, SerializeDisplay)]
+pub enum SolveResult {
+    Sat,
+    Unsat,
+    Unknown,
+}
+
+impl Display for SolveResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                SolveResult::Sat => "SAT",
+                SolveResult::Unsat => "UNSAT",
+                SolveResult::Unknown => "UNKNOWN",
+            }
+        )
+    }
+}
+
+#[derive(Debug)]
+enum SearchResult {
+    Sat,
+    Unsat,
+    Restart,
+}
 
 /// CDCL SAT solver.
 ///
@@ -313,10 +344,10 @@ impl Solver {
         );
     }
 
-    pub fn solve(&mut self) -> bool {
+    pub fn solve(&mut self) -> SolveResult {
         // If the solver is already in UNSAT state, return early.
         if !self.ok {
-            return false;
+            return SolveResult::Unsat;
         }
 
         // Make sure to start from the 0th level:
@@ -333,19 +364,28 @@ impl Solver {
             info!("Using exponential restarts");
         }
 
-        let mut status = None;
+        let mut status = SolveResult::Unknown;
         let mut current_restarts = 0;
-        while status.is_none() {
+        while status == SolveResult::Unknown {
             let num_confl = self.restart_strategy.num_confl(current_restarts);
             let time_search_start = Instant::now();
-            status = self.search(num_confl);
-            current_restarts += 1;
+            match self.search(num_confl) {
+                SearchResult::Sat => {
+                    status = SolveResult::Sat;
+                }
+                SearchResult::Unsat => {
+                    status = SolveResult::Unsat;
+                }
+                SearchResult::Restart => {
+                    // Restart => do nothing here
+                }
+            }
             let time_search = time_search_start.elapsed();
             self.time_search += time_search;
+            current_restarts += 1;
             debug!("Search #{} done in {:?}", current_restarts, time_search);
         }
-
-        status.unwrap()
+        status
     }
 
     /// The function `search` is the main CDCL loop.
@@ -365,7 +405,7 @@ impl Solver {
     /// - [`Some(true)`][Some] if the formula is satisfiable (no more unassigned variables),
     /// - [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
     /// - [`None`] if it is unknown yet (for example, a restart occurred).
-    fn search(&mut self, num_confl: usize) -> Option<bool> {
+    fn search(&mut self, num_confl: usize) -> SearchResult {
         assert!(self.ok);
         assert_eq!(self.decision_level(), 0);
 
@@ -378,13 +418,13 @@ impl Solver {
             //  - Returns `false` if conflict on root level was found (UNSAT)
             if !self.propagate_analyze_backtrack() {
                 info!("UNSAT");
-                return Some(false);
+                return SearchResult::Unsat;
             }
 
             // Restart:
             if self.conflicts >= confl_limit {
                 self.restart();
-                return None;
+                return SearchResult::Restart;
             }
 
             // Reduce DB:
@@ -398,7 +438,7 @@ impl Solver {
             //  - Returns `false` if no decision can be made (SAT).
             if !self.decide() {
                 info!("SAT");
-                return Some(true);
+                return SearchResult::Sat;
             }
         }
     }
@@ -771,7 +811,7 @@ mod tests {
 
         // Problem is satisfiable.
         let res = solver.solve();
-        assert_eq!(res, true);
+        assert_eq!(res, SolveResult::Sat);
 
         // Check TIE is false, SHIRT is true.
         assert_eq!(solver.value(tie), LBool::False);
@@ -782,6 +822,6 @@ mod tests {
 
         // Problem is now unsatisfiable.
         let res = solver.solve();
-        assert_eq!(res, false);
+        assert_eq!(res, SolveResult::Unsat);
     }
 }

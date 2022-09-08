@@ -10,13 +10,13 @@ use serde_with::serde_as;
 use serde_with::DurationSecondsWithFrac;
 use tabled::{Style, Table, Tabled};
 
-use simple_sat::solver::Solver;
+use simple_sat::solver::{SolveResult, Solver};
 
 #[serde_as]
 #[derive(Debug, Serialize)]
 struct TheResult {
     path: PathBuf,
-    res: bool,
+    result: SolveResult,
     #[serde_as(as = "DurationSecondsWithFrac<f64>")]
     time_total: Duration,
     #[serde_as(as = "DurationSecondsWithFrac<f64>")]
@@ -59,12 +59,12 @@ fn main() -> color_eyre::Result<()> {
             let time_total_start = Instant::now();
             let mut solver = Solver::default();
             solver.init_from_file(&path);
-            let res = solver.solve();
+            let result = solver.solve();
             let time_total = time_total_start.elapsed();
 
             let result = TheResult {
                 path,
-                res,
+                result,
                 time_total,
                 time_search: solver.time_search,
                 time_propagate: solver.time_propagate,
@@ -96,8 +96,7 @@ fn main() -> color_eyre::Result<()> {
     #[derive(Tabled)]
     struct TableLine {
         name: String,
-        #[tabled(rename = "SAT")]
-        res: bool,
+        result: SolveResult,
         time_total: f64,
         time_propagate: f64,
         num_vars: usize,
@@ -113,7 +112,7 @@ fn main() -> color_eyre::Result<()> {
     // Show the table with results:
     let data = results.into_iter().sorted_by_key(|r| Reverse(r.time_total)).map(|res| TableLine {
         name: res.path.file_name().unwrap().to_string_lossy().to_string(),
-        res: res.res,
+        result: res.result,
         time_total: round_f64(res.time_total.as_secs_f64(), 3),
         time_propagate: round_f64(res.time_propagate.as_secs_f64(), 3),
         num_vars: res.num_vars,

@@ -11,7 +11,7 @@ use serde_with::DurationSecondsWithFrac;
 
 use simple_sat::options::Options;
 use simple_sat::options::DEFAULT_OPTIONS;
-use simple_sat::solver::Solver;
+use simple_sat::solver::{SolveResult, Solver};
 
 const HEADING_RESTART: &'static str = "RESTART OPTIONS";
 const HEADING_REDUCE_DB: &'static str = "REDUCE-DB OPTIONS";
@@ -78,7 +78,7 @@ struct Cli {
 #[derive(Debug, Serialize)]
 struct TheResult {
     name: String,
-    res: bool,
+    result: SolveResult,
     #[serde_as(as = "DurationSecondsWithFrac<f64>")]
     time_total: Duration,
     #[serde_as(as = "DurationSecondsWithFrac<f64>")]
@@ -118,12 +118,12 @@ fn main() -> color_eyre::Result<()> {
     let time_create = time_start.elapsed();
 
     // Solve:
-    let res = solver.solve();
+    let result = solver.solve();
     let time_total = time_start.elapsed();
 
     let result = TheResult {
         name: cli.input.file_name().unwrap().to_str().unwrap().to_string(),
-        res,
+        result,
         time_total,
         time_search: solver.time_search,
         time_propagate: solver.time_propagate,
@@ -146,7 +146,7 @@ fn main() -> color_eyre::Result<()> {
 
     // Print the result and timings:
     let format = &Locale::en;
-    println!("Solver returned: {:?}", res);
+    println!("Solver returned: {:?}", result);
     println!("vars:         {}", solver.num_vars().to_formatted_string(format));
     println!("clauses:      {}", solver.num_clauses().to_formatted_string(format));
     println!("learnts:      {}", solver.num_learnts().to_formatted_string(format));
