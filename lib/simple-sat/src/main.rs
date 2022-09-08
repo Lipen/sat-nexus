@@ -1,9 +1,13 @@
+use std::fs::File;
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use clap::AppSettings;
 use clap::Parser;
 use num_format::{Locale, ToFormattedString};
+use serde::Serialize;
+use serde_with::serde_as;
+use serde_with::DurationSecondsWithFrac;
 
 use simple_sat::options::Options;
 use simple_sat::options::DEFAULT_OPTIONS;
@@ -19,6 +23,10 @@ struct Cli {
     /// Path to input CNF.
     #[clap(value_name = "PATH")]
     input: PathBuf,
+
+    /// Path to output results.
+    #[clap(short, long, value_name = "PATH")]
+    output: Option<PathBuf>,
 
     /// Use luby restarts.
     #[clap(help_heading = HEADING_RESTART)]
@@ -66,7 +74,28 @@ struct Cli {
     learntsize_adjust_inc: f64,
 }
 
-fn main() {
+#[serde_as]
+#[derive(Debug, Serialize)]
+struct TheResult {
+    name: String,
+    res: bool,
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
+    time_total: Duration,
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
+    time_search: Duration,
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
+    time_propagate: Duration,
+    num_vars: usize,
+    num_clauses: usize,
+    num_learnts: usize,
+    num_decisions: usize,
+    num_propagations: usize,
+    num_conflicts: usize,
+    num_restarts: usize,
+    num_reduces: usize,
+}
+
+fn main() -> color_eyre::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let cli = Cli::parse();
@@ -91,6 +120,29 @@ fn main() {
     // Solve:
     let res = solver.solve();
     let time_total = time_start.elapsed();
+
+    let result = TheResult {
+        name: cli.input.file_name().unwrap().to_str().unwrap().to_string(),
+        res,
+        time_total,
+        time_search: solver.time_search,
+        time_propagate: solver.time_propagate,
+        num_vars: solver.num_vars(),
+        num_clauses: solver.num_clauses(),
+        num_learnts: solver.num_learnts(),
+        num_decisions: solver.num_decisions(),
+        num_propagations: solver.num_propagations(),
+        num_conflicts: solver.num_conflicts(),
+        num_restarts: solver.num_restarts(),
+        num_reduces: solver.num_reduces(),
+    };
+    // println!("{:#?}", result);
+
+    // Dump the result:
+    if let Some(output) = cli.output {
+        println!("Writing result to '{}'...", output.display());
+        serde_json::to_writer_pretty(File::create(output)?, &result)?;
+    }
 
     // Print the result and timings:
     let format = &Locale::en;
@@ -146,4 +198,5 @@ fn main() {
     );
 
     println!("All done in {:?}", time_start.elapsed());
+    Ok(())
 }
