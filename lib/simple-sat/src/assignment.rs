@@ -57,6 +57,13 @@ impl Assignment {
         self.var_data[var].level
     }
 
+    pub fn fixed(&self, lit: Lit) -> LBool {
+        return if self.level(lit.var()) > 0 { LBool::Undef } else { self.value(lit) };
+    }
+    pub fn fixed_var(&self, var: Var) -> LBool {
+        return if self.level(var) > 0 { LBool::Undef } else { self.value_var(var) };
+    }
+
     pub fn decision_level(&self) -> usize {
         self.trail_lim.len()
     }
