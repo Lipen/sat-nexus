@@ -21,7 +21,6 @@ use crate::lit::Lit;
 use crate::options::Options;
 use crate::options::DEFAULT_OPTIONS;
 use crate::restart::RestartStrategy;
-use crate::utils::measure_time;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
 use crate::var::Var;
