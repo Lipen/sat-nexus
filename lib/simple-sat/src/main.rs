@@ -121,7 +121,7 @@ fn main() -> color_eyre::Result<()> {
     let result = solver.solve();
     let time_total = time_start.elapsed();
 
-    let result = TheResult {
+    let res = TheResult {
         name: cli.input.file_name().unwrap().to_str().unwrap().to_string(),
         result,
         time_total,
@@ -141,7 +141,7 @@ fn main() -> color_eyre::Result<()> {
     // Dump the result:
     if let Some(output) = cli.output {
         println!("Writing result to '{}'...", output.display());
-        serde_json::to_writer_pretty(File::create(output)?, &result)?;
+        serde_json::to_writer_pretty(File::create(output)?, &res)?;
     }
 
     // Print the result and timings:
