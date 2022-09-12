@@ -5,6 +5,7 @@ use tracing::debug;
 use crate::assignment::Assignment;
 use crate::clause_allocator::ClauseAllocator;
 use crate::cref::ClauseRef;
+use crate::lbool::LBool;
 use crate::lit::Lit;
 use crate::utils::cmp_f64;
 
@@ -80,7 +81,28 @@ impl ClauseDatabase {
         }
     }
 
-    pub fn reduce(&mut self, assigns: &Assignment, ca: &mut ClauseAllocator) {
+    pub fn reduce(&mut self, assignment: &Assignment, ca: &mut ClauseAllocator) {
+        let all_clauses = self.clauses.iter().chain(self.learnts.iter());
+        for &cref in all_clauses {
+            let clause = ca.clause_mut(cref);
+            if clause.is_deleted() {
+                continue;
+            }
+            match clause.contains_fixed_literal(assignment) {
+                LBool::True => {
+                    debug!("{:?} contains satisfied literal => deleting", clause);
+                    clause.mark_deleted();
+                }
+                LBool::False => {
+                    debug!("{:?} contains falsified literal => shrinking", clause);
+                    clause.remove_falsified_literals(assignment);
+                }
+                LBool::Undef => {}
+            }
+        }
+
+        // =============================================
+
         self.learnts.sort_by(|&a, &b| {
             let x = ca.clause(a);
             let y = ca.clause(b);
@@ -109,7 +131,7 @@ impl ClauseDatabase {
                 return false;
             }
 
-            let remove = c.len() > 2 && assigns.reason(c[0].var()) != Some(cref) && (i < index_lim || c.activity() < extra_lim);
+            let remove = c.len() > 2 && assignment.reason(c[0].var()) != Some(cref) && (i < index_lim || c.activity() < extra_lim);
             i += 1;
             if remove {
                 ca.free(cref);

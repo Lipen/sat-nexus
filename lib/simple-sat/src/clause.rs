@@ -1,6 +1,8 @@
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
 
+use tracing::debug;
+
 use crate::assignment::Assignment;
 use crate::lbool::LBool;
 use crate::lit::Lit;
@@ -60,8 +62,53 @@ impl Clause {
         self.lits.iter()
     }
 
-    pub fn is_satisfied(&self, assignment: &Assignment) -> bool {
+    pub(crate) fn is_satisfied(&self, assignment: &Assignment) -> bool {
         self.lits.iter().any(|&lit| assignment.value(lit) == LBool::True)
+    }
+
+    /// **Returns:**
+    ///
+    /// - [`LBool::True`], if clause contains root-level satisfied literal,
+    /// - [`LBool::False`], if clause contains root-level falsified literal,
+    /// - [`LBool::Undef`], if clause does not contain any fixed literal.
+    pub(crate) fn contains_fixed_literal(&self, assignment: &Assignment) -> LBool {
+        let mut num_satisfied: usize = 0;
+        let mut num_falsified: usize = 0;
+        for &lit in self.lits.iter() {
+            match assignment.fixed(lit) {
+                LBool::True => {
+                    debug!("Root-level satisfied literal {:?} in {:?}", lit, self);
+                    num_satisfied += 1
+                }
+                LBool::False => {
+                    debug!("Root-level falsified literal {:?} in {:?}", lit, self);
+                    num_falsified += 1;
+                }
+                LBool::Undef => {}
+            }
+        }
+        if num_satisfied > 0 {
+            LBool::True
+        } else if num_falsified > 0 {
+            LBool::False
+        } else {
+            LBool::Undef
+        }
+    }
+
+    pub(crate) fn remove_falsified_literals(&mut self, assignment: &Assignment) {
+        assert_eq!(assignment.value(self.lits[0]), LBool::Undef);
+        assert_eq!(assignment.value(self.lits[1]), LBool::Undef);
+        let mut i = 2;
+        let mut j = self.lits.len();
+        while i < j {
+            if assignment.fixed(self.lits[i]) == LBool::False {
+                self.lits.swap_remove(i);
+                j -= 1;
+            } else {
+                i += 1;
+            }
+        }
     }
 }
 
