@@ -97,18 +97,7 @@ impl Clause {
     }
 
     pub(crate) fn remove_falsified_literals(&mut self, assignment: &Assignment) {
-        assert_eq!(assignment.value(self.lits[0]), LBool::Undef);
-        assert_eq!(assignment.value(self.lits[1]), LBool::Undef);
-        let mut i = 2;
-        let mut j = self.lits.len();
-        while i < j {
-            if assignment.fixed(self.lits[i]) == LBool::False {
-                self.lits.swap_remove(i);
-                j -= 1;
-            } else {
-                i += 1;
-            }
-        }
+        self.lits.retain(|&lit| assignment.fixed(lit) != LBool::False);
     }
 }
 
