@@ -81,7 +81,7 @@ impl ClauseDatabase {
         }
     }
 
-    pub fn reduce(&mut self, assignment: &Assignment, ca: &mut ClauseAllocator) {
+    pub fn simplify(&mut self, assignment: &Assignment, ca: &mut ClauseAllocator) {
         let all_clauses = self.clauses.iter().chain(self.learnts.iter());
         for &cref in all_clauses {
             let clause = ca.clause_mut(cref);
@@ -100,8 +100,10 @@ impl ClauseDatabase {
                 LBool::Undef => {}
             }
         }
+    }
 
-        // =============================================
+    pub fn reduce(&mut self, assignment: &Assignment, ca: &mut ClauseAllocator) {
+        self.simplify(assignment, ca);
 
         self.learnts.sort_by(|&a, &b| {
             let x = ca.clause(a);
