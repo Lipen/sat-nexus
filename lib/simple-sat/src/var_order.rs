@@ -12,24 +12,27 @@ pub struct VarOrder {
     var_inc: f64,
 }
 
+const DEFAULT_VAR_DECAY: f64 = 0.95;
+const DEFAULT_VAR_INC: f64 = 1.0;
+
 impl VarOrder {
     pub fn new() -> Self {
         Self {
             activity: VarVec::new(),
             order_heap: VarHeap::new(),
-            var_decay: 0.95,
-            var_inc: 1.0,
+            var_decay: DEFAULT_VAR_DECAY,
+            var_inc: DEFAULT_VAR_INC,
         }
     }
-}
 
-impl Default for VarOrder {
-    fn default() -> Self {
-        Self::new()
+    pub fn clear(&mut self) {
+        *self = Self::new();
+        // self.activity.clear();
+        // self.order_heap.clear();
+        // self.var_decay = DEFAULT_VAR_DECAY;
+        // self.var_inc = DEFAULT_VAR_INC;
     }
-}
 
-impl VarOrder {
     pub(crate) fn push_zero_activity(&mut self) {
         self.activity.push(0.0);
     }

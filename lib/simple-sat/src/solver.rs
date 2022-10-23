@@ -53,6 +53,7 @@ enum SearchResult {
     Sat,
     Unsat,
     Restart,
+    AssumptionsConflict(Vec<Lit>),
 }
 
 /// CDCL SAT solver.
@@ -211,6 +212,15 @@ impl Solver {
         self.reduces
     }
 
+    /// Reset the solver state.
+    pub fn reset(&mut self) {
+        self.next_var = 0;
+        self.watchlist.clear();
+        self.assignment.clear();
+        self.polarity.clear();
+        self.var_order.clear();
+    }
+
     /// Allocate a new variable.
     pub fn new_var(&mut self) -> Var {
         let var = Var(self.next_var);
@@ -344,6 +354,10 @@ impl Solver {
     }
 
     pub fn solve(&mut self) -> SolveResult {
+        self.solve_under_assumptions(&[])
+    }
+
+    pub fn solve_under_assumptions(&mut self, assumptions: &[Lit]) -> SolveResult {
         // If the solver is already in UNSAT state, return early.
         if !self.ok {
             return SolveResult::Unsat;
@@ -368,7 +382,7 @@ impl Solver {
         while status == SolveResult::Unknown {
             let num_confl = self.restart_strategy.num_confl(current_restarts);
             let time_search_start = Instant::now();
-            match self.search(num_confl) {
+            match self.search(num_confl, assumptions) {
                 SearchResult::Sat => {
                     status = SolveResult::Sat;
                 }
@@ -377,6 +391,10 @@ impl Solver {
                 }
                 SearchResult::Restart => {
                     // Restart => do nothing here
+                }
+                SearchResult::AssumptionsConflict(_conflict) => {
+                    // TODO: save the `conflict`
+                    status = SolveResult::Unsat;
                 }
             }
             let time_search = time_search_start.elapsed();
@@ -404,7 +422,7 @@ impl Solver {
     /// - [`Some(true)`][Some] if the formula is satisfiable (no more unassigned variables),
     /// - [`Some(false)`][Some] if it is unsatisfiable (found a conflict on the ground level),
     /// - [`None`] if it is unknown yet (for example, a restart occurred).
-    fn search(&mut self, num_confl: usize) -> SearchResult {
+    fn search(&mut self, num_confl: usize, assumptions: &[Lit]) -> SearchResult {
         assert!(self.ok);
         assert_eq!(self.decision_level(), 0);
 
@@ -435,9 +453,19 @@ impl Solver {
             // Make a decision:
             //  - Returns `true` if successfully made a decision.
             //  - Returns `false` if no decision can be made (SAT).
-            if !self.decide() {
-                info!("SAT");
-                return SearchResult::Sat;
+            match self.decide(assumptions) {
+                Ok(Some(decision)) => {
+                    self.assignment.new_decision_level();
+                    self.assignment.unchecked_enqueue(decision, None);
+                }
+                Ok(None) => {
+                    info!("SAT");
+                    return SearchResult::Sat;
+                }
+                Err(conflict) => {
+                    info!("UNSAT (assumptions conflict)");
+                    return SearchResult::AssumptionsConflict(conflict);
+                }
             }
         }
     }
@@ -731,34 +759,79 @@ impl Solver {
         self.time_backtrack += time_backtrack_start.elapsed();
     }
 
+    fn analyze_final(&mut self, p: Lit) -> Vec<Lit> {
+        let mut conflict = vec![p];
+
+        if self.decision_level() == 0 {
+            return conflict;
+        }
+
+        let mut seen = VarVec::from(vec![false; self.num_vars()]);
+        seen[p.var()] = true;
+
+        for &lit in self.assignment.trail[self.assignment.trail_lim[0]..].iter().rev() {
+            let var = lit.var();
+            if seen[var] {
+                if let Some(reason) = self.reason(var) {
+                    let reason = self.clause(reason);
+                    for c in &reason[1..] {
+                        let v = c.var();
+                        if self.level(v) > 0 {
+                            seen[v] = true;
+                        }
+                    }
+                } else {
+                    assert!(self.decision_level() > 0);
+                    conflict.push(!lit);
+                }
+                seen[var] = false;
+            }
+        }
+        seen[p.var()] = true;
+
+        conflict
+    }
+
     /// If there is a variable that is unassigned, then pick it and assign.
     ///
     /// **Returns:**
     ///
     /// - `true`, if successfully made a decision,
     /// - `false`, if there are no unassigned variables (SAT).
-    fn decide(&mut self) -> bool {
-        let time_decide_start = Instant::now();
-        let ok = if let Some(var) = self.pick_branching_variable() {
-            let decision = self.pick_phase(var);
+    fn decide(&mut self, assumptions: &[Lit]) -> Result<Option<Lit>, Vec<Lit>> {
+        // Handle assumptions:
+        while let Some(&p) = assumptions.get(self.decision_level()) {
+            match self.value(p) {
+                LBool::True => {
+                    // Dummy decision level:
+                    self.assignment.new_decision_level();
+                }
+                LBool::False => {
+                    let conflict = self.analyze_final(!p);
+                    return Err(conflict);
+                }
+                LBool::Undef => {
+                    return Ok(Some(p));
+                }
+            }
+        }
 
+        let time_decide_start = Instant::now();
+        let decision = if let Some(var) = self.pick_branching_variable() {
+            let decision = self.pick_phase(var);
             debug!(
                 "Made a decision = {:?} = {}{:?}",
                 decision,
                 if decision.negated() { "-" } else { "+" },
                 decision.var()
             );
-
             self.decisions += 1;
-            self.assignment.new_decision_level();
-            self.assignment.unchecked_enqueue(decision, None);
-
-            true
+            Some(decision)
         } else {
-            false
+            None
         };
         self.time_decide += time_decide_start.elapsed();
-        ok
+        Ok(decision)
     }
 
     fn pick_branching_variable(&mut self) -> Option<Var> {
@@ -816,10 +889,19 @@ mod tests {
         assert_eq!(solver.value(tie), LBool::False);
         assert_eq!(solver.value(shirt), LBool::True);
 
+        // Assuming both TIE and SHIRT to be true.
+        // Problem is unsatisfiable under assumptions.
+        let response = solver.solve_under_assumptions(&[tie, shirt]);
+        assert_eq!(response, SolveResult::Unsat);
+
+        // `solve` resets assumptions, so calling it again should produce SAT.
+        let response = solver.solve();
+        assert_eq!(response, SolveResult::Sat);
+
         // Force TIE to true.
         solver.add_clause(&[tie]);
 
-        // Problem is now unsatisfiable.
+        // Problem is now finally unsatisfiable.
         let res = solver.solve();
         assert_eq!(res, SolveResult::Unsat);
     }

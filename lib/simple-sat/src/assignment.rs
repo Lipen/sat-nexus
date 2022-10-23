@@ -31,9 +31,16 @@ impl Assignment {
             qhead: 0,
         }
     }
-}
 
-impl Assignment {
+    pub fn clear(&mut self) {
+        *self = Self::new();
+        // self.assignment.clear();
+        // self.var_data.clear();
+        // self.trail.clear();
+        // self.trail_lim.clear();
+        // self.qhead = 0;
+    }
+
     pub fn value_var(&self, var: Var) -> LBool {
         self.assignment[var]
     }
@@ -58,10 +65,18 @@ impl Assignment {
     }
 
     pub fn fixed(&self, lit: Lit) -> LBool {
-        return if self.level(lit.var()) > 0 { LBool::Undef } else { self.value(lit) };
+        if self.level(lit.var()) > 0 {
+            LBool::Undef
+        } else {
+            self.value(lit)
+        }
     }
     pub fn fixed_var(&self, var: Var) -> LBool {
-        return if self.level(var) > 0 { LBool::Undef } else { self.value_var(var) };
+        if self.level(var) > 0 {
+            LBool::Undef
+        } else {
+            self.value_var(var)
+        }
     }
 
     pub fn decision_level(&self) -> usize {

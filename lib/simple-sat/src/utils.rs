@@ -36,7 +36,7 @@ pub fn parse_dimacs_clause(s: &str) -> Vec<Lit> {
         .collect_vec();
     let (&last, lits) = clause.split_last().unwrap();
     debug_assert_eq!(last, 0, "last lit in clause must be 0");
-    lits.iter().map(|&lit| Lit::from_lit(lit)).collect()
+    lits.iter().map(|&lit| Lit::from_external(lit)).collect()
 }
 
 pub fn luby(y: f64, mut x: u32) -> f64 {

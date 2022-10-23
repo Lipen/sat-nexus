@@ -20,13 +20,16 @@ pub struct ClauseDatabase {
     cla_inc: f64,
 }
 
+const DEFAULT_CLA_DECAY: f64 = 0.999;
+const DEFAULT_CLA_INC: f64 = 0.999;
+
 impl ClauseDatabase {
     pub fn new() -> Self {
         Self {
             clauses: Vec::new(),
             learnts: Vec::new(),
-            cla_decay: 0.999,
-            cla_inc: 1.0,
+            cla_decay: DEFAULT_CLA_DECAY,
+            cla_inc: DEFAULT_CLA_INC,
         }
     }
 }
