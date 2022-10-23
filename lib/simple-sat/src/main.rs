@@ -13,8 +13,8 @@ use simple_sat::options::Options;
 use simple_sat::options::DEFAULT_OPTIONS;
 use simple_sat::solver::{SolveResult, Solver};
 
-const HEADING_RESTART: &'static str = "RESTART OPTIONS";
-const HEADING_REDUCE_DB: &'static str = "REDUCE-DB OPTIONS";
+const HEADING_RESTART: &str = "RESTART OPTIONS";
+const HEADING_REDUCE_DB: &str = "REDUCE-DB OPTIONS";
 
 #[derive(Parser)]
 #[clap(author, version)]
