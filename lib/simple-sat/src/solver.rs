@@ -157,6 +157,12 @@ impl Default for Solver {
     }
 }
 
+impl Display for Solver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Solver")
+    }
+}
+
 impl Solver {
     pub fn init_from_file<P>(&mut self, path: P)
     where

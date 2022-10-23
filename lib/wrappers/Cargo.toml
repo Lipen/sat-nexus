@@ -9,6 +9,7 @@ sat-nexus-core = { path = "../core" }
 ipasir = { path = "../ipasir" }
 cadical = { path = "../cadical" }
 minisat = { path = "../minisat", features = ["dynamic"] }
+simple-sat = { path = "../simple-sat" }
 itertools = "0.10"
 strum = { version = "0.24", features = ["derive"] }
 tynm = "0.1.6"
