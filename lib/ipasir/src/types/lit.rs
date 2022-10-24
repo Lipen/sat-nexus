@@ -77,7 +77,7 @@ pub struct InvalidLitValueError {
 impl TryFrom<i32> for Lit {
     type Error = InvalidLitValueError;
 
-    fn try_from(val: i32) -> std::result::Result<Self, Self::Error> {
+    fn try_from(val: i32) -> Result<Self, Self::Error> {
         if val == 0 || val == i32::MIN {
             return InvalidLitValueSnafu { value: val }.fail();
         }
@@ -88,7 +88,7 @@ impl TryFrom<i32> for Lit {
 impl TryFrom<&i32> for Lit {
     type Error = <Self as TryFrom<i32>>::Error;
 
-    fn try_from(val: &i32) -> std::result::Result<Self, Self::Error> {
+    fn try_from(val: &i32) -> Result<Self, Self::Error> {
         Self::try_from(*val)
     }
 }
