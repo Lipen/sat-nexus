@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Options {
     // Restart:
     pub is_luby: bool,

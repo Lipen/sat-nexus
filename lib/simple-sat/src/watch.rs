@@ -21,11 +21,6 @@ impl WatchList {
         Self { watchlist: LitVec::new() }
     }
 
-    pub fn clear(&mut self) {
-        *self = Self::new();
-        // self.watchlist.clear();
-    }
-
     pub fn init(&mut self, var: Var) {
         self.watchlist.init(&Lit::new(var, false));
         self.watchlist.init(&Lit::new(var, true));

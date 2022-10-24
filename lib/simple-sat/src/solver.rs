@@ -79,6 +79,7 @@ enum SearchResult {
 /// * `time_decide`: The time spent making a decision.
 #[derive(Debug)]
 pub struct Solver {
+    options: Options,
     ca: ClauseAllocator,
     db: ClauseDatabase,
     watchlist: WatchList,
@@ -123,6 +124,7 @@ impl Solver {
         };
         let learning_guard = LearningGuard::new(learning_strategy);
         Self {
+            options,
             ca: ClauseAllocator::new(),
             db: ClauseDatabase::new(),
             watchlist: WatchList::new(),
@@ -220,11 +222,8 @@ impl Solver {
 
     /// Reset the solver state.
     pub fn reset(&mut self) {
-        self.next_var = 0;
-        self.watchlist.clear();
-        self.assignment.clear();
-        self.polarity.clear();
-        self.var_order.clear();
+        let options = self.options.clone();
+        *self = Self::new(options);
     }
 
     /// Allocate a new variable.

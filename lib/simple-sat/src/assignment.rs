@@ -32,15 +32,6 @@ impl Assignment {
         }
     }
 
-    pub fn clear(&mut self) {
-        *self = Self::new();
-        // self.assignment.clear();
-        // self.var_data.clear();
-        // self.trail.clear();
-        // self.trail_lim.clear();
-        // self.qhead = 0;
-    }
-
     pub fn value_var(&self, var: Var) -> LBool {
         self.assignment[var]
     }

@@ -25,14 +25,6 @@ impl VarOrder {
         }
     }
 
-    pub fn clear(&mut self) {
-        *self = Self::new();
-        // self.activity.clear();
-        // self.order_heap.clear();
-        // self.var_decay = DEFAULT_VAR_DECAY;
-        // self.var_inc = DEFAULT_VAR_INC;
-    }
-
     pub(crate) fn push_zero_activity(&mut self) {
         self.activity.push(0.0);
     }
