@@ -95,7 +95,7 @@ impl Solver for SimpleSatSolver {
 
     fn solve(&mut self) -> SolveResponse {
         use simple_sat::solver::SolveResult;
-        let assumptions = std::mem::replace(&mut self.assumptions, Vec::new());
+        let assumptions = std::mem::take(&mut self.assumptions);
         match self.inner.solve_under_assumptions(&assumptions) {
             SolveResult::Sat => SolveResponse::Sat,
             SolveResult::Unsat => SolveResponse::Unsat,
