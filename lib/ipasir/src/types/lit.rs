@@ -14,13 +14,13 @@ impl Lit {
     ///
     /// # Safety
     ///
-    /// Passed value [val] must be non-zero.
+    /// Passed value `val` must be non-zero.
     pub unsafe fn new_unchecked(val: i32) -> Self {
         debug_assert!(val != 0);
         Lit(val)
     }
 
-    /// Returns the backing integer of [self].
+    /// Returns the backing integer of `self`.
     pub fn get(self) -> i32 {
         self.0
     }
