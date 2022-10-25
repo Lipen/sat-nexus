@@ -191,6 +191,15 @@ impl Solver {
     pub fn num_vars(&self) -> usize {
         self.next_var as _
     }
+    /// Number of free variables.
+    pub fn num_free_vars(&self) -> usize {
+        let num_ground_assignments = if self.assignment.trail_lim.is_empty() {
+            self.assignment.trail.len()
+        } else {
+            self.assignment.trail_lim[0]
+        };
+        self.var_order.num_dec_vars - num_ground_assignments
+    }
     /// Number of original clauses.
     pub fn num_clauses(&self) -> usize {
         self.db.num_clauses()
@@ -247,8 +256,9 @@ impl Solver {
         // self.seen.push(false);
 
         // VSIDS
-        self.var_order.push_zero_activity();
-        self.var_order.insert_var_order(var);
+        self.var_order.init_var(var);
+        // self.var_order.push_zero_activity();
+        // self.var_order.insert_var_order(var);
 
         // TODO: decision
 
@@ -344,7 +354,7 @@ impl Solver {
 
     fn report(&self, stage: &str) {
         info!(
-            "{} lvl={} rst={} red={} dec={} prp={} cfl={} lrn={} cls={} vrs={}",
+            "{} lvl={} rst={} red={} dec={} prp={} cfl={} lrn={} cls={} vrs={} free={}",
             stage,
             self.decision_level(),
             self.num_restarts(),
@@ -354,7 +364,8 @@ impl Solver {
             self.num_conflicts(),
             self.num_learnts(),
             self.num_clauses(),
-            self.num_vars()
+            self.num_vars(),
+            self.num_free_vars(),
         );
     }
 

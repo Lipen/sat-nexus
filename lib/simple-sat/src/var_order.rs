@@ -1,12 +1,13 @@
 use tracing::debug;
 
 use crate::assignment::Assignment;
-use crate::idx::{VarHeap, VarVec};
+use crate::idx::{VarHeap, VarMap};
 use crate::var::Var;
 
 #[derive(Debug)]
 pub struct VarOrder {
-    activity: VarVec<f64>,
+    pub(crate) num_dec_vars: usize,
+    activity: VarMap<f64>,
     order_heap: VarHeap,
     var_decay: f64,
     var_inc: f64,
@@ -18,15 +19,18 @@ const DEFAULT_VAR_INC: f64 = 1.0;
 impl VarOrder {
     pub fn new() -> Self {
         Self {
-            activity: VarVec::new(),
+            num_dec_vars: 0,
+            activity: VarMap::new(),
             order_heap: VarHeap::new(),
             var_decay: DEFAULT_VAR_DECAY,
             var_inc: DEFAULT_VAR_INC,
         }
     }
 
-    pub(crate) fn push_zero_activity(&mut self) {
-        self.activity.push(0.0);
+    pub(crate) fn init_var(&mut self, var: Var) {
+        self.activity.insert(var, 0.0);
+        self.num_dec_vars += 1;
+        self.insert_var_order(var);
     }
 
     pub fn var_decay_activity(&mut self) {
@@ -55,7 +59,7 @@ impl VarOrder {
         self.var_inc *= 1e-100;
 
         // Decrease all activities:
-        for a in self.activity.iter_mut() {
+        for (_, a) in self.activity.iter_mut() {
             *a *= 1e-100;
         }
     }

@@ -148,6 +148,7 @@ fn main() -> color_eyre::Result<()> {
     let format = &Locale::en;
     println!("Solver returned: {:?}", result);
     println!("vars:         {}", solver.num_vars().to_formatted_string(format));
+    println!("free vars:    {}", solver.num_free_vars().to_formatted_string(format));
     println!("clauses:      {}", solver.num_clauses().to_formatted_string(format));
     println!("learnts:      {}", solver.num_learnts().to_formatted_string(format));
     println!("decisions:    {}", solver.num_decisions().to_formatted_string(format));
