@@ -3,11 +3,15 @@ main = _{SOI ~ expr ~ EOI}
 expr = {
     atom ~ (bin_op ~ atom)*
 }
-bin_op = _{ and | or | imply /*| iff*/ }
-    and = { "&" }
-    or = { "|" }
-    imply = { "->" | "=>" }
-    // iff = { "<->" | "<=>" }
+
+bin_op = _{
+    and | or | imply // | iff
+}
+and = { "&" }
+or = { "|" }
+imply = { "->" | "=>" }
+// iff = { "<->" | "<=>" }
+
 atom = _{
     "(" ~ expr ~ ")"
     | negated_atom
@@ -25,14 +29,10 @@ bool = {
     true_lit | false_lit
 }
 true_lit = {
-    "true"
-    | "T"
-    | "⊤"
+    "true" | "T" | "⊤"
 }
 false_lit = {
-    "false"
-    | "F"
-    | "⊥"
+    "false" | "F" | "⊥"
 }
 
 WHITESPACE = _{ " " }
