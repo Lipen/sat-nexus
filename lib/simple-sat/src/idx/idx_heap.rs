@@ -359,11 +359,11 @@ mod tests {
     fn test_min_heap_insert_by() {
         let mut heap = IdxHeap::<u32>::new();
         let cmp = |&a: &u32, &b: &u32| a < b;
-        heap.insert_by(3, &cmp);
-        heap.insert_by(1, &cmp);
-        heap.insert_by(5, &cmp);
-        heap.insert_by(2, &cmp);
-        heap.insert_by(4, &cmp);
+        heap.insert_by(3, cmp);
+        heap.insert_by(1, cmp);
+        heap.insert_by(5, cmp);
+        heap.insert_by(2, cmp);
+        heap.insert_by(4, cmp);
         println!("heap = {:?}", heap);
         assert_eq!(heap.heap, vec![1, 2, 5, 3, 4]);
 
@@ -376,11 +376,11 @@ mod tests {
     fn test_max_heap_insert_by() {
         let mut heap = IdxHeap::<u32>::new();
         let cmp = |&a: &u32, &b: &u32| a > b;
-        heap.insert_by(3, &cmp);
-        heap.insert_by(1, &cmp);
-        heap.insert_by(5, &cmp);
-        heap.insert_by(2, &cmp);
-        heap.insert_by(4, &cmp);
+        heap.insert_by(3, cmp);
+        heap.insert_by(1, cmp);
+        heap.insert_by(5, cmp);
+        heap.insert_by(2, cmp);
+        heap.insert_by(4, cmp);
         println!("heap = {:?}", heap);
         assert_eq!(heap.heap, vec![5, 4, 3, 1, 2]);
 
