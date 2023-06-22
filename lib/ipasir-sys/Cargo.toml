@@ -5,7 +5,7 @@ authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-libloading = "0.7.3"
+libloading = "0.8.0"
 
 [build-dependencies]
-bindgen = "0.60.1"
+bindgen = "0.65.1"
