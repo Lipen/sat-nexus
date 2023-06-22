@@ -9,9 +9,8 @@ use log::info;
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
 use sat_nexus_core::cnf::Cnf;
-use sat_nexus_core::solver::simple::BoxDynSimpleSolverExt;
 use sat_nexus_core::solver::simple::SimpleSolver;
-use sat_nexus_core::solver::Solver;
+use sat_nexus_core::solver::{SolveResponse, Solver};
 use sat_nexus_core::utils::bootstrap_solver_from_cnf;
 use sat_nexus_wrappers::cadical::CadicalSolver;
 use sat_nexus_wrappers::dispatch::DispatchSolver;
@@ -29,6 +28,26 @@ struct Cli {
     solver: String,
 }
 
+#[allow(dead_code)]
+fn get_solver1() -> DispatchSolver {
+    DispatchSolver::new_delegate_wrap(CadicalSolver::new())
+}
+
+#[allow(dead_code)]
+fn get_solver2(name: &str) -> color_eyre::Result<Box<dyn SimpleSolver>> {
+    let solver: Box<dyn SimpleSolver> = match name.to_ascii_lowercase().as_str() {
+        "minisat" => MiniSatSolver::new().into(),
+        "cadical" => CadicalSolver::new().into(),
+        _ => bail!("Bad solver '{}'", name),
+    };
+    Ok(solver)
+}
+
+#[allow(dead_code)]
+fn get_solver3(name: &str) -> DispatchSolver {
+    DispatchSolver::by_name(name)
+}
+
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto)?;
@@ -38,21 +57,7 @@ fn main() -> color_eyre::Result<()> {
     info!("args.cnf = {}", args.cnf.display());
     info!("args.solver = {}", args.solver);
 
-    let mut solver = DispatchSolver::new_delegate_wrap(CadicalSolver::new());
-    info!("solver1 = {}", solver);
-    solver.reset();
-
-    let mut solver: Box<dyn SimpleSolver> = match args.solver.to_ascii_lowercase().as_str() {
-        "minisat" => Box::new(MiniSatSolver::new()),
-        "cadical" => Box::new(CadicalSolver::new()),
-        _ => bail!("Bad solver '{}'", &args.solver),
-    };
-    info!("solver2 = {}", solver.display());
-    solver.reset();
-
-    let mut solver = DispatchSolver::by_name(&args.solver);
-    info!("solver3 = {}", solver);
-    solver.reset();
+    let solver = get_solver3(&args.solver);
 
     run(args, solver)
 }
@@ -65,7 +70,7 @@ where
 
     let cnf = Cnf::from_file(&args.cnf);
     info!("cnf.max_var = {}", cnf.max_var);
-    info!("cnf = {}", cnf);
+    info!("cnf.clauses = {}", cnf.clauses.len());
 
     bootstrap_solver_from_cnf(&mut solver, &cnf);
 
@@ -73,9 +78,11 @@ where
     let (elapsed, result) = measure_time(|| solver.solve());
     info!("{} in {}", result, elapsed);
 
-    let model = (1..=solver.num_vars()).map(|i| solver.value(i)).collect_vec();
-    let model_string = model.iter().map(|x| if x.bool() { "1" } else { "0" }).join("");
-    info!("model: {}", model_string);
+    if result == SolveResponse::Sat {
+        let model = (1..=solver.num_vars()).map(|i| solver.value(i)).collect_vec();
+        let model_string = model.iter().map(|x| if x.bool() { "1" } else { "0" }).join("");
+        info!("model: {}", model_string);
+    }
 
     Ok(())
 }
