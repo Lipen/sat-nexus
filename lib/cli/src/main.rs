@@ -17,8 +17,6 @@ use sat_nexus_wrappers::cadical::CadicalSolver;
 use sat_nexus_wrappers::dispatch::DispatchSolver;
 use sat_nexus_wrappers::minisat::MiniSatSolver;
 
-mod parsing;
-
 #[derive(Parser, Debug)]
 #[clap(author, version)]
 struct Cli {
