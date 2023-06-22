@@ -53,7 +53,7 @@ pub fn parse_expr(input: &str) -> Result<Expr, Error<Rule>> {
                 let a = atom.into_inner().next().unwrap();
                 debug!("a = {:?} = {}", a.as_str(), a);
                 let arg = parse_atom(a);
-                Expr::neg(arg)
+                Expr::negation(arg)
             }
             Rule::variable => {
                 assert_eq!(&atom.as_str()[..1], "x");

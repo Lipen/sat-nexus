@@ -10,7 +10,7 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn neg(arg: Expr) -> Self {
+    pub fn negation(arg: Expr) -> Self {
         Expr::Negation { arg: Box::new(arg) }
     }
 
@@ -99,7 +99,7 @@ impl ops::Not for Expr {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Expr::neg(self)
+        Expr::negation(self)
     }
 }
 
