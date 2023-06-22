@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::path::PathBuf;
 
 use clap::Parser;
+use color_eyre::eyre::bail;
 use elapsed::measure_time;
 use itertools::Itertools;
 use log::info;
@@ -44,9 +45,9 @@ fn main() -> color_eyre::Result<()> {
     solver.reset();
 
     let mut solver: Box<dyn SimpleSolver> = match args.solver.to_ascii_lowercase().as_str() {
-        "minisat" => MiniSatSolver::new().into(),
-        "cadical" => CadicalSolver::new().into(),
-        _ => panic!("Bad solver '{}'", &args.solver),
+        "minisat" => Box::new(MiniSatSolver::new()),
+        "cadical" => Box::new(CadicalSolver::new()),
+        _ => bail!("Bad solver '{}'", &args.solver),
     };
     info!("solver2 = {}", solver.display());
     solver.reset();
