@@ -26,7 +26,15 @@ impl VarOrder {
             var_inc: DEFAULT_VAR_INC,
         }
     }
+}
 
+impl Default for VarOrder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl VarOrder {
     pub(crate) fn init_var(&mut self, var: Var) {
         self.activity.insert(var, 0.0);
         self.num_dec_vars += 1;
