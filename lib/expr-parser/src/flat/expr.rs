@@ -9,12 +9,26 @@ pub enum Expr {
     BinOp { op: BinOp, lhs: Box<Expr>, rhs: Box<Expr> },
 }
 
+impl Expr {
+    pub fn neg(arg: Expr) -> Self {
+        Expr::Negation { arg: Box::new(arg) }
+    }
+
+    pub fn binop(op: BinOp, lhs: Expr, rhs: Expr) -> Self {
+        Expr::BinOp {
+            op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BinOp {
     And,
     Or,
     Imply,
-    // Iff,
+    Iff,
 }
 
 impl Display for Expr {
@@ -67,14 +81,14 @@ impl Display for BinOp {
                     BinOp::And => "and",
                     BinOp::Or => "or",
                     BinOp::Imply => "imply",
-                    // BinOp::Iff => "iff",
+                    BinOp::Iff => "iff",
                 }
             } else {
                 match self {
                     BinOp::And => "&",
                     BinOp::Or => "|",
                     BinOp::Imply => "->",
-                    // BinOp::Iff => "<=>",
+                    BinOp::Iff => "<=>",
                 }
             }
         )
@@ -85,7 +99,7 @@ impl ops::Not for Expr {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Expr::Negation { arg: Box::new(self) }
+        Expr::neg(self)
     }
 }
 
@@ -93,11 +107,7 @@ impl ops::BitAnd for Expr {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        Expr::BinOp {
-            op: BinOp::And,
-            lhs: Box::new(self),
-            rhs: Box::new(rhs),
-        }
+        Expr::binop(BinOp::And, self, rhs)
     }
 }
 
@@ -105,10 +115,6 @@ impl ops::BitOr for Expr {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        Expr::BinOp {
-            op: BinOp::Or,
-            lhs: Box::new(self),
-            rhs: Box::new(rhs),
-        }
+        Expr::binop(BinOp::Or, self, rhs)
     }
 }

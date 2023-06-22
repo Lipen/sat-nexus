@@ -2,7 +2,7 @@ use log::debug;
 use once_cell::sync::Lazy;
 use pest::error::Error;
 use pest::iterators::Pair;
-use pest::prec_climber::PrecClimber;
+use pest::pratt_parser::PrattParser;
 use pest::Parser;
 
 use super::expr::{BinOp, Expr};
@@ -11,17 +11,16 @@ use super::expr::{BinOp, Expr};
 #[grammar = "grammar/flat.pest"] // relative to project `src`
 struct ExprParser;
 
-static PREC_CLIMBER: Lazy<PrecClimber<Rule>> = Lazy::new(|| {
-    use pest::prec_climber::{Assoc::*, Operator};
+static PRATT_PARSER: Lazy<PrattParser<Rule>> = Lazy::new(|| {
+    use pest::pratt_parser::{Assoc::*, Op};
     use Rule::*;
 
     // Precedence is defined lowest to highest
-    PrecClimber::new(vec![
-        // Operator::new(iff, Left),
-        Operator::new(imply, Right),
-        Operator::new(or, Left),
-        Operator::new(and, Left),
-    ])
+    PrattParser::new()
+        .op(Op::infix(iff, Left))
+        .op(Op::infix(imply, Right))
+        .op(Op::infix(or, Left))
+        .op(Op::infix(and, Left))
 });
 
 pub fn parse_expr(input: &str) -> Result<Expr, Error<Rule>> {
@@ -35,16 +34,12 @@ pub fn parse_expr(input: &str) -> Result<Expr, Error<Rule>> {
                 Rule::and => BinOp::And,
                 Rule::or => BinOp::Or,
                 Rule::imply => BinOp::Imply,
-                // Rule::iff => BinOp::Iff,
+                Rule::iff => BinOp::Iff,
                 _ => unreachable!(),
             };
-            Expr::BinOp {
-                op,
-                lhs: Box::new(lhs),
-                rhs: Box::new(rhs),
-            }
+            Expr::binop(op, lhs, rhs)
         };
-        PREC_CLIMBER.climb(expr.into_inner(), parse_atom, infix)
+        PRATT_PARSER.map_primary(parse_atom).map_infix(infix).parse(expr.into_inner())
     }
 
     fn parse_atom(atom: Pair<Rule>) -> Expr {
@@ -57,9 +52,8 @@ pub fn parse_expr(input: &str) -> Result<Expr, Error<Rule>> {
             Rule::negated_atom => {
                 let a = atom.into_inner().next().unwrap();
                 debug!("a = {:?} = {}", a.as_str(), a);
-                Expr::Negation {
-                    arg: Box::new(parse_atom(a)),
-                }
+                let arg = parse_atom(a);
+                Expr::neg(arg)
             }
             Rule::variable => {
                 assert_eq!(&atom.as_str()[..1], "x");
@@ -220,10 +214,25 @@ mod tests {
     }
 
     #[test]
-    fn test_implication() {
+    fn test_imply() {
         let s = "x1 -> ~x2 => x3";
         let expr = parse_expr(s);
         assert!(expr.is_ok());
         assert_eq!(expr.unwrap().to_string(), "(1 -> (~2 -> 3))");
+    }
+
+    #[test]
+    fn test_iff() {
+        let s = "x1 & ~x2 <-> x3 | x4";
+        let expr = parse_expr(s);
+        assert!(expr.is_ok());
+        assert_eq!(expr.unwrap().to_string(), "((1 & ~2) <=> (3 | 4))");
+    }
+    #[test]
+    fn test_iff_imply() {
+        let s = "x1 <-> ~x2 -> x3 & x4";
+        let expr = parse_expr(s);
+        assert!(expr.is_ok());
+        assert_eq!(expr.unwrap().to_string(), "(1 <=> (~2 -> (3 & 4)))");
     }
 }

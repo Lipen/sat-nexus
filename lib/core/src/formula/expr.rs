@@ -205,6 +205,7 @@ impl Expr<Var> {
                         BinOp::And => lhs & rhs,
                         BinOp::Or => lhs | rhs,
                         BinOp::Imply => Expr::imply(lhs, rhs),
+                        BinOp::Iff => panic!("Iff not supported"),
                         // other ops
                     }
                 }

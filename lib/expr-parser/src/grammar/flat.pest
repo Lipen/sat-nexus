@@ -1,16 +1,12 @@
 main = _{SOI ~ expr ~ EOI}
 
-expr = {
-    atom ~ (bin_op ~ atom)*
-}
+expr = { atom ~ ( binop ~ atom )* }
 
-bin_op = _{
-    and | or | imply // | iff
-}
-and = { "&" }
-or = { "|" }
-imply = { "->" | "=>" }
-// iff = { "<->" | "<=>" }
+binop = _{ and | or | imply | iff }
+  and = { "&" }
+  or = { "|" }
+  imply = { "->" | "=>" }
+  iff = { "<->" | "<=>" }
 
 atom = _{
     "(" ~ expr ~ ")"
