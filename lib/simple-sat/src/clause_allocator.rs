@@ -7,7 +7,7 @@ use crate::lit::Lit;
 #[derive(Debug)]
 pub struct ClauseAllocator {
     /// All clauses.
-    pub(crate) arena: Vec<Clause>,
+    arena: Vec<Clause>,
 }
 
 impl ClauseAllocator {
