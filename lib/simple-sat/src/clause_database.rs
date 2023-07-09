@@ -21,7 +21,7 @@ pub struct ClauseDatabase {
 }
 
 const DEFAULT_CLA_DECAY: f64 = 0.999;
-const DEFAULT_CLA_INC: f64 = 0.999;
+const DEFAULT_CLA_INC: f64 = 1.0;
 
 impl ClauseDatabase {
     pub fn new() -> Self {
