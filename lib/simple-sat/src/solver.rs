@@ -613,6 +613,7 @@ impl Solver {
                         LBool::False => {
                             // conflict
                             debug!("Found conflict: {:?} = {:?}", cref, self.clause(cref));
+                            debug_assert!(conflict.is_none());
                             conflict = Some(cref);
                             self.assignment.qhead = self.assignment.trail.len();
                             // Copy the remaining watches:
