@@ -10,7 +10,7 @@ Cargo.lock
 # Local stuff
 data/
 stuff/
-_*.rs
+_bindings*.rs
 *.txt
 *.svg
 *.png
