@@ -10,3 +10,6 @@
 [submodule "lib/minisat-sys/vendor/zlib"]
 	path = lib/minisat-sys/vendor/zlib
 	url = https://github.com/madler/zlib
+[submodule "lib/kissat-sys/vendor/kissat"]
+	path = lib/kissat-sys/vendor/kissat
+	url = https://github.com/arminbiere/kissat

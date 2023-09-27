@@ -45,11 +45,11 @@ impl MiniSat {
     }
 
     pub fn new_custom(ffi: &'static CMiniSatFFI) -> Self {
-        let ptr = ffi.init();
         unsafe {
+            let ptr = ffi.minisat_new();
             ffi.minisat_eliminate(ptr, true);
+            MiniSat { ffi, ptr }
         }
-        MiniSat { ffi, ptr }
     }
 
     pub fn release(&mut self) {
@@ -235,7 +235,7 @@ impl MiniSat {
 impl MiniSat {
     pub fn reset(&mut self) {
         self.release();
-        self.ptr = self.ffi.init();
+        self.ptr = unsafe { self.ffi.minisat_new() };
     }
 
     pub fn set_polarity_lit(&self, lit: Lit, pol: LBool) {

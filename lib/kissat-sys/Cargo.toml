@@ -1,5 +1,5 @@
 [package]
-name = "cadical-sys"
+name = "kissat-sys"
 version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
@@ -12,6 +12,7 @@ static = ["cc", "glob"]
 [dependencies]
 libloading = { version = "0.8.0", optional = true }
 once_cell = { version = "1.8.0", optional = true }
+ffi-utils = { path = "../ffi-utils" }
 
 [build-dependencies]
 build_script = "0.2.0"

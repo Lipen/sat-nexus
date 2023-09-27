@@ -13,42 +13,53 @@ fn main() {
 
 #[cfg(feature = "dynamic")]
 fn generate_bindings_dynamic() {
-    println!("cargo:warning=Generating MiniSat dynamic bindings...");
+    build_script::cargo_warning("Generating MiniSat dynamic bindings...");
+    build_script::cargo_rerun_if_changed("wrapper.h");
+
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen vendor/minisat-c-bindings/minisat.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --blocklist-type minisat_bool --allowlist-function minisat_.*
-    let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    bindgen::builder()
-        .header("vendor/minisat-c-bindings/minisat.h")
+    //   bindgen wrapper.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --dynamic-link-require-all --blocklist-type minisat_bool --no-layout-tests
+    let bindings = bindgen::builder()
+        .header("wrapper.h")
         .dynamic_library_name("cminisat")
         .dynamic_link_require_all(true)
+        // .allowlist_function("minisat_.*")
         .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .layout_tests(false)
         .generate()
-        .expect("Could not create bindings!")
+        .expect("Could not create bindings!");
+
+    let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    bindings
         .write_to_file(out_path.join("bindings-cminisat-dynamic.rs"))
         .expect("Could not write bindings!");
 }
 
 #[cfg(feature = "static")]
 fn generate_bindings_static() {
-    println!("cargo:warning=Generating MiniSat static bindings...");
+    build_script::cargo_warning("Generating MiniSat static bindings...");
+    build_script::cargo_rerun_if_changed("wrapper.h");
+
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen vendor/minisat-c-bindings/minisat.h -o _bindings-cminisat-static.rs --blocklist-type minisat_bool --allowlist-function minisat_.*
-    let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    bindgen::builder()
-        .header("vendor/minisat-c-bindings/minisat.h")
+    //   bindgen wrapper.h -o _bindings-cminisat-static.rs --blocklist-type minisat_bool
+    let bindings = bindgen::builder()
+        .header("wrapper.h")
+        // .allowlist_function("minisat_.*")
         .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
-        .expect("Could not create bindings!")
+        .expect("Could not create bindings!");
+
+    let out_path = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    bindings
         .write_to_file(out_path.join("bindings-cminisat-static.rs"))
         .expect("Could not write bindings!");
 }
 
 #[cfg(feature = "static")]
 fn build_static_lib() {
-    println!("cargo:warning=Building MiniSat static library...");
+    build_script::cargo_warning("Building MiniSat static library...");
+
     cc::Build::new()
         .cpp(true)
         .include("vendor/minisat/minisat")

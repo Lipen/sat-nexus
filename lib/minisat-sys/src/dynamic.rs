@@ -24,33 +24,9 @@ impl CMiniSatFFI {
             .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}: {:?}", name, e, e))
     }
 
-    pub fn init(&self) -> CMiniSatPtr {
-        unsafe { self.minisat_new() }
-    }
-}
-
-macro_rules! instance {
-    ($name:expr) => {{
+    pub fn instance() -> &'static Self {
         use ::once_cell::sync::OnceCell;
         static INSTANCE: OnceCell<CMiniSatFFI> = OnceCell::new();
-        INSTANCE.get_or_init(|| CMiniSatFFI::load($name))
-    }};
-}
-
-impl CMiniSatFFI {
-    pub fn instance() -> &'static Self {
-        instance!("minisat-c")
-    }
-}
-
-impl CMiniSatFFI {
-    pub fn minisat_l_true(&self) -> bindings::minisat_lbool {
-        unsafe { self.minisat_get_l_True() }
-    }
-    pub fn minisat_l_false(&self) -> bindings::minisat_lbool {
-        unsafe { self.minisat_get_l_False() }
-    }
-    pub fn minisat_l_undef(&self) -> bindings::minisat_lbool {
-        unsafe { self.minisat_get_l_Undef() }
+        INSTANCE.get_or_init(|| Self::load("minisat-c"))
     }
 }

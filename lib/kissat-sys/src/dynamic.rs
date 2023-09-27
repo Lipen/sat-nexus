@@ -5,22 +5,22 @@ pub mod bindings {
     #![allow(dead_code)]
     #![allow(clippy::style)]
 
-    include!(concat!(env!("OUT_DIR"), "/bindings-ccadical-dynamic.rs"));
-    // include!("../_bindings-ccadical-dynamic.rs");
+    include!(concat!(env!("OUT_DIR"), "/bindings-kissat-dynamic.rs"));
+    // include!("../_bindings-kissat-dynamic.rs");
 }
 
-pub type CCadicalFFI = bindings::ccadical;
-pub type CCadicalPtr = *mut bindings::CCaDiCaL;
+pub type KissatFFI = bindings::kissat_ffi;
+pub type KissatPtr = *mut bindings::kissat;
 
-impl CCadicalFFI {
+impl KissatFFI {
     pub fn load(name: &str) -> Self {
         unsafe { Self::new(libloading::library_filename(name)) }
             .unwrap_or_else(|e| panic!("Could not load shared library '{}': {}: {:?}", name, e, e))
     }
 
     pub fn instance() -> &'static Self {
-        use ::once_cell::sync::OnceCell;
-        static INSTANCE: OnceCell<CCadicalFFI> = OnceCell::new();
-        INSTANCE.get_or_init(|| Self::load("cadical"))
+        use ::std::sync::OnceLock;
+        static INSTANCE: OnceLock<KissatFFI> = OnceLock::new();
+        INSTANCE.get_or_init(|| Self::load("kissat"))
     }
 }

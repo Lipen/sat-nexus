@@ -5,12 +5,13 @@ fn main() -> color_eyre::Result<()> {
 
     unsafe {
         let ffi = CMiniSatFFI::load("minisat-c");
-        let ptr = ffi.init();
+        println!("ffi created");
+        let ptr = ffi.minisat_new();
         println!("ptr = {:?}", ptr);
 
-        println!("minisat_l_True = {:?}", ffi.minisat_l_true());
-        println!("minisat_l_False = {:?}", ffi.minisat_l_false());
-        println!("minisat_l_Undef = {:?}", ffi.minisat_l_undef());
+        println!("minisat_l_True = {:?}", ffi.minisat_get_l_True());
+        println!("minisat_l_False = {:?}", ffi.minisat_get_l_False());
+        println!("minisat_l_Undef = {:?}", ffi.minisat_get_l_Undef());
 
         // Turn off variable elimination
         ffi.minisat_eliminate(ptr, true);

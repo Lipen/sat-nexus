@@ -4,6 +4,8 @@ use std::fmt::{Debug, Display, Formatter};
 use itertools::Itertools;
 use snafu::ensure;
 
+use ffi_utils::cstr2str;
+
 use crate::ffi::*;
 use crate::types::*;
 
@@ -43,7 +45,10 @@ impl Cadical {
     }
 
     pub fn new_custom(ffi: &'static CCadicalFFI) -> Self {
-        Cadical { ffi, ptr: ffi.init() }
+        Cadical {
+            ffi,
+            ptr: unsafe { ffi.ccadical_init() },
+        }
     }
 }
 
@@ -74,7 +79,7 @@ impl Display for Cadical {
 /// Cadical interface.
 impl Cadical {
     pub fn signature(&self) -> &'static str {
-        self.ffi.signature()
+        unsafe { cstr2str(self.ffi.ccadical_signature()) }
     }
 
     pub fn release(&mut self) {
@@ -284,7 +289,7 @@ impl Cadical {
 impl Cadical {
     pub fn reset(&mut self) {
         self.release();
-        self.ptr = self.ffi.init();
+        self.ptr = unsafe { self.ffi.ccadical_init() };
     }
 
     pub fn add_clause<I>(&self, lits: I)
