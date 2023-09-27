@@ -130,7 +130,7 @@ jobs:
         working-directory: lib/cadical-sys/vendor/cadical
         run: |
           ./configure -fPIC
-          make -j dll  2>&1
+          make -j8 dll
           # Result: build/cadical.dll
 
       - name: Copy DLLs to 'libs/'
