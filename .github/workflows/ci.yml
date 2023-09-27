@@ -57,6 +57,13 @@ jobs:
           make -j8 shared
           sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
 
+      - name: Build and install Kissat shared library (libkissat.so)
+        working-directory: lib/cadical-sys/vendor/cadical
+        run: |
+          ./configure --compact --no-options --no-proofs --quiet -shared
+          make -j8
+          sudo install -m 644 build/libkissat.so -Dt /usr/local/lib
+
       - name: Run ldconfig and update LD_LIBRARY_PATH
         run: |
           sudo ldconfig -n /usr/local/lib
@@ -71,6 +78,7 @@ jobs:
             /usr/local/lib/libminisat.so
             /usr/local/lib/libminisat-c.so
             /usr/local/lib/libcadical.so
+            /usr/local/lib/libkissat.so
 
       - name: Test all
         run: cargo test --workspace
