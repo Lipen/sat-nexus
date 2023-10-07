@@ -126,8 +126,7 @@ impl Cadical {
     /// zero is returned.  Here '--...' arguments as invalid options.
     pub fn get_option(&self, name: &'static str) -> i32 {
         let c_string = CString::new(name).expect("CString::new failed");
-        let c_chars = c_string.as_ptr();
-        unsafe { self.ffi.ccadical_get_option(self.ptr, c_chars) }
+        unsafe { self.ffi.ccadical_get_option(self.ptr, c_string.as_ptr()) }
     }
 
     /// Specify search limits, where currently 'name' can be "conflicts",
@@ -145,8 +144,7 @@ impl Cadical {
     /// which however should only be used for testing and debugging.
     pub fn limit(&self, name: &str, limit: i32) {
         let c_string = CString::new(name).expect("CString::new failed");
-        let c_chars = c_string.as_ptr();
-        unsafe { self.ffi.ccadical_limit(self.ptr, c_chars, limit) }
+        unsafe { self.ffi.ccadical_limit(self.ptr, c_string.as_ptr(), limit) }
     }
 
     /// Add valid literal to clause or zero to terminate clause.
