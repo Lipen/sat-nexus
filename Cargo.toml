@@ -23,7 +23,7 @@ sat-nexus-wrappers = { path = "lib/wrappers" }
 ipasir = { path = "lib/ipasir" }
 cadical = { path = "lib/cadical" }
 minisat = { path = "lib/minisat", features = ["dynamic"] }
-# kissat = { path = "lib/kissat", features = ["dynamic"] }
+kissat = { path = "lib/kissat" }
 
 [dev-dependencies]
 sat-nexus-test-utils = { path = "lib/_test_utils" }

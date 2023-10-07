@@ -17,11 +17,11 @@ fn generate_bindings_dynamic() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-kissat-dynamic.rs --dynamic-loading kissat_ffi --dynamic-link-require-all --allowlist-function kissat_.* --no-layout-tests
+    //   bindgen wrapper.h -o _bindings-kissat-dynamic.rs --dynamic-loading kissat_ffi --allowlist-function kissat_.* --no-layout-tests
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("kissat_ffi")
-        .dynamic_link_require_all(true)
+        // .dynamic_link_require_all(true)
         .allowlist_function("kissat_.*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .layout_tests(false)

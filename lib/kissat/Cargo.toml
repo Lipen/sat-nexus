@@ -1,0 +1,14 @@
+[package]
+name = "kissat"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+kissat-sys = { path = "../kissat-sys", features = ["dynamic"] }
+ffi-utils = { path = "../ffi-utils" }
+snafu = "0.7"
+itertools = "0.10"
+
+[dev-dependencies]
+color-eyre = "0.6"
