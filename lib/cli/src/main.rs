@@ -17,14 +17,14 @@ use sat_nexus_wrappers::dispatch::DispatchSolver;
 use sat_nexus_wrappers::minisat::MiniSatSolver;
 
 #[derive(Parser, Debug)]
-#[clap(author, version)]
+#[command(author, version)]
 struct Cli {
     /// CNF file
-    #[clap(parse(from_os_str), value_name = "FILE")]
+    #[arg(value_name = "FILE")]
     cnf: PathBuf,
 
     /// SAT solver
-    #[clap(short, long, default_value = "cadical")]
+    #[arg(short, long, default_value = "cadical")]
     solver: String,
 }
 
