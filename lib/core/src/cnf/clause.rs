@@ -27,13 +27,13 @@ impl Clause {
     }
 }
 
-impl<I> From<I> for Clause
+impl<L> FromIterator<L> for Clause
 where
-    I: IntoIterator,
-    I::Item: Into<Lit>,
+    L: Into<Lit>,
 {
-    fn from(iter: I) -> Self {
-        Self::new(iter.into_iter().map_into::<Lit>().collect())
+    fn from_iter<T: IntoIterator<Item = L>>(iter: T) -> Self {
+        let lits = iter.into_iter().map_into::<Lit>().collect();
+        Self::new(lits)
     }
 }
 

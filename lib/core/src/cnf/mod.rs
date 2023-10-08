@@ -40,15 +40,16 @@ impl Default for Cnf {
     }
 }
 
-impl<I> From<I> for Cnf
+impl<I> FromIterator<I> for Cnf
 where
     I: IntoIterator,
-    I::Item: Into<Clause>,
+    I::Item: Into<Lit>,
 {
-    fn from(iter: I) -> Self {
+    fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
         let mut cnf = Self::new();
-        for clause in iter.into_iter() {
-            cnf.add_clause(clause)
+        for lits in iter.into_iter() {
+            let clause = Clause::from_iter(lits);
+            cnf.add(clause);
         }
         cnf
     }
@@ -65,8 +66,7 @@ impl Display for Cnf {
 }
 
 impl Cnf {
-    pub fn add_clause(&mut self, clause: impl Into<Clause>) {
-        let clause = clause.into();
+    pub fn add(&mut self, clause: Clause) {
         self.max_var = self.max_var.max(clause.lits.iter().map(|lit| lit.var() as usize).max().unwrap());
         self.clauses.push(clause);
     }
@@ -75,7 +75,7 @@ impl Cnf {
 impl Extend<Clause> for Cnf {
     fn extend<T: IntoIterator<Item = Clause>>(&mut self, iter: T) {
         for clause in iter {
-            self.add_clause(clause)
+            self.add(clause);
         }
     }
 }
@@ -86,7 +86,8 @@ impl crate::op::ops::AddClause for Cnf {
         I: IntoIterator,
         I::Item: Into<Lit>,
     {
-        self.add_clause(lits)
+        let clause = Clause::from_iter(lits);
+        self.add(clause)
     }
 }
 
@@ -103,6 +104,6 @@ mod tests {
         let b = Lit::from(2i32);
         let c = Lit::from(3i32);
         cnf.imply_and(a, [b, c]);
-        assert_eq!(cnf.clauses, [Clause::from([-1, 2]), Clause::from([-1, 3])]);
+        assert_eq!(cnf.clauses, [Clause::from_iter([-1, 2]), Clause::from_iter([-1, 3])]);
     }
 }

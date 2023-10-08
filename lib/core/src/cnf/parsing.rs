@@ -26,7 +26,7 @@ pub fn parse_cnf<P: AsRef<Path>>(path: P) -> Cnf {
                                 Sign::Neg => -v,
                             }
                         })
-                        .into()
+                        .collect()
                 })
                 .collect(),
         },
