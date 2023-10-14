@@ -7,6 +7,9 @@ pub mod cadical;
 #[path = "wrap_minisat.rs"]
 pub mod minisat;
 
+#[path = "wrap_kissat.rs"]
+pub mod kissat;
+
 #[path = "wrap_simple-sat.rs"]
 pub mod simplesat;
 
