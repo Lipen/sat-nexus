@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
+use std::vec::IntoIter;
 
 use itertools::Itertools;
 
@@ -34,6 +35,24 @@ where
     fn from_iter<T: IntoIterator<Item = L>>(iter: T) -> Self {
         let lits = iter.into_iter().map_into::<Lit>().collect();
         Self::new(lits)
+    }
+}
+
+impl IntoIterator for Clause {
+    type Item = Lit;
+    type IntoIter = IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.lits.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Clause {
+    type Item = &'a Lit;
+    type IntoIter = Iter<'a, Lit>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
