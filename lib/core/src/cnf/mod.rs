@@ -1,3 +1,4 @@
+use log::debug;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 use std::slice::Iter;
@@ -30,6 +31,7 @@ impl Cnf {
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Self {
+        debug!("Reading CNF from '{}'...", path.as_ref().display());
         parsing::parse_cnf(path)
     }
 }
