@@ -121,7 +121,7 @@ fn main() -> color_eyre::Result<()> {
 
             info!("Spawning {} jobs...", intervals.end() - intervals.start() + 1);
             let (tx, rx) = std::sync::mpsc::channel();
-            for interval_index in intervals {
+            for interval_index in intervals.rev() {
                 let tx = tx.clone();
                 let tls = Arc::clone(&tls);
                 let input_variables = input_variables.clone();
