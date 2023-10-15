@@ -17,3 +17,4 @@ _bindings*.rs
 *.png
 perf.data
 perf.data.old
+*.csv
