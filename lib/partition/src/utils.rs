@@ -1,7 +1,10 @@
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 
+use crate::parsers::Interval;
+
 pub fn num2bits(x: usize, n: usize) -> Vec<bool> {
+    assert!(x < (1 << n), "Number {} must be less than 2^{}={}", x, n, 1 << n);
     let mut bits = vec![false; n];
 
     for i in 0..n.min(32) {
@@ -77,8 +80,8 @@ pub fn median(data: &[f64]) -> Option<f64> {
 }
 
 pub fn std_deviation(data: &[f64]) -> Option<f64> {
-    if data.len() < 2 {
-        return None;
+    if data.len() == 1 {
+        return Some(0.0);
     }
     let avg = mean(data)?;
     let variance = data
@@ -111,4 +114,27 @@ pub fn zscore(data: &[f64]) -> Vec<f64> {
     let avg = mean(data).unwrap();
     let sd = std_deviation(data).unwrap();
     data.iter().map(|&x| (x - avg) / sd).collect_vec()
+}
+
+pub fn extract_intervals(data: &[usize]) -> Vec<Interval<usize>> {
+    let n = data.len();
+    let mut result = Vec::new();
+    let mut i = 0;
+    while i < n {
+        let low = data[i];
+        while i < n - 1 && data[i] + 1 == data[i + 1] {
+            i += 1;
+        }
+        let high = data[i];
+        if high - low >= 2 {
+            result.push(Interval::Interval(low, high));
+        } else if high - low == 1 {
+            result.push(Interval::Single(low));
+            result.push(Interval::Single(high));
+        } else {
+            result.push(Interval::Single(low));
+        }
+        i += 1;
+    }
+    result
 }

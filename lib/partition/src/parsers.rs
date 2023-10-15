@@ -1,28 +1,71 @@
-use std::fmt::Debug;
-use std::ops::RangeInclusive;
-use std::str::FromStr;
+use std::fmt::{Display, Formatter};
 
-pub fn parse_input_variables(input: &str) -> Vec<u32> {
+pub fn parse_input_variables(input: &str) -> Vec<usize> {
     let mut result = Vec::new();
     for part in input.split(',') {
-        result.extend(parse_interval::<u32>(part));
+        match parse_interval(part) {
+            Interval::Single(x) => {
+                result.push(x);
+            }
+            Interval::Interval(low, high) => {
+                if low <= high {
+                    result.extend(low..=high);
+                } else {
+                    result.extend((high..=low).rev());
+                }
+            }
+        }
     }
     result
 }
 
-pub fn parse_interval<T>(input: &str) -> RangeInclusive<T>
+pub fn parse_intervals(input: &str) -> Vec<usize> {
+    let mut result = Vec::new();
+    for part in input.split(',') {
+        match parse_interval(part) {
+            Interval::Single(x) => {
+                result.push(x);
+            }
+            Interval::Interval(low, high) => {
+                if low <= high {
+                    result.extend(low..=high);
+                } else {
+                    result.extend((high..=low).rev());
+                }
+            }
+        }
+    }
+    result.sort();
+    result.dedup();
+    result
+}
+
+pub enum Interval<T> {
+    Single(T),
+    Interval(T, T),
+}
+
+impl<T> Display for Interval<T>
 where
-    T: FromStr + Copy,
-    <T as FromStr>::Err: Debug,
+    for<'a> &'a T: Display,
 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Interval::Single(x) => write!(f, "{}", x),
+            Interval::Interval(low, high) => write!(f, "{}-{}", low, high),
+        }
+    }
+}
+
+pub fn parse_interval(input: &str) -> Interval<usize> {
     let range_parts: Vec<&str> = input.splitn(2, "-").collect();
     if range_parts.len() == 2 {
         let start = range_parts[0].parse().unwrap();
         let end = range_parts[1].parse().unwrap();
-        start..=end
+        Interval::Interval(start, end)
     } else {
         let single = input.parse().unwrap();
-        single..=single
+        Interval::Single(single)
     }
 }
 

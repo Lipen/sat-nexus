@@ -18,7 +18,7 @@ pub fn get_bounds(interval_index: usize, interval_size: usize) -> (usize, usize)
     (low, high)
 }
 
-pub fn solve_interval(solver: &mut impl Solver, input_variables: &[u32], interval_size: usize, interval_index: usize) -> SolveResponse {
+pub fn solve_interval(solver: &mut impl Solver, input_variables: &[usize], interval_size: usize, interval_index: usize) -> SolveResponse {
     let lits: Vec<i32> = input_variables.iter().map(|&x| x as i32).collect();
     let (low, high) = get_bounds(interval_index, interval_size);
     let clauses = encode_interval(&lits, low, high);
@@ -69,7 +69,7 @@ pub fn encode_interval_reified(lits: &[i32], low: usize, high: usize, t_geq: i32
 
 pub fn solve_interval_reified(
     solver: &mut impl Solver,
-    input_variables: &[u32],
+    input_variables: &[usize],
     interval_size: usize,
     interval_index: usize,
 ) -> SolveResponse {

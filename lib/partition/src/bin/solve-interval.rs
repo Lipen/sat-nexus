@@ -5,15 +5,15 @@ use std::time::Instant;
 
 use clap::Parser;
 use fragile::Sticky;
-use itertools::Itertools;
+use itertools::{join, Itertools};
 use log::{debug, info, warn};
 use serde::Serialize;
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 use thread_local::ThreadLocal;
 
 use partition::interval::{get_bounds, solve_interval, solve_interval_reified};
-use partition::parsers::{parse_input_variables, parse_integer_maybe_power, parse_interval};
-use partition::utils::{is_power_of_two, mean, median, median_absolute_deviation, std_deviation};
+use partition::parsers::{parse_input_variables, parse_integer_maybe_power, parse_intervals};
+use partition::utils::{extract_intervals, is_power_of_two, mean, median, median_absolute_deviation, std_deviation};
 use sat_nexus_core::cnf::Cnf;
 use sat_nexus_core::solver::SolveResponse;
 use sat_nexus_core::utils::bootstrap_solver_from_cnf;
@@ -26,7 +26,7 @@ struct Cli {
     #[arg(value_name = "CNF")]
     path_cnf: PathBuf,
 
-    /// Input variables.
+    /// Input variables (comma-separated).
     #[arg(long = "vars", value_name = "INT...")]
     input_variables: String,
 
@@ -34,9 +34,9 @@ struct Cli {
     #[arg(long = "size", value_name = "INT")]
     interval_size: String,
 
-    /// Interval index (0-based).
+    /// Interval indices (0-based) (comma-separated).
     #[arg(long = "index", value_name = "INT...")]
-    interval_index: String,
+    intervals: String,
 
     /// Pool size.
     #[arg(short, long, default_value_t = 4)]
@@ -65,43 +65,46 @@ fn main() -> color_eyre::Result<()> {
 
     let input_variables = parse_input_variables(&args.input_variables);
     let interval_size = parse_integer_maybe_power(&args.interval_size);
-    let intervals = parse_interval(&args.interval_index); // set of 'interval_index'
+    let interval_indices = parse_intervals(&args.intervals);
 
-    info!("Total {} input variables: {:?}", input_variables.len(), input_variables);
+    info!(
+        "Total {} input variables: {}",
+        input_variables.len(),
+        join(extract_intervals(&input_variables), ",")
+    );
     info!("Interval size: {}", interval_size);
     if !is_power_of_two(interval_size) {
-        if args.allow_arbitrary_intervals {
-            warn!("Interval size {} is NOT a power of 2.", args.interval_size);
-        } else {
+        warn!("Interval size {} is NOT a power of 2.", args.interval_size);
+        if !args.allow_arbitrary_intervals {
             panic!("Interval size {} is NOT a power of 2.", args.interval_size);
         }
     }
-    if intervals.end() == intervals.start() {
-        info!("Interval index: {}", intervals.start());
+    if interval_indices.len() == 1 {
+        info!("Interval index: {}", interval_indices[0]);
     } else {
-        info!("Interval indices: {}-{}", intervals.start(), intervals.end());
+        info!("Interval indices: {}", join(extract_intervals(&interval_indices), ","));
     }
 
-    for interval_index in intervals.clone() {
+    for &interval_index in interval_indices.iter() {
         let (low, high) = get_bounds(interval_index, interval_size);
         if high >= (1 << input_variables.len()) {
-            warn!(
+            panic!(
                 "Interval #{} [{}, {}] is out of bounds (2^N = {})",
                 interval_index,
                 low,
                 high,
                 1 << input_variables.len()
             );
-            break;
         }
     }
 
     let mut results = Vec::new();
 
     if args.reified {
-        if intervals.end() > intervals.start() {
-            info!("Building a thread pool with {} workers...", args.pool_size);
-            let pool = rayon::ThreadPoolBuilder::new().num_threads(args.pool_size).build().unwrap();
+        let pool_size = args.pool_size.min(interval_indices.len());
+        if pool_size > 1 {
+            info!("Building a thread pool with {} workers...", pool_size);
+            let pool = rayon::ThreadPoolBuilder::new().num_threads(pool_size).build().unwrap();
 
             let tls = Arc::new(ThreadLocal::new());
             let cnf = Arc::new(Cnf::from_file(&args.path_cnf));
@@ -119,9 +122,9 @@ fn main() -> color_eyre::Result<()> {
                 });
             }
 
-            info!("Spawning {} jobs...", intervals.end() - intervals.start() + 1);
+            info!("Spawning {} jobs...", interval_indices.len());
             let (tx, rx) = std::sync::mpsc::channel();
-            for interval_index in intervals.rev() {
+            for &interval_index in interval_indices.iter() {
                 let tx = tx.clone();
                 let tls = Arc::clone(&tls);
                 let input_variables = input_variables.clone();
@@ -153,34 +156,37 @@ fn main() -> color_eyre::Result<()> {
                 results.push(result);
             }
         } else {
-            assert_eq!(intervals.start(), intervals.end());
-            let interval_index = *intervals.start();
-            let time_start = Instant::now();
-            let mut solver = CadicalSolver::new();
-            let cnf = Cnf::from_file(&args.path_cnf);
-            bootstrap_solver_from_cnf(&mut solver, &cnf);
-            let result = solve_interval_reified(&mut solver, &input_variables, interval_size, interval_index);
-            let time = time_start.elapsed();
-            let (low, high) = get_bounds(interval_index, interval_size);
-            info!(
-                "Solved interval #{} [{}, {}] of size {} in {:.3}s",
-                interval_index,
-                low,
-                high,
-                interval_size,
-                time.as_secs_f64()
-            );
-            assert_eq!(result, SolveResponse::Unsat);
-            results.push((interval_index, result, time))
+            // Note: actually, intervals.len() == 1 here.
+            for &interval_index in interval_indices.iter() {
+                let time_start = Instant::now();
+                let mut solver = CadicalSolver::new();
+                let cnf = Cnf::from_file(&args.path_cnf);
+                bootstrap_solver_from_cnf(&mut solver, &cnf);
+                let result = solve_interval_reified(&mut solver, &input_variables, interval_size, interval_index);
+                let time = time_start.elapsed();
+                let (low, high) = get_bounds(interval_index, interval_size);
+                info!(
+                    "Solved interval #{} [{}, {}] of size {} in {:.3}s",
+                    interval_index,
+                    low,
+                    high,
+                    interval_size,
+                    time.as_secs_f64()
+                );
+                assert_eq!(result, SolveResponse::Unsat);
+                results.push((interval_index, result, time))
+            }
         }
     } else {
-        if intervals.end() > intervals.start() {
-            info!("Building a thread pool with {} workers...", args.pool_size);
-            let pool = rayon::ThreadPoolBuilder::new().num_threads(args.pool_size).build().unwrap();
+        // NOT args.reified
+        let pool_size = args.pool_size.min(interval_indices.len());
+        if pool_size > 1 {
+            info!("Building a thread pool with {} workers...", pool_size);
+            let pool = rayon::ThreadPoolBuilder::new().num_threads(pool_size).build().unwrap();
 
-            info!("Spawning {} jobs...", intervals.end() - intervals.start() + 1);
+            info!("Spawning {} jobs...", interval_indices.len());
             let (tx, rx) = std::sync::mpsc::channel();
-            for interval_index in intervals.rev() {
+            for &interval_index in interval_indices.iter() {
                 let tx = tx.clone();
                 let cnf_path = args.path_cnf.clone();
                 let input_variables = input_variables.clone();
@@ -212,25 +218,26 @@ fn main() -> color_eyre::Result<()> {
                 results.push(result);
             }
         } else {
-            assert_eq!(intervals.start(), intervals.end());
-            let interval_index = *intervals.start();
-            let time_start = Instant::now();
-            let mut solver = KissatSolver::new();
-            let cnf = Cnf::from_file(&args.path_cnf);
-            bootstrap_solver_from_cnf(&mut solver, &cnf);
-            let result = solve_interval(&mut solver, &input_variables, interval_size, interval_index);
-            let time = time_start.elapsed();
-            let (low, high) = get_bounds(interval_index, interval_size);
-            info!(
-                "Solved interval #{} [{}, {}] of size {} in {:.3}s",
-                interval_index,
-                low,
-                high,
-                interval_size,
-                time.as_secs_f64()
-            );
-            assert_eq!(result, SolveResponse::Unsat);
-            results.push((interval_index, result, time))
+            // Note: actually, intervals.len() == 1 here.
+            for &interval_index in interval_indices.iter() {
+                let time_start = Instant::now();
+                let mut solver = KissatSolver::new();
+                let cnf = Cnf::from_file(&args.path_cnf);
+                bootstrap_solver_from_cnf(&mut solver, &cnf);
+                let result = solve_interval(&mut solver, &input_variables, interval_size, interval_index);
+                let time = time_start.elapsed();
+                let (low, high) = get_bounds(interval_index, interval_size);
+                info!(
+                    "Solved interval #{} [{}, {}] of size {} in {:.3}s",
+                    interval_index,
+                    low,
+                    high,
+                    interval_size,
+                    time.as_secs_f64()
+                );
+                assert_eq!(result, SolveResponse::Unsat);
+                results.push((interval_index, result, time))
+            }
         }
     }
 
@@ -269,13 +276,13 @@ fn main() -> color_eyre::Result<()> {
 
     let times = results.iter().map(|(_, _, time)| time.as_secs_f64()).collect_vec();
     let time_mean = mean(&times).unwrap();
-    let time_sd = std_deviation(&times).unwrap();
+    let time_sd = std_deviation(&times).unwrap_or(0.0);
     info!("Time mean±sd: {:.3} ± {:.3}", time_mean, time_sd);
     let time_med = median(&times).unwrap();
     let time_mad = median_absolute_deviation(&times).unwrap();
     info!("Time med±mad: {:.3} ± {:.3}", time_med, time_mad);
 
-    let total_subtasks = ((1 << input_variables.len()) as f64 / interval_size as f64).ceil() as usize;
+    let total_subtasks = ((1u128 << input_variables.len()) as f64 / interval_size as f64).ceil() as usize;
     info!("Total subtasks: {}", total_subtasks);
 
     let total_time_estimation = time_mean * total_subtasks as f64;
