@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use ordered_float::OrderedFloat;
 
 use crate::parsers::Interval;
 
@@ -68,7 +67,7 @@ pub fn median(data: &[f64]) -> Option<f64> {
     if count == 2 {
         return Some((data[0] + data[1]) / 2.0);
     }
-    let sorted = data.iter().copied().sorted_by_key(|&x| OrderedFloat(x)).collect_vec();
+    let sorted = data.iter().copied().sorted_by(|x, y| x.partial_cmp(y).unwrap()).collect_vec();
     let mid = count / 2;
     if count % 2 == 0 {
         // Even length: median is the mean of two near-middle elements

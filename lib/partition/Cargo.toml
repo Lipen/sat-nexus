@@ -15,7 +15,6 @@ sat-nexus-wrappers = { path = "../wrappers" }
 
 clap = { version = "4.4", features = ["derive"] }
 color-eyre = "0.6"
-ordered-float = "4.1.0"
 thread_local = "1.1.7"
 fragile = "2.0.0"
 csv = "1.2.2"
