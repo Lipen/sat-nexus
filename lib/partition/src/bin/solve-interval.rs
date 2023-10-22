@@ -275,11 +275,11 @@ fn main() -> color_eyre::Result<()> {
     }
 
     let times = results.iter().map(|(_, _, time)| time.as_secs_f64()).collect_vec();
-    let time_mean = mean(&times).unwrap();
-    let time_sd = std_deviation(&times).unwrap_or(0.0);
+    let time_mean = mean(&times);
+    let time_sd = std_deviation(&times);
     info!("Time mean±sd: {:.3} ± {:.3}", time_mean, time_sd);
-    let time_med = median(&times).unwrap();
-    let time_mad = median_absolute_deviation(&times).unwrap();
+    let time_med = median(&times);
+    let time_mad = median_absolute_deviation(&times);
     info!("Time med±mad: {:.3} ± {:.3}", time_med, time_mad);
 
     let total_subtasks = ((1u128 << input_variables.len()) as f64 / interval_size as f64).ceil() as usize;
