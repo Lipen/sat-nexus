@@ -143,16 +143,18 @@ mod tests {
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Sat);
 
-        // Assuming both a and b to be true
-        solver.assume(a);
-        solver.assume(b);
-        // Problem is unsatisfiable under assumptions
-        let response = solver.solve();
-        assert_eq!(response, SolveResponse::Unsat);
-
-        // `solve` resets assumptions, so calling it again should produce SAT
-        let response = solver.solve();
-        assert_eq!(response, SolveResponse::Sat);
+        // Note: Kissat currently does not support assumptions.
+        //
+        // // Assuming both a and b to be true
+        // solver.assume(a);
+        // solver.assume(b);
+        // // Problem is unsatisfiable under assumptions
+        // let response = solver.solve();
+        // assert_eq!(response, SolveResponse::Unsat);
+        //
+        // // `solve` resets assumptions, so calling it again should produce SAT
+        // let response = solver.solve();
+        // assert_eq!(response, SolveResponse::Sat);
 
         Ok(())
     }
