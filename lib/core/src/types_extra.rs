@@ -7,15 +7,15 @@ use std::num::NonZeroI32;
 pub struct Lit(NonZeroI32);
 
 impl Lit {
-    pub fn new(val: NonZeroI32) -> Self {
+    pub const fn new(val: NonZeroI32) -> Self {
         Lit(val)
     }
 
-    pub unsafe fn new_unchecked(val: i32) -> Self {
+    pub const unsafe fn new_unchecked(val: i32) -> Self {
         Self::new(NonZeroI32::new_unchecked(val))
     }
 
-    pub fn get(&self) -> i32 {
+    pub const fn get(&self) -> i32 {
         self.0.get()
     }
 }
