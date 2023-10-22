@@ -20,6 +20,9 @@ use sat_nexus_core::utils::bootstrap_solver_from_cnf;
 use sat_nexus_wrappers::cadical::CadicalSolver;
 use sat_nexus_wrappers::kissat::KissatSolver;
 
+// Run this example:
+// cargo run -p partition --bin solve-interval -- data/some.cnf --vars 1-32 --size 16 --index 0-15
+
 #[derive(Parser, Debug)]
 #[command(author, version)]
 struct Cli {
