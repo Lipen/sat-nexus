@@ -40,3 +40,50 @@ impl From<Lit> for i32 {
         lit.get()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lit_new() {
+        let val = NonZeroI32::new(42).unwrap();
+        let lit = Lit::new(val);
+
+        assert_eq!(lit.get(), 42);
+    }
+
+    #[test]
+    fn test_lit_new_unchecked() {
+        let lit = unsafe { Lit::new_unchecked(42) };
+
+        assert_eq!(lit.get(), 42);
+    }
+
+    #[test]
+    fn test_lit_from_non_zero_i32() {
+        let val = NonZeroI32::new(42).unwrap();
+        let lit: Lit = val.into();
+
+        assert_eq!(lit.get(), 42);
+    }
+
+    #[test]
+    fn test_lit_try_from_i32() {
+        let lit: Result<Lit, _> = 42.try_into();
+
+        assert!(lit.is_ok());
+        assert_eq!(lit.unwrap().get(), 42);
+
+        let zero_lit: Result<Lit, _> = 0.try_into();
+        assert!(zero_lit.is_err());
+    }
+
+    #[test]
+    fn test_lit_into_i32() {
+        let lit = Lit::new(NonZeroI32::new(42).unwrap());
+        let value: i32 = lit.into();
+
+        assert_eq!(value, 42);
+    }
+}
