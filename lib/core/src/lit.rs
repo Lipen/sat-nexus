@@ -61,3 +61,53 @@ impl Neg for Lit {
         Self::from(-self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lit_new() {
+        let lit = Lit::new(42);
+        assert_eq!(lit.get(), 42);
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "assertion failed: val != 0")]
+    fn test_lit_new_zero() {
+        let _lit = Lit::new(0);
+    }
+
+    #[test]
+    fn test_lit_display() {
+        let lit = Lit::new(42);
+        assert_eq!(format!("{}", lit), "42");
+    }
+
+    #[test]
+    fn test_lit_from_i32() {
+        let lit: Lit = 42.into();
+        assert_eq!(lit.get(), 42);
+    }
+
+    #[test]
+    fn test_lit_from_usize() {
+        let lit: Lit = 42usize.into();
+        assert_eq!(lit.get(), 42);
+    }
+
+    #[test]
+    fn test_lit_into_i32() {
+        let lit = Lit::new(42);
+        let value: i32 = lit.into();
+        assert_eq!(value, 42);
+    }
+
+    #[test]
+    fn test_lit_neg() {
+        let lit = Lit::new(42);
+        let neg_lit = -lit;
+        assert_eq!(neg_lit.get(), -42);
+    }
+}
