@@ -5,6 +5,7 @@ use itertools::chain;
 use crate::lit::Lit;
 
 pub trait AddClause {
+    /// Add a clause represented by an iterator of literals.
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,

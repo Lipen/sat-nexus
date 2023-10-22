@@ -8,6 +8,8 @@ use crate::lit::Lit;
 use super::types::*;
 use super::Solver;
 
+/// The [MockSolver] struct represents a mock implementation of a solver.
+/// It implements the [Solver] trait and provides methods for manipulating variables and clauses.
 #[derive(Debug)]
 pub struct MockSolver {
     nvars: usize,
@@ -16,6 +18,7 @@ pub struct MockSolver {
 }
 
 impl MockSolver {
+    /// Create a new instance of [MockSolver] with default values for its fields.
     pub const fn new() -> Self {
         Self {
             nvars: 0,

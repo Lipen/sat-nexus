@@ -5,25 +5,39 @@ use crate::lit::Lit;
 use super::types::*;
 
 pub trait Solver: Sized {
+    /// Return the signature of the solver as a `Cow<str>`.
     fn signature(&self) -> Cow<str>;
 
+    /// Reset the solver to its initial state.
     fn reset(&mut self);
+
+    /// Release any resources held by the solver.
     fn release(&mut self);
 
+    /// Return the number of variables in the solver.
     fn num_vars(&self) -> usize;
+
+    /// Return the number of clauses in the solver.
     fn num_clauses(&self) -> usize;
 
+    /// Create a new variable in the solver and return its literal representation.
     fn new_var(&mut self) -> Lit;
 
+    /// Add an assumption to the solver.
+    /// The assumption is represented by the given literal.
     fn assume<L>(&mut self, lit: L)
     where
         L: Into<Lit>;
 
+    /// Add a clause to the solver.
+    /// The clause is represented by an iterator of literals.
     fn add_clause<I>(&mut self, lits: I)
     where
         I: IntoIterator,
         I::Item: Into<Lit>;
 
+    /// Add a clause to the solver.
+    /// The clause is represented by a slice of literals.
     fn add_clause_<A, L>(&mut self, lits: A)
     where
         A: AsRef<[L]>,
@@ -32,6 +46,7 @@ pub trait Solver: Sized {
         self.add_clause(lits.as_ref())
     }
 
+    /// Add a unit clause to the solver.
     fn add_unit<L>(&mut self, lit: L)
     where
         L: Into<Lit>,
@@ -39,8 +54,10 @@ pub trait Solver: Sized {
         self.add_clause_([lit.into()])
     }
 
+    /// Solve the problem given to the solver and return the result as a [SolveResponse].
     fn solve(&mut self) -> SolveResponse;
 
+    /// Return the value of the given literal in the solver.
     fn value<L>(&self, lit: L) -> LitValue
     where
         L: Into<Lit>;
