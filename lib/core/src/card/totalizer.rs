@@ -18,18 +18,12 @@ pub struct Totalizer {
 }
 
 impl Totalizer {
-    pub fn new(output_vars: Vec<Lit>) -> Self {
-        Self {
-            output_vars,
-            declared_lower_bound: None,
-            declared_upper_bound: None,
-        }
-    }
-
-    pub fn declare<S>(solver: &mut S, input_vars: &[Lit]) -> Self
+    pub fn new<S>(solver: &mut S, input_vars: &[Lit]) -> Self
     where
         S: Solver,
     {
+        assert!(input_vars.len() > 0);
+
         let mut queue = VecDeque::new();
 
         for &e in input_vars {
@@ -81,7 +75,11 @@ impl Totalizer {
         }
 
         let output_vars = queue.pop_front().unwrap();
-        Totalizer::new(output_vars)
+        Self {
+            output_vars,
+            declared_lower_bound: None,
+            declared_upper_bound: None,
+        }
     }
 
     pub fn declare_upper_bound_less_than<S>(&mut self, solver: &mut S, new_ub: usize)
