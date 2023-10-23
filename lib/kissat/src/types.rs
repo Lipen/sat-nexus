@@ -1,4 +1,4 @@
-/// Possible responses from a call to `solve`.
+/// Possible responses from a call to `Kissat::solve`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SolveResponse {
     /// The solver found the input to be satisfiable.
@@ -9,7 +9,7 @@ pub enum SolveResponse {
     Interrupted = 0,
 }
 
-/// Possible literal values from a call to `val`.
+/// Possible literal values from a call to `Kissat::value`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LitValue {
     True,

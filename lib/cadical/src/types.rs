@@ -30,7 +30,7 @@ pub enum CadicalError {
     InvalidResponseFrozen { lit: i32, value: i32 },
 }
 
-/// Possible responses from a call to `simplify`.
+/// Possible responses from a call to `Cadical::simplify`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SimplifyResponse {
     Unknown = 0,
@@ -38,7 +38,7 @@ pub enum SimplifyResponse {
     Unsat = 20,
 }
 
-/// Possible responses from a call to `solve`.
+/// Possible responses from a call to `Cadical::solve`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SolveResponse {
     /// The solver found the input to be satisfiable.
@@ -49,7 +49,7 @@ pub enum SolveResponse {
     Interrupted = 0,
 }
 
-/// Possible literal values from a call to `val`.
+/// Possible literal values from a call to `Cadical::val`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LitValue {
     True,
@@ -66,7 +66,7 @@ impl From<LitValue> for bool {
     }
 }
 
-/// Possible responses from a call to `fixed`.
+/// Possible responses from a call to `Cadical::fixed`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FixedResponse {
     /// The literal is implied by the formula.
