@@ -4,6 +4,9 @@ use crate::lit::Lit;
 
 use super::types::*;
 
+// Note: `Solver` trait is NOT object-safe.
+// const _: Option<&dyn Solver> = None; // doesn't compile, see `rustc --explain E0038`
+
 pub trait Solver: Sized {
     /// Return the signature of the solver as a `Cow<str>`.
     fn signature(&self) -> Cow<str>;
