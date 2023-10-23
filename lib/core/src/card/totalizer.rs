@@ -1,6 +1,6 @@
 //! Totalizer from [[`1`]].
 //!
-//! [[`1`]] O. Bailleux and Y. Boufkhad, "Efficient CNF encoding of Boolean cardinality constraints," in Principles and Practice of Constraint Programming, 2003, pp. 108–122.
+//! [[`1`]] O. Bailleux and Y. Boufkhad, _"Efficient CNF encoding of Boolean cardinality constraints,"_ in Principles and Practice of Constraint Programming, 2003, pp. 108–122.
 //!
 //! [`1`]: https://doi.org/10.1007/978-3-540-45193-8_8
 
