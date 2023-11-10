@@ -136,9 +136,7 @@ jobs:
       - name: Build Kissat dynamic library
         working-directory: lib/kissat-sys/vendor/kissat
         run: |
-          git remote -v
-          git fetch origin windows
-          git branch -a
+          git fetch origin windows:windows --depth=1
           git switch windows
           ./configure --compact --quiet --no-options --no-proofs -shared
           make -j8 dll
