@@ -150,7 +150,7 @@ jobs:
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/minisat-c.dll libs/
           cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
-          cp lib/cadical-sys/vendor/kissat/build/kissat.dll libs/
+          cp lib/kissat-sys/vendor/kissat/build/kissat.dll libs/
           ldd libs/*.dll
           ls -al libs/*.dll
 
