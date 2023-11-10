@@ -133,12 +133,23 @@ jobs:
           make -j8 dll
           # Result: build/cadical.dll
 
+      - name: Build Kissat dynamic library
+        working-directory: lib/kissat-sys/vendor/kissat
+        run: |
+          git switch windows
+          ./configure --compact --quiet --no-options --no-proofs -shared
+          make -j8 dll
+          # Note: the resulting file `build/libkissat.so` is actually a DLL, just have a Linux-name!
+          cp build/libkissat.so build/kissat.dll
+          # Result: build/kissat.dll
+
       - name: Copy DLLs to 'libs/'
         run: |
           mkdir -p libs
           cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
           cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/minisat-c.dll libs/
           cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
+          cp lib/cadical-sys/vendor/kissat/build/kissat.dll libs/
           ldd libs/*.dll
           ls -al libs/*.dll
 
