@@ -137,7 +137,7 @@ jobs:
         working-directory: lib/kissat-sys/vendor/kissat
         run: |
           git remote -v
-          git fetch
+          git fetch origin windows
           git branch -a
           git switch windows
           ./configure --compact --quiet --no-options --no-proofs -shared
