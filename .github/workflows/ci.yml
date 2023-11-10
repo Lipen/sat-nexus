@@ -139,7 +139,7 @@ jobs:
           git fetch origin windows:windows --depth=1
           git switch windows
           ./configure --compact --quiet --no-options --no-proofs -shared
-          make -j8 dll
+          make -j8
           # Note: the resulting file `build/libkissat.so` is actually a DLL, just have a Linux-name!
           cp build/libkissat.so build/kissat.dll
           # Result: build/kissat.dll
