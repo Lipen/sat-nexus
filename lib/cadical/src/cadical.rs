@@ -219,7 +219,7 @@ impl Cadical {
     }
 
     /// Number of active variables.
-    pub fn active(&self) -> i64 {
+    pub fn active(&self) -> i32 {
         unsafe { self.ffi.ccadical_active(self.ptr) }
     }
 
