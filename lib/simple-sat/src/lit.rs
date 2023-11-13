@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::ops;
 
 use crate::var::Var;
@@ -67,5 +68,11 @@ impl ops::BitXor<bool> for Lit {
     fn bitxor(self, rhs: bool) -> Self::Output {
         // Lit::new(self.var(), self.negated() ^ rhs)
         Lit(self.0 ^ rhs as u32)
+    }
+}
+
+impl Display for Lit {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_external())
     }
 }
