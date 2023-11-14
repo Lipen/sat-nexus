@@ -4,6 +4,7 @@ use std::mem;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use itertools::Itertools;
 use serde_with::SerializeDisplay;
 use tracing::{debug, info, warn};
 
@@ -23,6 +24,7 @@ use crate::options::DEFAULT_OPTIONS;
 use crate::restart::RestartStrategy;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
+use crate::utils::DisplaySlice;
 use crate::var::Var;
 use crate::var_order::VarOrder;
 use crate::watch::{WatchList, Watcher};
@@ -887,6 +889,232 @@ impl Solver {
     }
 }
 
+impl Solver {
+    pub fn propcheck(&mut self, assumptions: &[Lit]) -> bool {
+        info!("propcheck(assumptions = {})", DisplaySlice(assumptions));
+
+        // First, propagate everything that needs to be propagated:
+        if let Some(_) = self.propagate() {
+            self.ok = false;
+        }
+
+        if !self.ok {
+            return false;
+        }
+
+        // Save the original decision level in order to backtrack to it later:
+        let level = self.decision_level();
+        let mut conflicting_assignment = false;
+        let mut conflict: Option<ClauseRef> = None;
+
+        for i in 0..assumptions.len() {
+            let p = assumptions[i];
+            match self.value(p) {
+                LBool::True => {
+                    // do nothing
+                }
+                LBool::False => {
+                    // conflict with assumption
+                    conflicting_assignment = true;
+                    break;
+                }
+                LBool::Undef => {
+                    self.assignment.new_decision_level();
+                    self.assignment.unchecked_enqueue(p, None);
+                    if let Some(c) = self.propagate() {
+                        // conflict during propagation
+                        conflict = Some(c);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Backtrack to the original decision level:
+        self.backtrack(level);
+
+        !conflicting_assignment && conflict.is_none()
+    }
+
+    pub fn propcheck_all(&mut self, variables: &[Var]) -> usize {
+        info!("propcheck_all(variables = {})", DisplaySlice(variables));
+
+        assert!(variables.len() < 30);
+
+        // TODO: backtrack(0) manually instead of asserting.
+        assert_eq!(self.decision_level(), 0);
+
+        let mut cube = vec![false; variables.len()];
+        let mut total_checked = 0; // number of 'propcheck' calls
+        let mut total_count = 0; // number of valid cubes
+
+        loop {
+            debug!("cube = {}", DisplaySlice(&cube));
+            let assumptions = variables.iter().zip(cube.iter()).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
+            let res = self.propcheck(&assumptions);
+            total_checked += 1;
+
+            if res {
+                debug!("valid assumptions: {}", DisplaySlice(&assumptions));
+                total_count += 1;
+            } else {
+                debug!("invalid assumptions: {}", DisplaySlice(&assumptions));
+            }
+
+            // Find the 1-based index of the last 'false' value in 'cube':
+            let mut j = variables.len(); // 1-based
+            while j > 0 && cube[j - 1] {
+                j -= 1;
+            }
+            if j == 0 {
+                break;
+            }
+
+            // Increment the 'cube':
+            assert!(!cube[j - 1]);
+            cube[j - 1] = true;
+            for i in j..variables.len() {
+                cube[i] = false;
+            }
+        }
+
+        info!("Checked {} cubes, {} valid", total_checked, total_count);
+        total_count
+    }
+
+    pub fn propcheck_all_tree(&mut self, variables: &[Var]) -> usize {
+        info!("propcheck_all_tree(variables = {})", DisplaySlice(variables));
+
+        assert!(variables.len() < 30);
+
+        // TODO: backtrack(0) manually instead of asserting.
+        assert_eq!(self.decision_level(), 0);
+
+        // Propagate everything that needs to be propagated:
+        if let Some(_) = self.propagate() {
+            self.ok = false;
+        }
+
+        if !self.ok {
+            return 0;
+        }
+
+        // Trivial case:
+        if variables.is_empty() {
+            return 0;
+        }
+
+        let mut cube = vec![false; variables.len()];
+        let mut total_checked = 0;
+        let mut total_count = 0;
+
+        enum State {
+            Descending,
+            Ascending,
+            Propagating,
+        }
+        let mut state = State::Descending;
+
+        loop {
+            debug!("cube = {}, level = {}", DisplaySlice(&cube), self.decision_level());
+            assert!(self.decision_level() <= variables.len());
+
+            match state {
+                State::Descending => {
+                    debug!("Descending...");
+
+                    if self.decision_level() == variables.len() {
+                        debug!("Found valid cube: {}", DisplaySlice(&cube));
+                        total_count += 1;
+                        state = State::Ascending;
+                    } else {
+                        while self.decision_level() < variables.len() {
+                            self.assignment.new_decision_level();
+                            let v = variables[self.decision_level() - 1];
+                            let s = cube[self.decision_level() - 1];
+                            let p = Lit::new(v, s);
+                            debug!("Trying to assign p = {} at new level {}", p, self.decision_level());
+                            match self.value(p) {
+                                LBool::True => {
+                                    debug!("Literal {} already has True value", p);
+                                    // do nothing
+                                }
+                                LBool::False => {
+                                    debug!(
+                                        "Propagated different value for cube = {}",
+                                        DisplaySlice(&cube[..self.decision_level()])
+                                    );
+                                    state = State::Ascending;
+                                    break;
+                                }
+                                LBool::Undef => {
+                                    debug!("Enqueueing {}", p);
+                                    self.assignment.unchecked_enqueue(p, None);
+                                    state = State::Propagating;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                State::Ascending => {
+                    debug!("Ascending...");
+                    assert!(self.decision_level() > 0);
+
+                    // Find the 1-based index of the last 'false' value in 'cube':
+                    let mut j = self.decision_level(); // 1-based
+                    while j > 0 && cube[j - 1] {
+                        j -= 1;
+                    }
+                    if j == 0 {
+                        break;
+                    }
+
+                    // Increment the 'cube':
+                    assert!(!cube[j - 1]);
+                    cube[j - 1] = true;
+                    for i in j..variables.len() {
+                        cube[i] = false;
+                    }
+
+                    // Backtrack to the level before `j`:
+                    self.backtrack(j - 1);
+
+                    // Switch state to descending:
+                    state = State::Descending;
+                }
+
+                State::Propagating => {
+                    info!("Propagating... total_checked = {}", total_checked);
+                    total_checked += 1;
+                    if let Some(_conflict) = self.propagate() {
+                        debug!(
+                            "Conflict for cube = {} at level {}",
+                            DisplaySlice(&cube[..self.decision_level()]),
+                            self.decision_level()
+                        );
+                        state = State::Ascending;
+                    } else {
+                        debug!(
+                            "No conflict for cube = {} at level {}",
+                            DisplaySlice(&cube[..self.decision_level()]),
+                            self.decision_level()
+                        );
+                        state = State::Descending;
+                    }
+                }
+            }
+        }
+
+        // Post-backtrack to zero level:
+        self.backtrack(0);
+
+        info!("Checked {} cubes, {} valid", total_checked, total_count);
+        total_count
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use test_log::test;
@@ -927,5 +1155,63 @@ mod tests {
         // Problem is now finally unsatisfiable.
         let res = solver.solve();
         assert_eq!(res, SolveResult::Unsat);
+    }
+
+    #[test]
+    fn test_propcheck() {
+        let mut solver = Solver::default();
+
+        let x1 = solver.new_lit();
+        let x2 = solver.new_lit();
+        let g1 = solver.new_lit();
+        info!("x1 = {0:?} = {0}, x2 = {1:?} = {1}, g1 = {2:?} = {2}", x1, x2, g1);
+
+        // g1 <=> x1 AND x2
+        solver.add_clause(&[g1, -x1, -x2]);
+        solver.add_clause(&[-g1, x1]);
+        solver.add_clause(&[-g1, x2]);
+
+        // Forbid (x1 AND ~x2)
+        solver.add_clause(&[-x1, x2]);
+
+        info!("vars = {}, clauses = {}", solver.num_vars(), solver.num_clauses());
+
+        // Problem is satisfiable.
+        // let res = solver.solve();
+        // assert_eq!(res, SolveResult::Sat);
+
+        let variables = vec![x1.var(), x2.var()];
+
+        info!("----------------------");
+        let count = solver.propcheck_all(&variables);
+        info!("count = {}", count);
+
+        info!("----------------------");
+        let count_tree = solver.propcheck_all_tree(&variables);
+        info!("count_tree = {}", count_tree);
+
+        assert_eq!(count, count_tree);
+    }
+
+    #[test]
+    fn test_propcheck_tieshirt() {
+        let mut solver = Solver::default();
+
+        let tie = Lit::new(solver.new_var(), false);
+        let shirt = Lit::new(solver.new_var(), false);
+        info!("TIE = {:?}, SHIRT = {:?}", tie, shirt);
+
+        solver.add_clause(&[-tie, shirt]);
+        solver.add_clause(&[tie, shirt]);
+        solver.add_clause(&[-tie, -shirt]);
+        info!("vars = {}, clauses = {}", solver.num_vars(), solver.num_clauses());
+
+        // Problem is satisfiable.
+        // let res = solver.solve();
+        // assert_eq!(res, SolveResult::Sat);
+
+        let variables = vec![tie.var(), shirt.var()];
+        let count = solver.propcheck_all(&variables);
+        info!("count = {}", count);
     }
 }
