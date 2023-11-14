@@ -826,6 +826,7 @@ impl Solver {
             match self.value(p) {
                 LBool::True => {
                     // Dummy decision level:
+                    // TODO: do we need this dummy level at all?
                     self.assignment.new_decision_level();
                 }
                 LBool::False => {
