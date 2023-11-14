@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::ffi::OsStr;
+use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
@@ -7,7 +8,7 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use flate2::read::GzDecoder;
-use itertools::Itertools;
+use itertools::{join, Itertools};
 
 use crate::lit::Lit;
 
@@ -70,4 +71,29 @@ where
 
 pub fn cmp_f64(a: f64, b: f64) -> Ordering {
     PartialOrd::partial_cmp(&a, &b).unwrap()
+}
+
+pub struct DisplaySlice<'a, T>(pub &'a [T])
+where
+    &'a T: Display;
+
+impl<'a, T> Display for DisplaySlice<'a, T>
+where
+    &'a T: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", join(self.0, ", "))
+    }
+}
+
+pub struct DisplayIter<I>(pub I);
+
+impl<I> Display for DisplayIter<I>
+where
+    I: IntoIterator + Copy,
+    I::Item: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", join(self.0, ", "))
+    }
 }
