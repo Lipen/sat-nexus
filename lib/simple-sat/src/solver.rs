@@ -266,6 +266,11 @@ impl Solver {
         var
     }
 
+    /// Allocate a new variable and return it as positive literal.
+    pub fn new_lit(&mut self) -> Lit {
+        Lit::new(self.new_var(), false)
+    }
+
     /// Value of the variable.
     pub fn value_var(&self, var: Var) -> LBool {
         self.assignment.value_var(var)
