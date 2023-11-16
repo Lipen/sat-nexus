@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use itertools::Itertools;
 use serde_with::SerializeDisplay;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace, warn};
 
 // use rand::rngs::StdRng;
 // use rand::{Rng, SeedableRng};
@@ -510,7 +510,7 @@ impl Solver {
 
             // Analyze the conflict:
             let (lemma, backtrack_level) = self.analyze(conflict);
-            debug!("Learnt {:?}", lemma);
+            trace!("Learnt {:?}", lemma);
 
             // Backjump:
             self.backtrack(backtrack_level);
@@ -614,12 +614,12 @@ impl Solver {
                     match self.assignment.value(first) {
                         LBool::Undef => {
                             // unit
-                            debug!("Propagated unit {:?} with reason {:?} = {:?}", first, cref, self.clause(cref));
+                            trace!("Propagated unit {:?} with reason {:?} = {:?}", first, cref, self.clause(cref));
                             self.assignment.unchecked_enqueue(first, Some(cref));
                         }
                         LBool::False => {
                             // conflict
-                            debug!("Found conflict: {:?} = {:?}", cref, self.clause(cref));
+                            trace!("Found conflict: {:?} = {:?}", cref, self.clause(cref));
                             debug_assert!(conflict.is_none());
                             conflict = Some(cref);
                             self.assignment.qhead = self.assignment.trail.len();
@@ -644,7 +644,7 @@ impl Solver {
 
     /// Returns learnt clause and backtrack level.
     fn analyze(&mut self, conflict: ClauseRef) -> (Vec<Lit>, usize) {
-        debug!(
+        trace!(
             "Analyze conflict @{}: {:?} = {:?}",
             self.decision_level(),
             conflict,
@@ -761,7 +761,7 @@ impl Solver {
     }
 
     fn backtrack(&mut self, level: usize) {
-        debug!("Backtrack from {} to {}", self.decision_level(), level);
+        trace!("Backtrack from {} to {}", self.decision_level(), level);
 
         let time_backtrack_start = Instant::now();
 
@@ -891,10 +891,10 @@ impl Solver {
 
 impl Solver {
     pub fn propcheck(&mut self, assumptions: &[Lit]) -> bool {
-        info!("propcheck(assumptions = {})", DisplaySlice(assumptions));
+        debug!("propcheck(assumptions = {})", DisplaySlice(assumptions));
 
         // First, propagate everything that needs to be propagated:
-        if let Some(_) = self.propagate() {
+        if let Some(_conflict) = self.propagate() {
             self.ok = false;
         }
 
@@ -907,8 +907,7 @@ impl Solver {
         let mut conflicting_assignment = false;
         let mut conflict: Option<ClauseRef> = None;
 
-        for i in 0..assumptions.len() {
-            let p = assumptions[i];
+        for &p in assumptions.iter() {
             match self.value(p) {
                 LBool::True => {
                     // do nothing
@@ -936,8 +935,8 @@ impl Solver {
         !conflicting_assignment && conflict.is_none()
     }
 
-    pub fn propcheck_all(&mut self, variables: &[Var]) -> usize {
-        info!("propcheck_all(variables = {})", DisplaySlice(variables));
+    pub fn propcheck_all(&mut self, variables: &[Var]) -> u64 {
+        debug!("propcheck_all(variables = {})", DisplaySlice(variables));
 
         assert!(variables.len() < 30);
 
@@ -945,20 +944,20 @@ impl Solver {
         assert_eq!(self.decision_level(), 0);
 
         let mut cube = vec![false; variables.len()];
-        let mut total_checked = 0; // number of 'propcheck' calls
-        let mut total_count = 0; // number of valid cubes
+        let mut total_checked = 0u64; // number of 'propcheck' calls
+        let mut total_count = 0u64; // number of valid cubes
 
         loop {
-            debug!("cube = {}", DisplaySlice(&cube));
+            trace!("cube = {}", DisplaySlice(&cube));
             let assumptions = variables.iter().zip(cube.iter()).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
             let res = self.propcheck(&assumptions);
             total_checked += 1;
 
             if res {
-                debug!("valid assumptions: {}", DisplaySlice(&assumptions));
+                trace!("valid assumptions: {}", DisplaySlice(&assumptions));
                 total_count += 1;
             } else {
-                debug!("invalid assumptions: {}", DisplaySlice(&assumptions));
+                trace!("invalid assumptions: {}", DisplaySlice(&assumptions));
             }
 
             // Find the 1-based index of the last 'false' value in 'cube':
@@ -978,12 +977,12 @@ impl Solver {
             }
         }
 
-        info!("Checked {} cubes, {} valid", total_checked, total_count);
+        debug!("Checked {} cubes, {} valid", total_checked, total_count);
         total_count
     }
 
-    pub fn propcheck_all_tree(&mut self, variables: &[Var]) -> usize {
-        info!("propcheck_all_tree(variables = {})", DisplaySlice(variables));
+    pub fn propcheck_all_tree(&mut self, variables: &[Var]) -> u64 {
+        debug!("propcheck_all_tree(variables = {})", DisplaySlice(variables));
 
         assert!(variables.len() < 30);
 
@@ -991,7 +990,7 @@ impl Solver {
         assert_eq!(self.decision_level(), 0);
 
         // Propagate everything that needs to be propagated:
-        if let Some(_) = self.propagate() {
+        if let Some(_conflict) = self.propagate() {
             self.ok = false;
         }
 
@@ -1005,8 +1004,8 @@ impl Solver {
         }
 
         let mut cube = vec![false; variables.len()];
-        let mut total_checked = 0;
-        let mut total_count = 0;
+        let mut total_checked = 0u64;
+        let mut total_count = 0u64;
 
         enum State {
             Descending,
@@ -1016,15 +1015,15 @@ impl Solver {
         let mut state = State::Descending;
 
         loop {
-            debug!("cube = {}, level = {}", DisplaySlice(&cube), self.decision_level());
+            trace!("cube = {}, level = {}", DisplaySlice(&cube), self.decision_level());
             assert!(self.decision_level() <= variables.len());
 
             match state {
                 State::Descending => {
-                    debug!("Descending...");
+                    trace!("Descending...");
 
                     if self.decision_level() == variables.len() {
-                        debug!("Found valid cube: {}", DisplaySlice(&cube));
+                        trace!("Found valid cube: {}", DisplaySlice(&cube));
                         total_count += 1;
                         state = State::Ascending;
                     } else {
@@ -1033,14 +1032,14 @@ impl Solver {
                             let v = variables[self.decision_level() - 1];
                             let s = cube[self.decision_level() - 1];
                             let p = Lit::new(v, s);
-                            debug!("Trying to assign p = {} at new level {}", p, self.decision_level());
+                            trace!("Trying to assign p = {} at new level {}", p, self.decision_level());
                             match self.value(p) {
                                 LBool::True => {
-                                    debug!("Literal {} already has True value", p);
+                                    trace!("Literal {} already has True value", p);
                                     // do nothing
                                 }
                                 LBool::False => {
-                                    debug!(
+                                    trace!(
                                         "Propagated different value for cube = {}",
                                         DisplaySlice(&cube[..self.decision_level()])
                                     );
@@ -1048,7 +1047,7 @@ impl Solver {
                                     break;
                                 }
                                 LBool::Undef => {
-                                    debug!("Enqueueing {}", p);
+                                    trace!("Enqueueing {}", p);
                                     self.assignment.unchecked_enqueue(p, None);
                                     state = State::Propagating;
                                     break;
@@ -1059,7 +1058,7 @@ impl Solver {
                 }
 
                 State::Ascending => {
-                    debug!("Ascending...");
+                    trace!("Ascending...");
                     assert!(self.decision_level() > 0);
 
                     // Find the 1-based index of the last 'false' value in 'cube':
@@ -1086,17 +1085,17 @@ impl Solver {
                 }
 
                 State::Propagating => {
-                    info!("Propagating... total_checked = {}", total_checked);
+                    trace!("Propagating... total_checked = {}", total_checked);
                     total_checked += 1;
                     if let Some(_conflict) = self.propagate() {
-                        debug!(
+                        trace!(
                             "Conflict for cube = {} at level {}",
                             DisplaySlice(&cube[..self.decision_level()]),
                             self.decision_level()
                         );
                         state = State::Ascending;
                     } else {
-                        debug!(
+                        trace!(
                             "No conflict for cube = {} at level {}",
                             DisplaySlice(&cube[..self.decision_level()]),
                             self.decision_level()
@@ -1110,7 +1109,7 @@ impl Solver {
         // Post-backtrack to zero level:
         self.backtrack(0);
 
-        info!("Checked {} cubes, {} valid", total_checked, total_count);
+        debug!("Checked {} cubes, {} valid", total_checked, total_count);
         total_count
     }
 }
