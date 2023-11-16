@@ -16,6 +16,7 @@ members = [
     "lib/expr-parser",
     "lib/simple-sat",
     "examples/partition",
+    "examples/backdoor",
 ]
 
 [dependencies]
