@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct Var(pub(crate) u32);
+pub struct Var(pub u32);
 
 impl Var {
     pub const fn new(var: u32) -> Self {
