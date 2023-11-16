@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use itertools::{Either, Itertools};
 use log::{debug, info};
@@ -32,10 +32,19 @@ impl Algorithm {
     }
 }
 
+#[derive(Debug)]
+pub struct RunResult {
+    pub best_iteration: usize,
+    pub best_instance: Instance,
+    pub best_fitness: Fitness,
+    pub time: Duration,
+}
+
 impl Algorithm {
-    pub fn run(&mut self, weight: usize, num_iter: usize) {
+    pub fn run(&mut self, weight: usize, num_iter: usize) -> RunResult {
         let start_time = Instant::now();
 
+        info!("-----");
         info!("Running EA for {} iterations with weight = {}", num_iter, weight);
 
         // Determine genome size:
@@ -101,6 +110,13 @@ impl Algorithm {
 
         let elapsed_time = Instant::now() - start_time;
         info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
+
+        RunResult {
+            best_iteration,
+            best_instance,
+            best_fitness,
+            time: elapsed_time,
+        }
     }
 
     fn initial_instance(&mut self, size: usize, weight: usize) -> Instance {
