@@ -1124,6 +1124,27 @@ impl Solver {
     }
 }
 
+// Additional methods.
+impl Solver {
+    pub fn add_clause_external<I>(&mut self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<i32>,
+    {
+        let lits = lits.into_iter().map(|i| Lit::from_external(i.into())).collect_vec();
+        self.add_clause(&lits);
+    }
+
+    pub fn solve_under_assumptions_external<I>(&mut self, assumptions: I) -> SolveResult
+    where
+        I: IntoIterator,
+        I::Item: Into<i32>,
+    {
+        let assumptions = assumptions.into_iter().map(|i| Lit::from_external(i.into())).collect_vec();
+        self.solve_under_assumptions(&assumptions)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use test_log::test;
