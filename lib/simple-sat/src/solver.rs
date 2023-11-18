@@ -815,7 +815,7 @@ impl Solver {
                         }
                     }
                 } else {
-                    assert!(self.decision_level() > 0);
+                    assert!(self.level(var) > 0);
                     conflict.push(!lit);
                 }
                 seen[var] = false;
