@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
 
@@ -6,6 +7,7 @@ use tracing::debug;
 use crate::assignment::Assignment;
 use crate::lbool::LBool;
 use crate::lit::Lit;
+use crate::utils::DisplaySlice;
 
 #[derive(Debug, Clone)]
 pub struct Clause {
@@ -98,6 +100,12 @@ impl Clause {
 
     pub(crate) fn remove_falsified_literals(&mut self, assignment: &Assignment) {
         self.lits.retain(|&lit| assignment.fixed(lit) != LBool::False);
+    }
+}
+
+impl Display for Clause {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", DisplaySlice(&self.lits))
     }
 }
 
