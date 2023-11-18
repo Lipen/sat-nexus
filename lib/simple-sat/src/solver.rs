@@ -303,6 +303,13 @@ impl Solver {
         self.ca.clause_mut(cref)
     }
 
+    pub fn clauses(&self) -> impl Iterator<Item = &Clause> + '_ {
+        self.db.clauses().map(|cref| self.ca.clause(cref))
+    }
+    pub fn learnts(&self) -> impl Iterator<Item = &Clause> + '_ {
+        self.db.learnts().map(|cref| self.ca.clause(cref))
+    }
+
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
         // assert_eq!(self.decision_level(), 0);
 
