@@ -821,7 +821,7 @@ impl Solver {
                 seen[var] = false;
             }
         }
-        seen[p.var()] = true;
+        seen[p.var()] = false;
 
         conflict
     }
