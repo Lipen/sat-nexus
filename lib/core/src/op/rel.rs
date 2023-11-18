@@ -232,6 +232,7 @@ pub fn encode_leq_reified(t: i32, x: &[i32], b: &[bool]) -> Vec<Vec<i32>> {
 
 // =============================================================
 
+#[allow(unused)]
 fn num2bits(x: u32, n: usize) -> Vec<bool> {
     let mut bits = vec![false; n];
 
@@ -242,10 +243,12 @@ fn num2bits(x: u32, n: usize) -> Vec<bool> {
     bits
 }
 
+#[allow(unused)]
 fn bits2str(bits: &[bool]) -> String {
     bits.iter().map(|&bit| if bit { '1' } else { '0' }).collect::<String>()
 }
 
+#[allow(unused)]
 fn bits2num(bits: &[bool]) -> u32 {
     assert!(bits.len() <= 32);
 

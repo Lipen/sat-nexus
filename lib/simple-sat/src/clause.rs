@@ -64,6 +64,7 @@ impl Clause {
         self.lits.iter()
     }
 
+    #[allow(unused)]
     pub(crate) fn is_satisfied(&self, assignment: &Assignment) -> bool {
         self.lits.iter().any(|&lit| assignment.value(lit) == LBool::True)
     }
