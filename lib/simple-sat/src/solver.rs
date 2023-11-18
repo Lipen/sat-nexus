@@ -791,6 +791,8 @@ impl Solver {
     }
 
     fn analyze_final(&mut self, p: Lit) -> Vec<Lit> {
+        assert_eq!(self.value(p), LBool::True);
+
         let mut conflict = vec![p];
 
         if self.decision_level() == 0 {
@@ -805,6 +807,7 @@ impl Solver {
             if seen[var] {
                 if let Some(reason) = self.reason(var) {
                     let reason = self.clause(reason);
+                    assert_eq!(reason[0], lit);
                     for c in &reason[1..] {
                         let v = c.var();
                         if self.level(v) > 0 {
