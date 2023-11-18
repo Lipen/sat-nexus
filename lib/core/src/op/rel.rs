@@ -94,7 +94,7 @@ pub fn encode_gt(x: &[i32], a: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, a.len());
 
-    if let Some(a1) = bits_increment(&a) {
+    if let Some(a1) = bits_increment(a) {
         encode_geq(x, &a1)
     } else {
         // Empty clause:
@@ -106,7 +106,7 @@ pub fn encode_lt(x: &[i32], b: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, b.len());
 
-    if let Some(b1) = bits_decrement(&b) {
+    if let Some(b1) = bits_decrement(b) {
         encode_leq(x, &b1)
     } else {
         // Empty clause:
