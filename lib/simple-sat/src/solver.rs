@@ -651,12 +651,7 @@ impl Solver {
 
     /// Returns learnt clause and backtrack level.
     fn analyze(&mut self, conflict: ClauseRef) -> (Vec<Lit>, usize) {
-        trace!(
-            "Analyze conflict @{}: {:?} = {:?}",
-            self.decision_level(),
-            conflict,
-            self.clause(conflict)
-        );
+        trace!("Analyze conflict {} at level {}", self.clause(conflict), self.decision_level());
         debug_assert!(self.decision_level() > 0);
 
         let time_analyze_start = Instant::now();
