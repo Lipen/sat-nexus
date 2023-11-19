@@ -42,6 +42,13 @@ impl Default for ClauseDatabase {
 }
 
 impl ClauseDatabase {
+    pub fn clauses(&self) -> &[ClauseRef] {
+        &self.clauses
+    }
+    pub fn learnts(&self) -> &[ClauseRef] {
+        &self.learnts
+    }
+
     pub fn num_clauses(&self) -> usize {
         self.clauses.len()
     }
@@ -58,13 +65,6 @@ impl ClauseDatabase {
             self.clauses.push(cref);
         }
         cref
-    }
-
-    pub fn clauses(&self) -> &[ClauseRef] {
-        &self.clauses
-    }
-    pub fn learnts(&self) -> &[ClauseRef] {
-        &self.learnts
     }
 
     pub fn cla_decay_activity(&mut self) {
