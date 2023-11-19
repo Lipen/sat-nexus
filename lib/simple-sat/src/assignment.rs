@@ -26,8 +26,8 @@ impl Assignment {
         Self {
             assignment: VarVec::new(),
             var_data: VarVec::new(),
-            trail: vec![],
-            trail_lim: vec![],
+            trail: Vec::new(),
+            trail_lim: Vec::new(),
             qhead: 0,
         }
     }
