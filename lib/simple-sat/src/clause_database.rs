@@ -60,11 +60,11 @@ impl ClauseDatabase {
         cref
     }
 
-    pub fn clauses(&self) -> impl Iterator<Item = ClauseRef> + '_ {
-        self.clauses.iter().copied()
+    pub fn clauses(&self) -> &[ClauseRef] {
+        &self.clauses
     }
-    pub fn learnts(&self) -> impl Iterator<Item = ClauseRef> + '_ {
-        self.learnts.iter().copied()
+    pub fn learnts(&self) -> &[ClauseRef] {
+        &self.learnts
     }
 
     pub fn cla_decay_activity(&mut self) {

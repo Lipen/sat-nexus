@@ -304,10 +304,10 @@ impl Solver {
     }
 
     pub fn clauses(&self) -> impl Iterator<Item = &Clause> + '_ {
-        self.db.clauses().map(|cref| self.ca.clause(cref))
+        self.db.clauses().iter().map(|&cref| self.ca.clause(cref))
     }
     pub fn learnts(&self) -> impl Iterator<Item = &Clause> + '_ {
-        self.db.learnts().map(|cref| self.ca.clause(cref))
+        self.db.learnts().iter().map(|&cref| self.ca.clause(cref))
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) -> bool {
