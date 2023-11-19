@@ -27,7 +27,7 @@ impl Clause {
         }
     }
 
-    pub fn from_lits(lits: &[i32]) -> Self {
+    pub fn from_external_lits(lits: &[i32]) -> Self {
         let lits = lits.iter().map(|&lit| Lit::from_external(lit)).collect();
         Self::new(lits, false)
     }
