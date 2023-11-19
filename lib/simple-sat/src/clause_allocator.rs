@@ -46,8 +46,8 @@ impl ClauseAllocator {
         self.index_mut(cref)
     }
 
-    pub fn alloc(&mut self, lits: &[Lit], learnt: bool) -> ClauseRef {
-        let clause = Clause::new(lits.to_vec(), learnt);
+    pub fn alloc(&mut self, lits: Vec<Lit>, learnt: bool) -> ClauseRef {
+        let clause = Clause::new(lits, learnt);
         let cref = ClauseRef(self.arena.len());
         self.arena.push(clause);
         cref

@@ -344,7 +344,7 @@ impl Solver {
         // TODO: handle unit clauses (better)
 
         if lits.len() >= 2 {
-            let cref = self.db.add_clause(lits, false, &mut self.ca);
+            let cref = self.db.add_clause(lits.to_vec(), false, &mut self.ca);
             self.attach_clause(cref);
         } else {
             assert_eq!(lits.len(), 1);
@@ -532,7 +532,7 @@ impl Solver {
             } else {
                 // Learn a clause
                 let asserting_literal = lemma[0];
-                let cref = self.db.add_clause(&lemma, true, &mut self.ca);
+                let cref = self.db.add_clause(lemma, true, &mut self.ca);
                 self.attach_clause(cref);
                 self.db.cla_bump_activity(cref, &mut self.ca);
                 self.assignment.enqueue(asserting_literal, Some(cref));

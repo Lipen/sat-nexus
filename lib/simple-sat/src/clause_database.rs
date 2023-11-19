@@ -48,7 +48,7 @@ impl ClauseDatabase {
         self.learnts.len()
     }
 
-    pub fn add_clause(&mut self, lits: &[Lit], learnt: bool, ca: &mut ClauseAllocator) -> ClauseRef {
+    pub fn add_clause(&mut self, lits: Vec<Lit>, learnt: bool, ca: &mut ClauseAllocator) -> ClauseRef {
         let cref = ca.alloc(lits, learnt);
         if learnt {
             self.learnts.push(cref);
