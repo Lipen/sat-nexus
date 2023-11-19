@@ -303,10 +303,10 @@ impl Solver {
         self.ca.clause_mut(cref)
     }
 
-    pub fn clauses(&self) -> impl Iterator<Item = &Clause> + '_ {
+    pub fn clauses_iter(&self) -> impl Iterator<Item = &Clause> + '_ {
         self.db.clauses().iter().map(|&cref| self.ca.clause(cref))
     }
-    pub fn learnts(&self) -> impl Iterator<Item = &Clause> + '_ {
+    pub fn learnts_iter(&self) -> impl Iterator<Item = &Clause> + '_ {
         self.db.learnts().iter().map(|&cref| self.ca.clause(cref))
     }
 
