@@ -63,7 +63,6 @@ impl Algorithm {
         let mut best_fitness = fitness.clone();
 
         for i in 1..=num_iter {
-            // debug!("--- Iteration #{}", i);
             let start_time_iter = Instant::now();
 
             // Mutate the instance:
@@ -75,7 +74,6 @@ impl Algorithm {
             let mutated_fitness = self.calculate_fitness(&mutated_instance);
 
             let elapsed_time_iter = Instant::now() - start_time_iter;
-
             if i <= 10 || (i < 1000 && i % 100 == 0) || (i < 10000 && i % 1000 == 0) || i % 10000 == 0 {
                 debug!(
                     "[{} / {}] {:?} for weight={} in {:.3} ms",
