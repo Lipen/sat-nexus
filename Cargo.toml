@@ -15,6 +15,7 @@ members = [
     "lib/cli",
     "lib/expr-parser",
     "lib/simple-sat",
+    "lib/espresso-sys",
     "examples/partition",
     "examples/backdoor",
 ]

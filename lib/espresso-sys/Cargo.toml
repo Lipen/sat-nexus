@@ -1,0 +1,17 @@
+[package]
+name = "espresso-sys"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2021"
+
+[features]
+default = ["static"]
+static = ["cc", "glob"]
+
+[dependencies]
+
+[build-dependencies]
+build_script = "0.2"
+bindgen = "0.69"
+cc = { version = "1.0", features = ["parallel"], optional = true }
+glob = { version = "0.3", optional = true }

@@ -13,3 +13,6 @@
 [submodule "lib/kissat-sys/vendor/kissat"]
 	path = lib/kissat-sys/vendor/kissat
 	url = https://github.com/Lipen/kissat
+[submodule "lib/espresso-sys/vendor/espresso"]
+	path = lib/espresso-sys/vendor/espresso
+	url = https://github.com/classabbyamp/espresso-logic
