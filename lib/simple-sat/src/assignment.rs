@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::debug;
 
 use crate::cref::ClauseRef;
 use crate::idx::VarVec;
@@ -107,7 +107,7 @@ impl Assignment {
                 true
             }
             LBool::True => {
-                info!("existing consistent assignment of {:?}", lit);
+                debug!("existing consistent assignment of {:?}", lit);
                 true
             }
             LBool::False => {
