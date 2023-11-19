@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 
 use tracing::debug;
@@ -56,7 +57,11 @@ impl ClauseDatabase {
         self.learnts.len()
     }
 
-    pub fn add_clause(&mut self, lits: Vec<Lit>, learnt: bool, ca: &mut ClauseAllocator) -> ClauseRef {
+    pub fn new_clause<'a, L>(&mut self, lits: L, learnt: bool, ca: &mut ClauseAllocator) -> ClauseRef
+    where
+        L: Into<Cow<'a, [Lit]>>,
+    {
+        let lits = lits.into().into_owned();
         let clause = Clause::new(lits, learnt);
         let cref = ca.alloc(clause);
         if learnt {
