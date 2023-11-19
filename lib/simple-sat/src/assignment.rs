@@ -32,11 +32,11 @@ impl Assignment {
         }
     }
 
-    pub fn value_var(&self, var: Var) -> LBool {
-        self.assignment[var]
-    }
     pub fn value(&self, lit: Lit) -> LBool {
         self.assignment[lit.var()] ^ lit.negated()
+    }
+    pub fn value_var(&self, var: Var) -> LBool {
+        self.assignment[var]
     }
     pub fn assign(&mut self, var: Var, value: LBool) {
         self.assignment[var] = value;
