@@ -2,7 +2,6 @@ use std::ops::{Index, IndexMut};
 
 use crate::clause::Clause;
 use crate::cref::ClauseRef;
-use crate::lit::Lit;
 
 #[derive(Debug)]
 pub struct ClauseAllocator {
@@ -46,8 +45,7 @@ impl ClauseAllocator {
         self.index_mut(cref)
     }
 
-    pub fn alloc(&mut self, lits: Vec<Lit>, learnt: bool) -> ClauseRef {
-        let clause = Clause::new(lits, learnt);
+    pub fn alloc(&mut self, clause: Clause) -> ClauseRef {
         let cref = ClauseRef(self.arena.len());
         self.arena.push(clause);
         cref

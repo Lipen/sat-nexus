@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use tracing::debug;
 
 use crate::assignment::Assignment;
+use crate::clause::Clause;
 use crate::clause_allocator::ClauseAllocator;
 use crate::cref::ClauseRef;
 use crate::lbool::LBool;
@@ -49,7 +50,8 @@ impl ClauseDatabase {
     }
 
     pub fn add_clause(&mut self, lits: Vec<Lit>, learnt: bool, ca: &mut ClauseAllocator) -> ClauseRef {
-        let cref = ca.alloc(lits, learnt);
+        let clause = Clause::new(lits, learnt);
+        let cref = ca.alloc(clause);
         if learnt {
             self.learnts.push(cref);
         } else {
