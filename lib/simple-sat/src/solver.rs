@@ -821,6 +821,44 @@ impl Solver {
         conflict
     }
 
+    fn analyze_full(&mut self, conflict: ClauseRef) -> Vec<Lit> {
+        trace!(
+            "Analyze (FULL) conflict {} at level {}",
+            self.clause(conflict),
+            self.decision_level()
+        );
+        assert!(self.decision_level() > 0);
+
+        let mut lemma = Vec::new();
+        let mut seen = VarVec::from(vec![false; self.num_vars()]);
+
+        for p in self.clause(conflict).iter() {
+            seen[p.var()] = true;
+        }
+
+        for &lit in self.assignment.trail[self.assignment.trail_lim[0]..].iter().rev() {
+            let var = lit.var();
+            if seen[var] {
+                if let Some(reason) = self.reason(var) {
+                    let reason = self.clause(reason);
+                    assert_eq!(reason[0], lit);
+                    for c in &reason[1..] {
+                        let v = c.var();
+                        if self.level(v) > 0 {
+                            seen[v] = true;
+                        }
+                    }
+                } else {
+                    assert!(self.level(var) > 0);
+                    lemma.push(!lit);
+                }
+                seen[var] = false;
+            }
+        }
+
+        lemma
+    }
+
     /// If there is a variable that is unassigned, then pick it and assign.
     ///
     /// **Returns:**
