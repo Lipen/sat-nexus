@@ -1345,5 +1345,6 @@ mod tests {
         let variables = vec![tie.var(), shirt.var()];
         let count = solver.propcheck_all(&variables);
         info!("count = {}", count);
+        assert_eq!(count, 1);
     }
 }
