@@ -1050,6 +1050,9 @@ impl Solver {
         let mut total_checked = 0u64;
         let mut total_count = 0u64;
 
+        let mut learnts = Vec::new();
+
+        #[derive(Debug)]
         enum State {
             Descending,
             Ascending,
@@ -1058,13 +1061,23 @@ impl Solver {
         let mut state = State::Descending;
 
         loop {
-            trace!("cube = {}, level = {}", DisplaySlice(&cube), self.decision_level());
+            trace!(
+                "state = {:?}, cube = {}, level = {}, trail = [{}]",
+                state,
+                DisplaySlice(&cube),
+                self.decision_level(),
+                variables
+                    .iter()
+                    .zip(cube.iter())
+                    .take(self.decision_level())
+                    .map(|(&v, &s)| Lit::new(v, s))
+                    .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                    .join(", ")
+            );
             assert!(self.decision_level() <= variables.len());
 
             match state {
                 State::Descending => {
-                    trace!("Descending...");
-
                     if self.decision_level() == variables.len() {
                         trace!("Found valid cube: {}", DisplaySlice(&cube));
                         total_count += 1;
@@ -1083,8 +1096,15 @@ impl Solver {
                                 }
                                 LBool::False => {
                                     trace!(
-                                        "Propagated different value for cube = {}",
-                                        DisplaySlice(&cube[..self.decision_level()])
+                                        "Propagated different value for p = {} with trail = [{}]",
+                                        p,
+                                        variables
+                                            .iter()
+                                            .zip(cube.iter())
+                                            .take(self.decision_level())
+                                            .map(|(&v, &s)| Lit::new(v, s))
+                                            .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                            .join(", ")
                                     );
                                     state = State::Ascending;
                                     break;
@@ -1101,7 +1121,6 @@ impl Solver {
                 }
 
                 State::Ascending => {
-                    trace!("Ascending...");
                     assert!(self.decision_level() > 0);
 
                     // Find the 1-based index of the last 'false' value in 'cube':
@@ -1128,20 +1147,59 @@ impl Solver {
                 }
 
                 State::Propagating => {
-                    trace!("Propagating... total_checked = {}", total_checked);
                     total_checked += 1;
-                    if let Some(_conflict) = self.propagate() {
+                    if let Some(conflict) = self.propagate() {
                         trace!(
-                            "Conflict for cube = {} at level {}",
-                            DisplaySlice(&cube[..self.decision_level()]),
-                            self.decision_level()
+                            "Conflict {} for trail = [{}]",
+                            self.clause(conflict),
+                            variables
+                                .iter()
+                                .zip(cube.iter())
+                                .take(self.decision_level())
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                .join(", ")
                         );
+
+                        let lemma = self.analyze_full(conflict);
+                        trace!(
+                            "lemma {} for conflict {} with trail = [{}]",
+                            DisplaySlice(&lemma),
+                            self.clause(conflict),
+                            variables
+                                .iter()
+                                .zip(cube.iter())
+                                .take(self.decision_level())
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                .join(", ")
+                        );
+                        learnts.push(lemma.clone());
+
+                        // Add non-unit learnt clause:
+                        assert!(!lemma.is_empty());
+                        if lemma.len() > 1 {
+                            let cref = self.db.new_clause(lemma, true, &mut self.ca);
+                            self.attach_clause(cref);
+                            self.db.cla_bump_activity(cref, &mut self.ca);
+                        }
+
+                        // FIXME: do we need to execute the following stuff?
+                        // self.var_order.var_decay_activity();
+                        // self.db.cla_decay_activity();
+                        // self.learning_guard.bump();
+
                         state = State::Ascending;
                     } else {
                         trace!(
-                            "No conflict for cube = {} at level {}",
-                            DisplaySlice(&cube[..self.decision_level()]),
-                            self.decision_level()
+                            "No conflict for trail = [{}]",
+                            variables
+                                .iter()
+                                .zip(cube.iter())
+                                .take(self.decision_level())
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                .join(", ")
                         );
                         state = State::Descending;
                     }
@@ -1151,6 +1209,17 @@ impl Solver {
 
         // Post-backtrack to zero level:
         self.backtrack(0);
+
+        // Add learnt units only:
+        for lemma in learnts {
+            assert!(lemma.len() > 0);
+            if lemma.len() == 1 {
+                assert_eq!(self.decision_level(), 0);
+                self.assignment.enqueue(lemma[0], None);
+            }
+        }
+
+        // TODO: re-check all hard tasks
 
         debug!("Checked {} cubes, {} valid", total_checked, total_count);
         total_count
