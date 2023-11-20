@@ -43,7 +43,7 @@ struct Cli {
     dump_learnts: bool,
 
     /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
-    #[arg(long, action)]
+    #[arg(long)]
     add_learnts: bool,
 }
 
