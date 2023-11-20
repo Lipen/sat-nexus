@@ -6,7 +6,7 @@ use std::io::{LineWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use backdoor::algorithm::{Algorithm, Options};
+use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use simple_sat::solver::Solver;
 
 // Run this example:
@@ -31,7 +31,7 @@ struct Cli {
     num_runs: usize,
 
     /// Random seed.
-    #[arg(long, default_value_t = 42)]
+    #[arg(long, default_value_t = DEFAULT_OPTIONS.seed)]
     seed: u64,
 
     /// Results.
@@ -61,9 +61,11 @@ fn main() -> color_eyre::Result<()> {
 
     // Setup the evolutionary algorithm:
     let options = Options {
+        seed: args.seed,
         add_learnts_in_propcheck_all_tree: args.add_learnts,
+        ..DEFAULT_OPTIONS
     };
-    let mut algorithm = Algorithm::new(solver, args.seed, options);
+    let mut algorithm = Algorithm::new(solver, options);
 
     // Create and open the file with results:
     let mut f = if let Some(path_results) = &args.path_results {

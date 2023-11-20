@@ -25,11 +25,11 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
-    pub fn new(solver: Solver, seed: u64, options: Options) -> Self {
+    pub fn new(solver: Solver, options: Options) -> Self {
         let banned = vec![false; solver.num_vars()];
         Self {
             solver,
-            rng: StdRng::seed_from_u64(seed),
+            rng: StdRng::seed_from_u64(options.seed),
             cache: HashMap::new(),
             cache_hits: 0,
             cache_misses: 0,
@@ -41,10 +41,12 @@ impl Algorithm {
 
 #[derive(Debug)]
 pub struct Options {
+    pub seed: u64,
     pub add_learnts_in_propcheck_all_tree: bool,
 }
 
 pub const DEFAULT_OPTIONS: Options = Options {
+    seed: 42,
     add_learnts_in_propcheck_all_tree: false,
 };
 
