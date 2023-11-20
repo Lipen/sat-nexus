@@ -21,10 +21,11 @@ pub struct Algorithm {
     pub cache_hits: usize,
     pub cache_misses: usize,
     pub banned: Vec<bool>,
+    pub options: Options,
 }
 
 impl Algorithm {
-    pub fn new(solver: Solver, seed: u64) -> Self {
+    pub fn new(solver: Solver, seed: u64, options: Options) -> Self {
         let banned = vec![false; solver.num_vars()];
         Self {
             solver,
@@ -33,7 +34,23 @@ impl Algorithm {
             cache_hits: 0,
             cache_misses: 0,
             banned,
+            options,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct Options {
+    pub add_learnts_in_propcheck_all_tree: bool,
+}
+
+pub const DEFAULT_OPTIONS: Options = Options {
+    add_learnts_in_propcheck_all_tree: false,
+};
+
+impl Default for Options {
+    fn default() -> Self {
+        DEFAULT_OPTIONS
     }
 }
 
@@ -161,7 +178,7 @@ impl Algorithm {
             fit.clone()
         } else {
             self.cache_misses += 1;
-            let fit = instance.calculate_fitness(&mut self.solver);
+            let fit = instance.calculate_fitness(&mut self.solver, &self.options);
             self.cache.insert(instance.clone(), fit.clone());
             fit
         }

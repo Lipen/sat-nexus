@@ -6,9 +6,8 @@ use std::io::{LineWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
+use backdoor::algorithm::{Algorithm, Options};
 use simple_sat::solver::Solver;
-
-use backdoor::algorithm::Algorithm;
 
 // Run this example:
 // cargo run -p backdoor --bin search -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 1000
@@ -42,6 +41,10 @@ struct Cli {
     /// Do dump learnts after each EA run?
     #[arg(long)]
     dump_learnts: bool,
+
+    /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
+    #[arg(long, action)]
+    add_learnts: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -57,7 +60,10 @@ fn main() -> color_eyre::Result<()> {
     solver.init_from_file(&args.path_cnf);
 
     // Setup the evolutionary algorithm:
-    let mut algorithm = Algorithm::new(solver, args.seed);
+    let options = Options {
+        add_learnts_in_propcheck_all_tree: args.add_learnts,
+    };
+    let mut algorithm = Algorithm::new(solver, args.seed, options);
 
     // Create and open the file with results:
     let mut f = if let Some(path_results) = &args.path_results {

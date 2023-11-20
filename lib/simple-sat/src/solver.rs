@@ -1024,7 +1024,7 @@ impl Solver {
         total_count
     }
 
-    pub fn propcheck_all_tree(&mut self, variables: &[Var]) -> u64 {
+    pub fn propcheck_all_tree(&mut self, variables: &[Var], add_learnts: bool) -> u64 {
         debug!("propcheck_all_tree(variables = {})", DisplaySlice(variables));
 
         assert!(variables.len() < 30);
@@ -1161,33 +1161,36 @@ impl Solver {
                                 .join(", ")
                         );
 
-                        let lemma = self.analyze_full(conflict);
-                        trace!(
-                            "lemma {} for conflict {} with trail = [{}]",
-                            DisplaySlice(&lemma),
-                            self.clause(conflict),
-                            variables
-                                .iter()
-                                .zip(cube.iter())
-                                .take(self.decision_level())
-                                .map(|(&v, &s)| Lit::new(v, s))
-                                .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
-                                .join(", ")
-                        );
-                        learnts.push(lemma.clone());
+                        if add_learnts {
+                            let lemma = self.analyze_full(conflict);
+                            trace!(
+                                "lemma {} for conflict {} with trail = [{}]",
+                                DisplaySlice(&lemma),
+                                self.clause(conflict),
+                                variables
+                                    .iter()
+                                    .zip(cube.iter())
+                                    .take(self.decision_level())
+                                    .map(|(&v, &s)| Lit::new(v, s))
+                                    .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                    .join(", ")
+                            );
 
-                        // Add non-unit learnt clause:
-                        assert!(!lemma.is_empty());
-                        if lemma.len() > 1 {
-                            let cref = self.db.new_clause(lemma, true, &mut self.ca);
-                            self.attach_clause(cref);
-                            self.db.cla_bump_activity(cref, &mut self.ca);
+                            learnts.push(lemma.clone());
+
+                            // Add non-unit learnt clause:
+                            assert!(!lemma.is_empty());
+                            if lemma.len() > 1 {
+                                let cref = self.db.new_clause(lemma, true, &mut self.ca);
+                                self.attach_clause(cref);
+                                self.db.cla_bump_activity(cref, &mut self.ca);
+                            }
+
+                            // FIXME: do we need to execute the following stuff?
+                            // self.var_order.var_decay_activity();
+                            // self.db.cla_decay_activity();
+                            // self.learning_guard.bump();
                         }
-
-                        // FIXME: do we need to execute the following stuff?
-                        // self.var_order.var_decay_activity();
-                        // self.db.cla_decay_activity();
-                        // self.learning_guard.bump();
 
                         state = State::Ascending;
                     } else {
@@ -1210,16 +1213,18 @@ impl Solver {
         // Post-backtrack to zero level:
         self.backtrack(0);
 
-        // Add learnt units only:
-        for lemma in learnts {
-            assert!(lemma.len() > 0);
-            if lemma.len() == 1 {
-                assert_eq!(self.decision_level(), 0);
-                self.assignment.enqueue(lemma[0], None);
+        if add_learnts {
+            // Add learnt units only:
+            for lemma in learnts {
+                assert!(lemma.len() > 0);
+                if lemma.len() == 1 {
+                    assert_eq!(self.decision_level(), 0);
+                    self.assignment.enqueue(lemma[0], None);
+                }
             }
-        }
 
-        // TODO: re-check all hard tasks
+            // TODO: re-check all hard tasks - they might be "easy" after adding the learnt clauses.
+        }
 
         debug!("Checked {} cubes, {} valid", total_checked, total_count);
         total_count
@@ -1319,7 +1324,7 @@ mod tests {
         info!("count = {}", count);
 
         info!("----------------------");
-        let count_tree = solver.propcheck_all_tree(&variables);
+        let count_tree = solver.propcheck_all_tree(&variables, false);
         info!("count_tree = {}", count_tree);
 
         assert_eq!(count, count_tree);
