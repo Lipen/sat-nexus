@@ -83,7 +83,7 @@ impl Algorithm {
         for i in 0..self.solver.num_vars() {
             let v = Var(i as u32);
             if self.solver.value_var(v) != LBool::Undef {
-                trace!("Skipping variable {} with value {:?}", v, self.solver.value_var(v));
+                trace!("Skipping already assigned variable {} with value {:?}", v, self.solver.value_var(v));
                 self.banned[i] = true;
             }
         }
