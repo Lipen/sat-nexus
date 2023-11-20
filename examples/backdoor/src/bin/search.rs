@@ -45,6 +45,10 @@ struct Cli {
     /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
     #[arg(long)]
     add_learnts: bool,
+
+    /// Do ban variables used in the best backdoor (on previous runs)?
+    #[arg(long)]
+    ban_used: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -63,6 +67,7 @@ fn main() -> color_eyre::Result<()> {
     let options = Options {
         seed: args.seed,
         add_learnts_in_propcheck_all_tree: args.add_learnts,
+        ban_used_variables: args.ban_used,
         ..DEFAULT_OPTIONS
     };
     let mut algorithm = Algorithm::new(solver, options);

@@ -43,11 +43,13 @@ impl Algorithm {
 pub struct Options {
     pub seed: u64,
     pub add_learnts_in_propcheck_all_tree: bool,
+    pub ban_used_variables: bool,
 }
 
 pub const DEFAULT_OPTIONS: Options = Options {
     seed: 42,
     add_learnts_in_propcheck_all_tree: false,
+    ban_used_variables: false,
 };
 
 impl Default for Options {
@@ -148,8 +150,10 @@ impl Algorithm {
         info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
 
         // Ban used variables:
-        for i in best_instance.indices_true() {
-            self.banned[i] = true;
+        if self.options.ban_used_variables {
+            for i in best_instance.indices_true() {
+                self.banned[i] = true;
+            }
         }
 
         RunResult {
