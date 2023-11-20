@@ -19,23 +19,23 @@ struct Cli {
     path_cnf: PathBuf,
 
     /// Backdoor size.
-    #[arg(long)]
+    #[arg(long, value_name = "INT")]
     backdoor_size: usize,
 
     /// Number of EA iterations.
-    #[arg(long)]
+    #[arg(long, value_name = "INT")]
     num_iters: usize,
 
     /// Number of EA runs.
-    #[arg(long, default_value_t = 1)]
+    #[arg(long, value_name = "INT", default_value_t = 1)]
     num_runs: usize,
 
     /// Random seed.
-    #[arg(long, default_value_t = DEFAULT_OPTIONS.seed)]
+    #[arg(long, value_name="INT", default_value_t = DEFAULT_OPTIONS.seed)]
     seed: u64,
 
-    /// Results.
-    #[arg(long = "results")]
+    /// Path to a file with results.
+    #[arg(long = "results", value_name = "FILE")]
     path_results: Option<PathBuf>,
 
     /// Do dump learnts after each EA run?
