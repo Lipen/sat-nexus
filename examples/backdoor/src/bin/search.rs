@@ -38,6 +38,10 @@ struct Cli {
     /// Results.
     #[arg(long = "results")]
     path_results: Option<PathBuf>,
+
+    /// Do dump learnts after each EA run?
+    #[arg(long)]
+    dump_learnts: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -48,10 +52,14 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
+    // Initialize the SAT solver:
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
+
+    // Setup the evolutionary algorithm:
     let mut algorithm = Algorithm::new(solver, args.seed);
 
+    // Create and open the file with results:
     let mut f = if let Some(path_results) = &args.path_results {
         let f = OpenOptions::new().write(true).create(true).truncate(true).open(path_results)?;
         let f = LineWriter::new(f);
@@ -60,8 +68,29 @@ fn main() -> color_eyre::Result<()> {
         None
     };
 
-    for _ in 0..args.num_runs {
+    for run_number in 1..=args.num_runs {
+        info!("EA run {} / {}", run_number, args.num_runs);
+
+        // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters);
+
+        // Dump learnts:
+        if args.dump_learnts {
+            let lf = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(format!("learnts_{}.txt", run_number))?;
+            let mut lf = LineWriter::new(lf);
+            for learnt in algorithm.solver.learnts_iter() {
+                for lit in learnt.iter() {
+                    write!(lf, "{} ", lit)?;
+                }
+                writeln!(lf, " 0")?;
+            }
+        }
+
+        // Write the best found backdoor into the resulting file:
         if let Some(f) = &mut f {
             // Note: variables in backdoors are reported 1-based.
             writeln!(
@@ -76,6 +105,7 @@ fn main() -> color_eyre::Result<()> {
                 result.time.as_secs_f64() * 1000.0
             )?;
         }
+        assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
     }
 
     let elapsed = Instant::now() - start_time;

@@ -1,10 +1,13 @@
-use crate::fitness::Fitness;
 use itertools::Itertools;
 use rand::prelude::*;
-use simple_sat::solver::Solver;
-use simple_sat::var::Var;
+
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Index, IndexMut};
+
+use simple_sat::solver::Solver;
+use simple_sat::var::Var;
+
+use crate::fitness::Fitness;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Instance {

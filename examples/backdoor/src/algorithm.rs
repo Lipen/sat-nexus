@@ -1,33 +1,38 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use itertools::{Either, Itertools};
-use log::{debug, info};
+use itertools::Itertools;
+use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
+use simple_sat::lbool::LBool;
 use simple_sat::solver::Solver;
+use simple_sat::var::Var;
 
 use crate::fitness::Fitness;
 use crate::instance::Instance;
 
 #[derive(Debug)]
 pub struct Algorithm {
-    solver: Solver,
-    rng: StdRng,
-    cache: HashMap<Instance, Fitness>,
-    cache_hits: usize,
-    cache_misses: usize,
+    pub solver: Solver,
+    pub rng: StdRng,
+    pub cache: HashMap<Instance, Fitness>,
+    pub cache_hits: usize,
+    pub cache_misses: usize,
+    pub banned: Vec<bool>,
 }
 
 impl Algorithm {
     pub fn new(solver: Solver, seed: u64) -> Self {
+        let banned = vec![false; solver.num_vars()];
         Self {
             solver,
             rng: StdRng::seed_from_u64(seed),
             cache: HashMap::new(),
             cache_hits: 0,
             cache_misses: 0,
+            banned,
         }
     }
 }
@@ -44,12 +49,26 @@ impl Algorithm {
     pub fn run(&mut self, weight: usize, num_iter: usize) -> RunResult {
         let start_time = Instant::now();
 
-        info!("-----");
-        info!("Running EA for {} iterations with weight = {}", num_iter, weight);
+        info!("Running EA for {} iterations with weight {}", num_iter, weight);
+
+        debug!("solver.num_vars() = {}", self.solver.num_vars());
+        debug!("solver.num_clauses() = {}", self.solver.num_clauses());
+        debug!("solver.num_learnts() = {}", self.solver.num_learnts());
 
         // Determine genome size:
         let genome_size = self.solver.num_vars();
         info!("Genome size: {}", genome_size);
+
+        // Ban already assigned variables:
+        assert_eq!(self.banned.len(), self.solver.num_vars());
+        for i in 0..self.solver.num_vars() {
+            let v = Var(i as u32);
+            if self.solver.value_var(v) != LBool::Undef {
+                trace!("Skipping variable {} with value {:?}", v, self.solver.value_var(v));
+                self.banned[i] = true;
+            }
+        }
+        info!("Total banned variables: {}", self.banned.iter().filter(|&&b| b).count());
 
         // Create an initial instance:
         let mut instance = self.initial_instance(genome_size, weight);
@@ -109,6 +128,11 @@ impl Algorithm {
         let elapsed_time = Instant::now() - start_time;
         info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
 
+        // Ban used variables:
+        for i in best_instance.indices_true() {
+            self.banned[i] = true;
+        }
+
         RunResult {
             best_iteration,
             best_instance,
@@ -118,7 +142,17 @@ impl Algorithm {
     }
 
     fn initial_instance(&mut self, size: usize, weight: usize) -> Instance {
-        Instance::new_random_with_weight(size, weight, &mut self.rng)
+        // Instance::new_random_with_weight(size, weight, &mut self.rng)
+
+        let mut genome = vec![false; size];
+        let available = (0..size).filter(|&i| !self.banned[i]).collect_vec();
+        for &i in available.choose_multiple(&mut self.rng, weight) {
+            genome[i] = true;
+        }
+        let instance = Instance::new(genome);
+        assert_eq!(instance.weight(), weight);
+
+        instance
     }
 
     fn calculate_fitness(&mut self, instance: &Instance) -> Fitness {
@@ -139,12 +173,17 @@ impl Algorithm {
         let d = Bernoulli::new(p).unwrap();
 
         // Determine the indices of ones and zeros in the instance's genome:
-        let (ones, zeros): (Vec<_>, Vec<_>) =
-            instance
-                .genome
-                .iter()
-                .enumerate()
-                .partition_map(|(i, &b)| if b { Either::Left(i) } else { Either::Right(i) });
+        let mut ones = Vec::new();
+        let mut zeros = Vec::new();
+        for (i, &b) in instance.genome.iter().enumerate() {
+            if b {
+                ones.push(i);
+            } else {
+                if !self.banned[i] {
+                    zeros.push(i);
+                }
+            }
+        }
 
         // Flip some (`Binomial(1/p)` distributed) number of 1's to 0's:
         let mut successes = 0;
