@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::assignment::Assignment;
 use crate::clause::Clause;
@@ -107,11 +107,11 @@ impl ClauseDatabase {
             }
             match clause.contains_fixed_literal(assignment) {
                 LBool::True => {
-                    debug!("{:?} contains satisfied literal => deleting", clause);
+                    trace!("{} contains satisfied literal => deleting", clause);
                     clause.mark_deleted();
                 }
                 LBool::False => {
-                    debug!("{:?} contains falsified literal => shrinking", clause);
+                    trace!("{} contains falsified literal => shrinking", clause);
                     clause.remove_falsified_literals(assignment);
                 }
                 LBool::Undef => {}
@@ -161,6 +161,6 @@ impl ClauseDatabase {
         });
 
         let removed = learnts_before_remove - self.learnts.len();
-        debug!("Removed {} clauses of {}", removed, learnts_before_remove);
+        trace!("Removed {} clauses of {}", removed, learnts_before_remove);
     }
 }

@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::assignment::Assignment;
 use crate::lbool::LBool;
@@ -80,11 +80,11 @@ impl Clause {
         for &lit in self.lits.iter() {
             match assignment.fixed(lit) {
                 LBool::True => {
-                    debug!("Root-level satisfied literal {:?} in {:?}", lit, self);
+                    trace!("Root-level satisfied literal {} in {}", lit, self);
                     num_satisfied += 1
                 }
                 LBool::False => {
-                    debug!("Root-level falsified literal {:?} in {:?}", lit, self);
+                    trace!("Root-level falsified literal {} in {}", lit, self);
                     num_falsified += 1;
                 }
                 LBool::Undef => {}
