@@ -161,16 +161,14 @@ impl Algorithm {
     }
 
     fn initial_instance(&mut self, size: usize, weight: usize) -> Instance {
-        // Instance::new_random_with_weight(size, weight, &mut self.rng)
-
         let mut genome = vec![false; size];
         let available = (0..size).filter(|&i| !self.banned[i]).collect_vec();
         for &i in available.choose_multiple(&mut self.rng, weight) {
             genome[i] = true;
         }
+
         let instance = Instance::new(genome);
         assert_eq!(instance.weight(), weight);
-
         instance
     }
 
