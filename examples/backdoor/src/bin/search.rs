@@ -46,7 +46,7 @@ struct Cli {
     #[arg(long)]
     add_learnts: bool,
 
-    /// Do ban variables used in the best backdoor (on previous runs)?
+    /// Do ban variables used in best backdoors on previous runs?
     #[arg(long)]
     ban_used: bool,
 }
