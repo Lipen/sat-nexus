@@ -8,9 +8,10 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
+use simple_sat::solver::Solver;
+
 use backdoor::minimization::minimize_backdoor;
 use backdoor::utils::partition_tasks;
-use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 
 // Run this example:
@@ -113,6 +114,9 @@ fn main() -> color_eyre::Result<()> {
         let result = algorithm.run(args.backdoor_size, args.num_iters);
 
         if args.minimize {
+            #[cfg(not(feature = "minimization"))]
+            log::warn!("'minimization' feature is required for '--minimize' to work properly");
+
             // Minimize the best backdoor:
             let backdoor = result.best_instance.get_variables();
             let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
