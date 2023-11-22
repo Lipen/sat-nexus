@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::io::BufRead;
 use std::mem;
@@ -1064,8 +1065,7 @@ impl Solver {
         let mut total_checked = 0u64;
         let mut total_count = 0u64;
 
-        // TODO: replace with HashSet
-        let mut learnts = Vec::new();
+        let mut learnts = HashSet::new();
 
         // Reset the limits for reduceDB:
         // self.learning_guard.reset(self.num_clauses());
@@ -1195,20 +1195,22 @@ impl Solver {
                                     .join(", ")
                             );
 
-                            learnts.push(lemma.clone());
+                            if learnts.insert(lemma.clone()) {
+                                // Add non-unit learnt clause:
+                                assert!(!lemma.is_empty());
+                                if lemma.len() > 1 {
+                                    debug!("Adding learnt {}", DisplaySlice(&lemma));
+                                    let cref = self.db.new_clause(lemma, true, &mut self.ca);
+                                    self.attach_clause(cref);
+                                    self.db.cla_bump_activity(cref, &mut self.ca);
+                                }
 
-                            // Add non-unit learnt clause:
-                            assert!(!lemma.is_empty());
-                            if lemma.len() > 1 {
-                                debug!("Adding learnt {}", DisplaySlice(&lemma));
-                                let cref = self.db.new_clause(lemma, true, &mut self.ca);
-                                self.attach_clause(cref);
-                                self.db.cla_bump_activity(cref, &mut self.ca);
+                                self.var_order.var_decay_activity();
+                                self.db.cla_decay_activity();
+                                self.learning_guard.bump();
+                            } else {
+                                trace!("lemma {} already present", DisplaySlice(&lemma));
                             }
-
-                            self.var_order.var_decay_activity();
-                            self.db.cla_decay_activity();
-                            self.learning_guard.bump();
                         }
 
                         state = State::Ascending;
