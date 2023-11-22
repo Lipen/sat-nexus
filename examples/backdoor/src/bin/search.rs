@@ -1,13 +1,17 @@
 use clap::Parser;
 use itertools::Itertools;
-use log::{info, trace};
+use log::{debug, info, trace};
+
 use std::fs::OpenOptions;
 use std::io::{LineWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
+use backdoor::minimization::minimize_backdoor;
+use backdoor::utils::partition_tasks;
 use simple_sat::solver::Solver;
+use simple_sat::utils::DisplaySlice;
 
 // Run this example:
 // cargo run -p backdoor --bin search -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 1000
@@ -53,6 +57,10 @@ struct Cli {
     /// Comma-separated list of banned variables (1-based indices).
     #[arg(long, value_name = "INT...")]
     bans: Option<String>,
+
+    /// Do minimize the best backdoors into clauses using Espresso?
+    #[arg(long)]
+    minimize: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -95,11 +103,45 @@ fn main() -> color_eyre::Result<()> {
         None
     };
 
+    // let fm = OpenOptions::new().write(true).create(true).truncate(true).open("learnts.txt")?;
+    // let mut fm = LineWriter::new(fm);
+
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters);
+
+        // Minimize the best backdoor:
+        let backdoor = result.best_instance.get_variables();
+        let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
+        debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
+        let clauses = minimize_backdoor(&easy);
+        debug!("Total minimized clauses: {}", clauses.len());
+        for c in clauses.iter() {
+            debug!("{}", DisplaySlice(c));
+        }
+
+        // Add the minimized clauses as learnts:
+        if args.minimize {
+            for lemma in clauses.iter() {
+                algorithm.solver.add_learnt(lemma);
+                // for lit in lemma.iter() {
+                //     write!(fm, "{} ", lit)?;
+                // }
+                // writeln!(fm, "0")?;
+            }
+
+            // Note: currently, `add_learnt` does the propagation and simplification at the end.
+            //
+            // // Post-propagate:
+            // if let Some(conflict) = algorithm.solver.propagate() {
+            //     warn!("Conflict during post-propagation: {}", algorithm.solver.clause(conflict));
+            // }
+            //
+            // // Simplify:
+            // algorithm.solver.simplify();
+        }
 
         // Dump learnts:
         if args.dump_learnts {

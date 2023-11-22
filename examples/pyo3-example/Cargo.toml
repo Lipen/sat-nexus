@@ -1,0 +1,10 @@
+[package]
+name = "pyo3-example"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2021"
+publish = false
+
+[dependencies]
+pyo3 = { version = "0.20.0", features = ["auto-initialize"] }
+itertools = "0.12.0"

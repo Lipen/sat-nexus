@@ -358,6 +358,42 @@ impl Solver {
         self.ok
     }
 
+    pub fn add_learnt(&mut self, lits: &[Lit]) -> bool {
+        assert_eq!(self.decision_level(), 0);
+
+        if lits.is_empty() {
+            warn!("Empty learnt clause");
+            self.ok = false;
+        }
+
+        if !self.ok {
+            // Already UNSAT, no need to add learnts.
+            return false;
+        }
+
+        if lits.len() == 1 {
+            // Learn a unit clause:
+            self.assignment.unchecked_enqueue(lits[0], None);
+            // FIXME: handle (ignore, in fact) the bool returned from 'enqueue'
+
+            // Propagate the assigned unit:
+            if let Some(conflict) = self.propagate() {
+                debug!("Conflict during propagation of learn unit: {}", self.clause(conflict));
+                self.ok = false;
+            }
+        } else {
+            // Learn a clause:
+            let cref = self.db.new_clause(lits, true, &mut self.ca);
+            self.attach_clause(cref);
+            self.db.cla_bump_activity(cref, &mut self.ca);
+        }
+
+        // Post-simplify:
+        self.simplify();
+
+        self.ok
+    }
+
     fn attach_clause(&mut self, cref: ClauseRef) {
         let clause = self.ca.clause(cref);
         debug_assert!(clause.len() >= 2, "Clause must have at least 2 literals");
@@ -552,7 +588,7 @@ impl Solver {
         true
     }
 
-    fn propagate(&mut self) -> Option<ClauseRef> {
+    pub fn propagate(&mut self) -> Option<ClauseRef> {
         let time_propagate_start = Instant::now();
 
         let mut conflict = None;
@@ -1181,7 +1217,8 @@ impl Solver {
                         );
 
                         if add_learnts {
-                            let lemma = self.analyze_full(conflict);
+                            // let lemma = self.analyze_full(conflict);
+                            let (lemma, _) = self.analyze(conflict);
                             trace!(
                                 "lemma {} for conflict {} with trail = [{}]",
                                 DisplaySlice(&lemma),
