@@ -112,18 +112,19 @@ fn main() -> color_eyre::Result<()> {
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters);
 
-        // Minimize the best backdoor:
-        let backdoor = result.best_instance.get_variables();
-        let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
-        debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
-        let clauses = minimize_backdoor(&easy);
-        debug!("Total minimized clauses: {}", clauses.len());
-        for c in clauses.iter() {
-            debug!("{}", DisplaySlice(c));
-        }
-
-        // Add the minimized clauses as learnts:
         if args.minimize {
+            // Minimize the best backdoor:
+            let backdoor = result.best_instance.get_variables();
+            let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
+            debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
+            let clauses = minimize_backdoor(&easy);
+            debug!(
+                "Total {} minimized clauses: [{}]",
+                clauses.len(),
+                clauses.iter().map(|c| DisplaySlice(c)).join(", ")
+            );
+
+            // Add the minimized clauses as learnts:
             for lemma in clauses.iter() {
                 algorithm.solver.add_learnt(lemma);
                 // for lit in lemma.iter() {
