@@ -78,18 +78,22 @@ impl Clause {
         let mut num_satisfied: usize = 0;
         let mut num_falsified: usize = 0;
         for &lit in self.lits.iter() {
-            match assignment.fixed(lit) {
-                LBool::True => {
-                    trace!("Root-level satisfied literal {} in {}", lit, self);
-                    num_satisfied += 1
+            if assignment.level(lit.var()) == 0 {
+                match assignment.value(lit) {
+                    LBool::True => {
+                        trace!("Root-level satisfied literal {} in {}", lit, self);
+                        num_satisfied += 1
+                    }
+                    LBool::False => {
+                        trace!("Root-level falsified literal {} in {}", lit, self);
+                        num_falsified += 1;
+                    }
+                    LBool::Undef => {
+                        // do nothing
+                    }
                 }
-                LBool::False => {
-                    trace!("Root-level falsified literal {} in {}", lit, self);
-                    num_falsified += 1;
-                }
-                LBool::Undef => {
-                    // do nothing
-                }
+            } else {
+                // do nothing
             }
         }
         if num_satisfied > 0 {
