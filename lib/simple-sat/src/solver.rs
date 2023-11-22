@@ -474,6 +474,12 @@ impl Solver {
                 return SearchResult::Restart;
             }
 
+            // Simplify DB:
+            if self.decision_level() == 0 {
+                // TODO: handle returned 'false' value
+                self.simplify();
+            }
+
             // Reduce DB:
             let learnts_limit = self.learning_guard.limit(self.assignment.trail.len());
             if self.num_learnts() >= learnts_limit {
@@ -535,7 +541,7 @@ impl Solver {
                 let cref = self.db.new_clause(lemma, true, &mut self.ca);
                 self.attach_clause(cref);
                 self.db.cla_bump_activity(cref, &mut self.ca);
-                self.assignment.enqueue(asserting_literal, Some(cref));
+                self.assignment.unchecked_enqueue(asserting_literal, Some(cref));
             }
 
             self.var_order.var_decay_activity();
@@ -923,6 +929,13 @@ impl Solver {
         self.time_restart += time_restart_start.elapsed();
     }
 
+    pub fn simplify(&mut self) {
+        // TODO: return bool
+        assert_eq!(self.decision_level(), 0);
+        // TODO: timing
+        self.db.simplify(&self.assignment, &mut self.ca);
+    }
+
     fn reduce_db(&mut self) {
         let time_reduce_start = Instant::now();
         self.reduces += 1;
@@ -1034,6 +1047,7 @@ impl Solver {
 
         // Propagate everything that needs to be propagated:
         if let Some(_conflict) = self.propagate() {
+            warn!("Conflict during pre-propagation");
             self.ok = false;
         }
 
@@ -1050,7 +1064,12 @@ impl Solver {
         let mut total_checked = 0u64;
         let mut total_count = 0u64;
 
+        // TODO: replace with HashSet
         let mut learnts = Vec::new();
+
+        // Reset the limits for reduceDB:
+        // self.learning_guard.reset(self.num_clauses());
+        // Note: currently, this is performed outside.
 
         #[derive(Debug)]
         enum State {
@@ -1181,15 +1200,15 @@ impl Solver {
                             // Add non-unit learnt clause:
                             assert!(!lemma.is_empty());
                             if lemma.len() > 1 {
+                                debug!("Adding learnt {}", DisplaySlice(&lemma));
                                 let cref = self.db.new_clause(lemma, true, &mut self.ca);
                                 self.attach_clause(cref);
                                 self.db.cla_bump_activity(cref, &mut self.ca);
                             }
 
-                            // FIXME: do we need to execute the following stuff?
-                            // self.var_order.var_decay_activity();
-                            // self.db.cla_decay_activity();
-                            // self.learning_guard.bump();
+                            self.var_order.var_decay_activity();
+                            self.db.cla_decay_activity();
+                            self.learning_guard.bump();
                         }
 
                         state = State::Ascending;
@@ -1219,11 +1238,34 @@ impl Solver {
                 assert!(lemma.len() > 0);
                 if lemma.len() == 1 {
                     assert_eq!(self.decision_level(), 0);
+                    debug!("Adding unit {}", lemma[0]);
                     self.assignment.enqueue(lemma[0], None);
                 }
             }
 
+            self.var_order.var_decay_activity();
+            self.db.cla_decay_activity();
+            self.learning_guard.bump();
+
             // TODO: re-check all hard tasks - they might be "easy" after adding the learnt clauses.
+        }
+
+        // Post-propagate:
+        if let Some(_conflict) = self.propagate() {
+            warn!("Conflict during post-propagation");
+            self.ok = false;
+            return 0;
+        }
+
+        // Simplify DB:
+        self.simplify();
+
+        // Reduce DB:
+        let learnts_limit = self.learning_guard.limit(self.assignment.trail.len());
+        if self.num_learnts() >= learnts_limit {
+            // self.reduce_db();
+            debug!("Reducing DB");
+            self.db.reduce(&self.assignment, &mut self.ca);
         }
 
         debug!("Checked {} cubes, {} valid", total_checked, total_count);

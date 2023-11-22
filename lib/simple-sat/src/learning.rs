@@ -1,4 +1,4 @@
-use tracing::debug;
+use tracing::trace;
 
 #[derive(Debug)]
 pub struct LearningStrategy {
@@ -38,14 +38,18 @@ impl LearningGuard {
     }
 
     pub fn bump(&mut self) -> bool {
+        if self.learntsize_adjust_cnt == 0 {
+            return false;
+        }
         self.learntsize_adjust_cnt -= 1;
         if self.learntsize_adjust_cnt == 0 {
             self.max_learnts *= self.strategy.learntsize_inc;
             self.learntsize_adjust_confl *= self.strategy.learntsize_adjust_inc;
             self.learntsize_adjust_cnt = self.learntsize_adjust_confl as _;
-            debug!(
+            trace!(
                 "New max_learnts = {}, learntsize_adjust_cnt = {}",
-                self.max_learnts as u64, self.learntsize_adjust_cnt
+                self.max_learnts as u64,
+                self.learntsize_adjust_cnt
             );
             true
         } else {

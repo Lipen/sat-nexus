@@ -25,8 +25,12 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
-    pub fn new(solver: Solver, options: Options) -> Self {
+    pub fn new(mut solver: Solver, options: Options) -> Self {
         let banned = vec![false; solver.num_vars()];
+
+        // Reset the limits for reduceDB:
+        solver.learning_guard.reset(solver.num_clauses());
+
         Self {
             solver,
             rng: StdRng::seed_from_u64(options.seed),

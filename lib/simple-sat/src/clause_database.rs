@@ -120,8 +120,6 @@ impl ClauseDatabase {
     }
 
     pub fn reduce(&mut self, assignment: &Assignment, ca: &mut ClauseAllocator) {
-        self.simplify(assignment, ca);
-
         self.learnts.sort_by(|&a, &b| {
             let x = ca.clause(a);
             let y = ca.clause(b);
