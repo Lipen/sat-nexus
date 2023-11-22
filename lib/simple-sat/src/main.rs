@@ -155,6 +155,7 @@ fn main() -> color_eyre::Result<()> {
     println!("propagations: {}", solver.num_propagations().to_formatted_string(format));
     println!("conflicts:    {}", solver.num_conflicts().to_formatted_string(format));
     println!("restarts:     {}", solver.num_restarts().to_formatted_string(format));
+    println!("simplifies:   {}", solver.num_simplifies().to_formatted_string(format));
     println!("reduces:      {}", solver.num_reduces().to_formatted_string(format));
     println!("time total:      {:?}", time_total);
     println!(
@@ -191,6 +192,11 @@ fn main() -> color_eyre::Result<()> {
         "time restart:    {:?} ({:.2}%)",
         solver.time_restart,
         100.0 * solver.time_restart.as_secs_f64() / time_total.as_secs_f64(),
+    );
+    println!(
+        "time simplify:    {:?} ({:.2}%)",
+        solver.time_simplify,
+        100.0 * solver.time_simplify.as_secs_f64() / time_total.as_secs_f64(),
     );
     println!(
         "time reduce:     {:?} ({:.2}%)",

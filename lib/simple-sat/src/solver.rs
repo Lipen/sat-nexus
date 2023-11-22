@@ -100,6 +100,7 @@ pub struct Solver {
     propagations: usize,
     conflicts: usize,
     restarts: usize,
+    simplifies: usize,
     reduces: usize,
     // Timings:
     pub time_search: Duration,
@@ -108,6 +109,7 @@ pub struct Solver {
     pub time_backtrack: Duration,
     pub time_decide: Duration,
     pub time_restart: Duration,
+    pub time_simplify: Duration,
     pub time_reduce: Duration,
 }
 
@@ -144,6 +146,7 @@ impl Solver {
             propagations: 0,
             conflicts: 0,
             restarts: 0,
+            simplifies: 0,
             reduces: 0,
             time_search: Duration::new(0, 0),
             time_propagate: Duration::new(0, 0),
@@ -151,6 +154,7 @@ impl Solver {
             time_backtrack: Duration::new(0, 0),
             time_decide: Duration::new(0, 0),
             time_restart: Duration::new(0, 0),
+            time_simplify: Duration::new(0, 0),
             time_reduce: Duration::new(0, 0),
         }
     }
@@ -226,6 +230,10 @@ impl Solver {
     /// Number of restarts.
     pub fn num_restarts(&self) -> usize {
         self.restarts
+    }
+    /// Number of clause database simplifies.
+    pub fn num_simplifies(&self) -> usize {
+        self.simplifies
     }
     /// Number of clause database reductions.
     pub fn num_reduces(&self) -> usize {
@@ -864,6 +872,7 @@ impl Solver {
         conflict
     }
 
+    #[allow(unused)]
     fn analyze_full(&mut self, conflict: ClauseRef) -> Vec<Lit> {
         trace!(
             "Analyze (FULL) conflict {} at level {}",
@@ -968,9 +977,11 @@ impl Solver {
 
     pub fn simplify(&mut self) {
         // TODO: return bool
+        let time_simplify_start = Instant::now();
+        self.simplifies += 1;
         assert_eq!(self.decision_level(), 0);
-        // TODO: timing
         self.db.simplify(&self.assignment, &mut self.ca);
+        self.time_simplify += time_simplify_start.elapsed();
     }
 
     fn reduce_db(&mut self) {
