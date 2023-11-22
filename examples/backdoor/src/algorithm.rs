@@ -106,6 +106,8 @@ impl Algorithm {
         let mut best_instance = instance.clone();
         let mut best_fitness = fitness.clone();
 
+        let mut num_stagnation: usize = 0;
+
         for i in 1..=num_iter {
             let start_time_iter = Instant::now();
 
@@ -134,6 +136,9 @@ impl Algorithm {
                 best_iteration = i;
                 best_instance = mutated_instance.clone();
                 best_fitness = mutated_fitness.clone();
+            } else {
+                num_stagnation += 1;
+                trace!("Stagnated for {} iterations", num_stagnation);
             }
 
             // (1+1) strategy:
