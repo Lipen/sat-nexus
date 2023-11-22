@@ -87,7 +87,9 @@ impl Clause {
                     trace!("Root-level falsified literal {} in {}", lit, self);
                     num_falsified += 1;
                 }
-                LBool::Undef => {}
+                LBool::Undef => {
+                    // do nothing
+                }
             }
         }
         if num_satisfied > 0 {

@@ -114,7 +114,9 @@ impl ClauseDatabase {
                     trace!("{} contains falsified literal => shrinking", clause);
                     clause.remove_falsified_literals(assignment);
                 }
-                LBool::Undef => {}
+                LBool::Undef => {
+                    // do nothing
+                }
             }
         }
     }
