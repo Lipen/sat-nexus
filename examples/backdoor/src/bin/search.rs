@@ -39,18 +39,6 @@ struct Cli {
     #[arg(long, value_name="INT", default_value_t = DEFAULT_OPTIONS.seed)]
     seed: u64,
 
-    /// Path to a file with results.
-    #[arg(long = "results", value_name = "FILE")]
-    path_results: Option<PathBuf>,
-
-    /// Do dump learnts after each EA run?
-    #[arg(long)]
-    dump_learnts: bool,
-
-    /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
-    #[arg(long)]
-    add_learnts: bool,
-
     /// Do ban variables used in best backdoors on previous runs?
     #[arg(long)]
     ban_used: bool,
@@ -59,9 +47,25 @@ struct Cli {
     #[arg(long, value_name = "INT...")]
     bans: Option<String>,
 
+    /// Path to a file with results.
+    #[arg(long = "results", value_name = "FILE")]
+    path_results: Option<PathBuf>,
+
+    /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
+    #[arg(long)]
+    add_learnts: bool,
+
+    /// Do dump learnts after each EA run?
+    #[arg(long)]
+    dump_learnts: bool,
+
     /// Do minimize the best backdoors into clauses using Espresso?
     #[arg(long)]
     minimize: bool,
+
+    /// Do dump minimized learnts after after EA run?
+    #[arg(long)]
+    dump_minimized: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -96,7 +100,7 @@ fn main() -> color_eyre::Result<()> {
     }
 
     // Create and open the file with results:
-    let mut f = if let Some(path_results) = &args.path_results {
+    let mut file_results = if let Some(path_results) = &args.path_results {
         let f = OpenOptions::new().write(true).create(true).truncate(true).open(path_results)?;
         let f = LineWriter::new(f);
         Some(f)
@@ -104,8 +108,13 @@ fn main() -> color_eyre::Result<()> {
         None
     };
 
-    // let fm = OpenOptions::new().write(true).create(true).truncate(true).open("learnts.txt")?;
-    // let mut fm = LineWriter::new(fm);
+    let mut file_minimized_learnts = if args.dump_minimized {
+        let f = OpenOptions::new().write(true).create(true).truncate(true).open("learnts.txt")?;
+        let f = LineWriter::new(f);
+        Some(f)
+    } else {
+        None
+    };
 
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
@@ -128,13 +137,17 @@ fn main() -> color_eyre::Result<()> {
                 clauses.iter().map(|c| DisplaySlice(c)).join(", ")
             );
 
+            // TODO: use 'derived' instead of 'minimized'.
             // Add the minimized clauses as learnts:
             for lemma in clauses.iter() {
                 algorithm.solver.add_learnt(lemma);
-                // for lit in lemma.iter() {
-                //     write!(fm, "{} ", lit)?;
-                // }
-                // writeln!(fm, "0")?;
+
+                if let Some(f) = &mut file_minimized_learnts {
+                    for lit in lemma.iter() {
+                        write!(f, "{} ", lit)?;
+                    }
+                    writeln!(f, "0")?;
+                }
             }
 
             // Note: currently, `add_learnt` does the propagation and simplification at the end.
@@ -150,22 +163,22 @@ fn main() -> color_eyre::Result<()> {
 
         // Dump learnts:
         if args.dump_learnts {
-            let lf = OpenOptions::new()
+            let f = OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
                 .open(format!("learnts_{}.txt", run_number))?;
-            let mut lf = LineWriter::new(lf);
+            let mut f = LineWriter::new(f);
             for learnt in algorithm.solver.learnts_iter() {
                 for lit in learnt.iter() {
-                    write!(lf, "{} ", lit)?;
+                    write!(f, "{} ", lit)?;
                 }
-                writeln!(lf, " 0")?;
+                writeln!(f, " 0")?;
             }
         }
 
         // Write the best found backdoor into the resulting file:
-        if let Some(f) = &mut f {
+        if let Some(f) = &mut file_results {
             // Note: variables in backdoors are reported 1-based.
             writeln!(
                 f,
