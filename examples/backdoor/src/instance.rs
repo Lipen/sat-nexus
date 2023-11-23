@@ -66,6 +66,9 @@ impl IndexMut<usize> for Instance {
 }
 
 impl Instance {
+    // TODO: add 'key() -> ...' for using Instance as HashMap keys
+    //   without actually storing the whole Instance itself as key.
+
     pub fn bitstring(&self) -> String {
         self.genome.iter().map(|&b| if b { '1' } else { '0' }).collect()
     }
