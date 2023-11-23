@@ -4,11 +4,7 @@ use rand::prelude::*;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Index, IndexMut};
 
-use crate::algorithm::Options;
-use simple_sat::solver::Solver;
 use simple_sat::var::Var;
-
-use crate::fitness::Fitness;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Instance {
@@ -86,25 +82,5 @@ impl Instance {
 
     pub fn get_variables(&self) -> Vec<Var> {
         self.indices_true().map(|i| Var::new(i as u32)).collect()
-    }
-
-    pub(crate) fn calculate_fitness(&self, solver: &mut Solver, options: &Options) -> Fitness {
-        // Extract the set of variables an instance represents:
-        let vars = self.get_variables();
-        assert!(vars.len() < 32);
-
-        // Compute rho:
-        let num_hard = solver.propcheck_all_tree(&vars, options.add_learnts_in_propcheck_all_tree);
-        let num_total = 1u64 << vars.len();
-        let rho = 1.0 - (num_hard as f64 / num_total as f64);
-
-        // Calculate the fitness value:
-        let fitness = 1.0 - rho;
-
-        Fitness {
-            value: fitness,
-            rho,
-            num_hard,
-        }
     }
 }

@@ -191,7 +191,25 @@ impl Algorithm {
             fit.clone()
         } else {
             self.cache_misses += 1;
-            let fit = instance.calculate_fitness(&mut self.solver, &self.options);
+
+            let vars = instance.get_variables();
+            assert!(vars.len() < 32);
+
+            // Compute rho:
+            let add_learnts = self.options.add_learnts_in_propcheck_all_tree;
+            let num_hard = self.solver.propcheck_all_tree(&vars, add_learnts);
+            let num_total = 1u64 << vars.len();
+            let rho = 1.0 - (num_hard as f64 / num_total as f64);
+
+            // Calculate the fitness value:
+            let fitness = 1.0 - rho;
+
+            let fit = Fitness {
+                value: fitness,
+                rho,
+                num_hard,
+            };
+
             self.cache.insert(instance.clone(), fit.clone());
             fit
         }
