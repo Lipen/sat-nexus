@@ -130,16 +130,16 @@ fn main() -> color_eyre::Result<()> {
             let backdoor = result.best_instance.get_variables();
             let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
             debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
-            let clauses = minimize_backdoor(&easy);
+            let derived_clauses = minimize_backdoor(&easy);
             debug!(
                 "Total {} minimized clauses: [{}]",
-                clauses.len(),
-                clauses.iter().map(|c| DisplaySlice(c)).join(", ")
+                derived_clauses.len(),
+                derived_clauses.iter().map(|c| DisplaySlice(c)).join(", ")
             );
 
             // TODO: use 'derived' instead of 'minimized'.
             // Add the minimized clauses as learnts:
-            for lemma in clauses.iter() {
+            for lemma in derived_clauses.iter() {
                 algorithm.solver.add_learnt(lemma);
 
                 if let Some(f) = &mut file_minimized_learnts {
@@ -149,6 +149,14 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
             }
+
+            for mut lemma in derived_clauses {
+                lemma.sort_by_key(|lit| lit.var().0);
+                algorithm.derived_clauses.insert(lemma);
+            }
+
+            // Check cubes again.
+            // algorithm.solver.propcheck_all2(&backdoor, &algorithm.derived_clauses);
 
             // Note: currently, `add_learnt` does the propagation and simplification at the end.
             //

@@ -1039,6 +1039,60 @@ impl Solver {
         !conflicting_assignment && conflict.is_none()
     }
 
+    pub fn propcheck2(&mut self, assumptions: &[Lit]) -> (bool, Option<Vec<Lit>>) {
+        debug!("propcheck(assumptions = {})", DisplaySlice(assumptions));
+
+        // First, propagate everything that needs to be propagated:
+        if let Some(_conflict) = self.propagate() {
+            trace!("Conflict during pre-propagate: {}", self.clause(_conflict));
+            self.ok = false;
+            return (false, Some(self.clause(_conflict).lits().to_vec()));
+        }
+
+        if !self.ok {
+            return (false, None);
+        }
+
+        // Save the original decision level in order to backtrack to it later:
+        let level = self.decision_level();
+        let mut conflicting_assignment = false;
+        let mut conflict: Option<Vec<Lit>> = None;
+
+        for &p in assumptions.iter() {
+            match self.value(p) {
+                LBool::True => {
+                    // do nothing
+                }
+                LBool::False => {
+                    // conflict with assumption
+                    conflicting_assignment = true;
+                    let c = self.analyze_final(!p);
+                    trace!("Conflict during assignment: {}", DisplaySlice(&c));
+                    conflict = Some(c);
+                    break;
+                }
+                LBool::Undef => {
+                    self.assignment.new_decision_level();
+                    self.assignment.unchecked_enqueue(p, None);
+                    if let Some(c) = self.propagate() {
+                        // conflict during propagation
+                        trace!("Conflict during propagation: {}", self.clause(c));
+                        if self.clause(c).is_learnt() {
+                            info!("Conflict (learnt) during propagation: {}", self.clause(c));
+                        }
+                        conflict = Some(self.clause(c).lits().to_vec());
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Backtrack to the original decision level:
+        self.backtrack(level);
+
+        (!conflicting_assignment && conflict.is_none(), conflict)
+    }
+
     pub fn propcheck_all(&mut self, variables: &[Var]) -> u64 {
         debug!("propcheck_all(variables = {})", DisplaySlice(variables));
 
@@ -1062,6 +1116,64 @@ impl Solver {
                 total_count += 1;
             } else {
                 trace!("invalid assumptions: {}", DisplaySlice(&assumptions));
+            }
+
+            // Find the 1-based index of the last 'false' value in 'cube':
+            let mut j = variables.len(); // 1-based
+            while j > 0 && cube[j - 1] {
+                j -= 1;
+            }
+            if j == 0 {
+                break;
+            }
+
+            // Increment the 'cube':
+            assert!(!cube[j - 1]);
+            cube[j - 1] = true;
+            for i in j..variables.len() {
+                cube[i] = false;
+            }
+        }
+
+        debug!("Checked {} cubes, {} valid", total_checked, total_count);
+        total_count
+    }
+
+    pub fn propcheck_all2(&mut self, variables: &[Var], derived_clauses: &HashSet<Vec<Lit>>) -> u64 {
+        debug!("propcheck_all(variables = {})", DisplaySlice(variables));
+
+        assert!(variables.len() < 30);
+
+        // TODO: backtrack(0) manually instead of asserting.
+        assert_eq!(self.decision_level(), 0);
+
+        let mut cube = vec![false; variables.len()];
+        let mut total_checked = 0u64; // number of 'propcheck' calls
+        let mut total_count = 0u64; // number of valid cubes
+
+        loop {
+            trace!("---");
+            trace!("cube = {}", DisplaySlice(&cube));
+            let assumptions = variables.iter().zip(cube.iter()).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
+            let (res, conflict) = self.propcheck2(&assumptions);
+            total_checked += 1;
+
+            if res {
+                trace!("valid assumptions: {}", DisplaySlice(&assumptions));
+                total_count += 1;
+            } else {
+                trace!("invalid assumptions: {}", DisplaySlice(&assumptions));
+                if let Some(mut conflict) = conflict {
+                    conflict.sort_by_key(|lit| lit.var().0);
+                    trace!("conflict = {}", DisplaySlice(&conflict));
+                    trace!("conflict in derived: {}", derived_clauses.contains(&conflict));
+                    if derived_clauses.contains(&conflict) {
+                        info!("conflict in derived: {}", DisplaySlice(&conflict));
+                        total_count += 1;
+                    }
+                } else {
+                    trace!("no conflict");
+                }
             }
 
             // Find the 1-based index of the last 'false' value in 'cube':

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use itertools::Itertools;
@@ -7,6 +7,7 @@ use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
 use simple_sat::lbool::LBool;
+use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::var::Var;
 
@@ -22,6 +23,7 @@ pub struct Algorithm {
     pub cache_misses: usize,
     pub banned: Vec<bool>,
     pub options: Options,
+    pub derived_clauses: HashSet<Vec<Lit>>,
 }
 
 impl Algorithm {
@@ -39,6 +41,7 @@ impl Algorithm {
             cache_misses: 0,
             banned,
             options,
+            derived_clauses: HashSet::new(),
         }
     }
 }
@@ -196,8 +199,9 @@ impl Algorithm {
             assert!(vars.len() < 32);
 
             // Compute rho:
-            let add_learnts = self.options.add_learnts_in_propcheck_all_tree;
-            let num_hard = self.solver.propcheck_all_tree(&vars, add_learnts);
+            // let add_learnts = self.options.add_learnts_in_propcheck_all_tree;
+            // let num_hard = self.solver.propcheck_all_tree(&vars, add_learnts);
+            let num_hard = self.solver.propcheck_all2(&vars, &self.derived_clauses);
             let num_total = 1u64 << vars.len();
             let rho = 1.0 - (num_hard as f64 / num_total as f64);
 
