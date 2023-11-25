@@ -80,7 +80,7 @@ impl Algorithm {
         debug!("solver.num_clauses() = {}", self.solver.num_clauses());
         debug!("solver.num_learnts() = {}", self.solver.num_learnts());
 
-        // Determine genome size:
+        // Determine the genome size:
         let genome_size = self.solver.num_vars();
         info!("Genome size: {}", genome_size);
 
@@ -99,9 +99,11 @@ impl Algorithm {
         let mut instance = self.initial_instance(genome_size, weight);
         info!("Initial instance: {:#}", instance);
 
+        // Evaluate the initial instance:
         let mut fitness = self.calculate_fitness(&instance);
         info!("Initial fitness: {:?}", fitness);
 
+        // Store the best result:
         let mut best_iteration: usize = 0;
         let mut best_instance = instance.clone();
         let mut best_fitness = fitness.clone();
@@ -148,6 +150,7 @@ impl Algorithm {
             }
         }
 
+        // Print the best result:
         info!("Best iteration: {} / {}", best_iteration, num_iter);
         info!("Best instance: {:#}", best_instance);
         info!("Best fitness: {:?}", best_fitness);
