@@ -158,15 +158,15 @@ impl Algorithm {
         debug!("cache hits: {}", self.cache_hits);
         debug!("cache misses: {}", self.cache_misses);
 
-        let elapsed_time = Instant::now() - start_time;
-        info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
-
         // Ban used variables:
         if self.options.ban_used_variables {
             for i in best_instance.indices_true() {
                 self.banned[i] = true;
             }
         }
+
+        let elapsed_time = Instant::now() - start_time;
+        info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
 
         RunResult {
             best_iteration,
