@@ -177,7 +177,7 @@ impl Solver {
     where
         P: AsRef<Path>,
     {
-        info!("Initializing solver from '{}'", path.as_ref().display());
+        debug!("Initializing solver from '{}'", path.as_ref().display());
         for line in read_maybe_gzip(path).unwrap().lines().flatten() {
             if line.is_empty() {
                 debug!("Skipping empty line");
