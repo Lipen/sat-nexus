@@ -34,12 +34,13 @@ impl Lit {
     }
 
     pub const fn to_external(self) -> i32 {
-        self.sign() * (self.var().0 + 1) as i32
+        self.sign() * (self.var().to_external() as i32)
     }
 
-    pub const fn from_external(lit: i32) -> Lit {
-        let var = lit.unsigned_abs() - 1;
-        Lit::new(Var(var), lit < 0)
+    pub const fn from_external(lit: i32) -> Self {
+        let var = Var::from_external(lit.unsigned_abs());
+        let sign = lit < 0;
+        Self::new(var, sign)
     }
 }
 
