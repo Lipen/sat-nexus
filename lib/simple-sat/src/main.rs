@@ -28,7 +28,7 @@ struct Cli {
     #[clap(short, long, value_name = "PATH")]
     output: Option<PathBuf>,
 
-    /// Use luby restarts.
+    /// Use Luby restarts.
     #[clap(help_heading = HEADING_RESTART)]
     #[clap(long, value_name = "BOOL")]
     #[clap(action = clap::ArgAction::Set)]
