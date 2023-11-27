@@ -56,15 +56,19 @@ struct Cli {
 
     /// Do dump learnts after each EA run?
     #[arg(long)]
+    dump_intermediate_learnts: bool,
+
+    /// Do dump all learnts after all EA runs?
+    #[arg(long)]
     dump_learnts: bool,
 
     /// Do minimize the best backdoors into clauses using Espresso?
     #[arg(long)]
     minimize: bool,
 
-    /// Do dump minimized learnts after after EA run?
+    /// Do dump derived clauses after each EA run?
     #[arg(long)]
-    dump_minimized: bool,
+    dump_derived: bool,
 
     /// Do dump records for each EA run?
     #[arg(long)]
@@ -111,8 +115,8 @@ fn main() -> color_eyre::Result<()> {
         None
     };
 
-    let mut file_minimized_learnts = if args.dump_minimized {
-        let f = File::create("learnts.txt")?;
+    let mut file_derived_clauses = if args.dump_derived {
+        let f = File::create("derived_clauses.txt")?;
         let f = LineWriter::new(f);
         Some(f)
     } else {
@@ -121,6 +125,9 @@ fn main() -> color_eyre::Result<()> {
 
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
+
+        debug!("algorithm.derived_clauses.len() = {}", algorithm.derived_clauses.len());
+        debug!("algorithm.learnt_clauses.len() = {}", algorithm.learnt_clauses.len());
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters);
@@ -134,24 +141,28 @@ fn main() -> color_eyre::Result<()> {
             let backdoor = result.best_instance.get_variables();
             let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
             debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
-            let clauses = minimize_backdoor(&easy);
+            let derived_clauses = minimize_backdoor(&easy);
             debug!(
-                "Total {} minimized clauses: [{}]",
-                clauses.len(),
-                clauses.iter().map(|c| DisplaySlice(c)).join(", ")
+                "Total {} derived clauses: [{}]",
+                derived_clauses.len(),
+                derived_clauses.iter().map(|c| DisplaySlice(c)).join(", ")
             );
 
-            // TODO: use 'derived' instead of 'minimized'.
-            // Add the minimized clauses as learnts:
-            for lemma in clauses.iter() {
+            // Add the derived clauses as learnts:
+            for lemma in derived_clauses.iter() {
                 algorithm.solver.add_learnt(lemma);
 
-                if let Some(f) = &mut file_minimized_learnts {
+                if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
                         write!(f, "{} ", lit)?;
                     }
                     writeln!(f, "0")?;
                 }
+            }
+
+            for mut lemma in derived_clauses {
+                lemma.sort_by_key(|lit| lit.var().0);
+                algorithm.derived_clauses.insert(lemma);
             }
 
             // Note: currently, `add_learnt` does the propagation and simplification at the end.
@@ -166,7 +177,7 @@ fn main() -> color_eyre::Result<()> {
         }
 
         // Dump learnts:
-        if args.dump_learnts {
+        if args.dump_intermediate_learnts {
             let f = File::create(format!("learnts_{}.txt", run_number))?;
             let mut f = LineWriter::new(f);
             for learnt in algorithm.solver.learnts_iter() {
@@ -206,6 +217,18 @@ fn main() -> color_eyre::Result<()> {
                     record.fitness.rho,
                 ))?;
             }
+        }
+    }
+
+    // Dump all learnts:
+    if args.dump_learnts {
+        let f = File::create("learnt_clauses.txt")?;
+        let mut f = LineWriter::new(f);
+        for lemma in algorithm.learnt_clauses.iter() {
+            for lit in lemma.iter() {
+                write!(f, "{} ", lit)?;
+            }
+            writeln!(f, "0")?;
         }
     }
 
