@@ -213,7 +213,7 @@ fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
                 result.extend((end..=start).rev());
             }
         } else {
-            let single: usize = input.parse().unwrap();
+            let single: usize = part.parse().unwrap();
             result.push(single);
         }
     }
