@@ -2,7 +2,7 @@ use clap::Parser;
 use itertools::Itertools;
 use log::{debug, info, trace};
 
-use std::fs::OpenOptions;
+use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
@@ -101,7 +101,7 @@ fn main() -> color_eyre::Result<()> {
 
     // Create and open the file with results:
     let mut file_results = if let Some(path_results) = &args.path_results {
-        let f = OpenOptions::new().write(true).create(true).truncate(true).open(path_results)?;
+        let f = File::create(path_results)?;
         let f = LineWriter::new(f);
         Some(f)
     } else {
@@ -109,7 +109,7 @@ fn main() -> color_eyre::Result<()> {
     };
 
     let mut file_minimized_learnts = if args.dump_minimized {
-        let f = OpenOptions::new().write(true).create(true).truncate(true).open("learnts.txt")?;
+        let f = File::create("learnts.txt")?;
         let f = LineWriter::new(f);
         Some(f)
     } else {
@@ -163,11 +163,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Dump learnts:
         if args.dump_learnts {
-            let f = OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(format!("learnts_{}.txt", run_number))?;
+            let f = File::create(format!("learnts_{}.txt", run_number))?;
             let mut f = LineWriter::new(f);
             for learnt in algorithm.solver.learnts_iter() {
                 for lit in learnt.iter() {
