@@ -466,6 +466,17 @@ impl Solver {
                 }
                 SearchResult::Restart => {
                     // Restart => do nothing here
+                    if false {
+                        use std::io::Write;
+                        let f = std::fs::File::create("learnts.txt").unwrap();
+                        let mut f = std::io::LineWriter::new(f);
+                        for lemma in self.learnts_iter() {
+                            for lit in lemma.lits() {
+                                write!(f, "{} ", lit).unwrap();
+                            }
+                            writeln!(f, "0").unwrap();
+                        }
+                    }
                 }
                 SearchResult::AssumptionsConflict(_conflict) => {
                     // TODO: save the `conflict`
