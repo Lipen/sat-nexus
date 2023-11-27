@@ -447,9 +447,9 @@ impl Solver {
         self.learning_guard.reset(self.num_clauses());
 
         if self.restart_strategy.is_luby {
-            info!("Using Luby restarts");
+            debug!("Using Luby restarts");
         } else {
-            info!("Using exponential restarts");
+            debug!("Using exponential restarts");
         }
 
         let mut status = SolveResult::Unknown;
@@ -509,7 +509,7 @@ impl Solver {
             //  - Returns `true` if everything OK so far
             //  - Returns `false` if conflict on root level was found (UNSAT)
             if !self.propagate_analyze_backtrack() {
-                info!("UNSAT");
+                debug!("UNSAT");
                 return SearchResult::Unsat;
             }
 
@@ -540,11 +540,11 @@ impl Solver {
                     self.assignment.unchecked_enqueue(decision, None);
                 }
                 Ok(None) => {
-                    info!("SAT");
+                    debug!("SAT");
                     return SearchResult::Sat;
                 }
                 Err(conflict) => {
-                    info!("UNSAT (assumptions conflict)");
+                    debug!("UNSAT (assumptions conflict)");
                     return SearchResult::AssumptionsConflict(conflict);
                 }
             }
@@ -1018,6 +1018,12 @@ impl Solver {
                 }
                 LBool::False => {
                     // conflict with assumption
+                    // info!(
+                    //     "Conflict during assignment: value(p = {}) = {:?} with reason = {}",
+                    //     p,
+                    //     self.value(p),
+                    //     self.clause(self.reason(p.var()).unwrap())
+                    // );
                     conflicting_assignment = true;
                     break;
                 }
@@ -1026,6 +1032,7 @@ impl Solver {
                     self.assignment.unchecked_enqueue(p, None);
                     if let Some(c) = self.propagate() {
                         // conflict during propagation
+                        // info!("Conflict during propagation: {}", self.clause(c));
                         conflict = Some(c);
                         break;
                     }
@@ -1085,7 +1092,7 @@ impl Solver {
         total_count
     }
 
-    pub fn propcheck_all_tree(&mut self, variables: &[Var], add_learnts: bool) -> u64 {
+    pub fn propcheck_all_tree(&mut self, variables: &[Var], add_learnts: bool, out_learnts: &mut Vec<Vec<Lit>>) -> u64 {
         debug!("propcheck_all_tree(variables = {})", DisplaySlice(variables));
 
         assert!(variables.len() < 30);
@@ -1291,6 +1298,8 @@ impl Solver {
                     debug!("Adding unit {}", lemma[0]);
                     self.assignment.enqueue(lemma[0], None);
                 }
+
+                out_learnts.push(lemma);
             }
 
             self.var_order.var_decay_activity();
@@ -1416,7 +1425,8 @@ mod tests {
         info!("count = {}", count);
 
         info!("----------------------");
-        let count_tree = solver.propcheck_all_tree(&variables, false);
+        let mut learnts = Vec::new();
+        let count_tree = solver.propcheck_all_tree(&variables, false, &mut learnts);
         info!("count_tree = {}", count_tree);
 
         assert_eq!(count, count_tree);
