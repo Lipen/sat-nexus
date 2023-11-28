@@ -40,7 +40,7 @@ impl Instance {
 impl Display for Instance {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
-            write!(f, "{{{}}}", self.get_variables().iter().map(|v| v.0).join(", "))
+            write!(f, "{{{}}}", self.get_variables().iter().map(|v| v.to_external()).join(", "))
         } else {
             write!(f, "{}", self.bitstring())
         }
