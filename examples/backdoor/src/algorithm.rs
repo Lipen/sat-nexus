@@ -68,6 +68,14 @@ pub struct RunResult {
     pub best_instance: Instance,
     pub best_fitness: Fitness,
     pub time: Duration,
+    pub records: Vec<Record>,
+}
+
+#[derive(Debug)]
+pub struct Record {
+    pub iteration: usize,
+    pub instance: Instance,
+    pub fitness: Fitness,
 }
 
 impl Algorithm {
@@ -108,18 +116,41 @@ impl Algorithm {
         let mut best_instance = instance.clone();
         let mut best_fitness = fitness.clone();
 
+        // Store all results:
+        let mut records = Vec::new();
+        records.push(Record {
+            iteration: 0,
+            instance: instance.clone(),
+            fitness: fitness.clone(),
+        });
+
+        // Count the stagnated iterations:
         let mut num_stagnation: usize = 0;
 
         for i in 1..=num_iter {
             let start_time_iter = Instant::now();
 
-            // Mutate the instance:
-            let mut mutated_instance = instance.clone();
-            self.mutate(&mut mutated_instance);
-            let mutated_instance = mutated_instance;
+            let mutated_instance = if num_stagnation < 50 {
+                // Mutate the instance:
+                let mut mutated_instance = instance.clone();
+                self.mutate(&mut mutated_instance);
+                mutated_instance
+            } else {
+                // Re-initialize:
+                // debug!("Re-initializing");
+                num_stagnation = 0;
+                self.initial_instance(genome_size, weight)
+            };
 
             // Evaluate the mutated instance:
             let mutated_fitness = self.calculate_fitness(&mutated_instance);
+
+            // Save the record about the new instance:
+            records.push(Record {
+                iteration: i,
+                instance: mutated_instance.clone(),
+                fitness: mutated_fitness.clone(),
+            });
 
             let elapsed_time_iter = Instant::now() - start_time_iter;
             if i <= 10 || (i < 1000 && i % 100 == 0) || (i < 10000 && i % 1000 == 0) || i % 10000 == 0 {
@@ -173,6 +204,7 @@ impl Algorithm {
             best_instance,
             best_fitness,
             time: elapsed_time,
+            records,
         }
     }
 

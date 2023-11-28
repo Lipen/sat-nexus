@@ -1,17 +1,16 @@
-use clap::Parser;
-use itertools::Itertools;
-use log::{debug, info, trace};
-
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
-use simple_sat::solver::Solver;
+use clap::Parser;
+use itertools::Itertools;
+use log::{debug, info, trace};
 
+use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::minimization::minimize_backdoor;
 use backdoor::utils::partition_tasks;
+use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 
 // Run this example:
@@ -36,7 +35,7 @@ struct Cli {
     num_runs: usize,
 
     /// Random seed.
-    #[arg(long, value_name="INT", default_value_t = DEFAULT_OPTIONS.seed)]
+    #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
     seed: u64,
 
     /// Do ban variables used in best backdoors on previous runs?
@@ -66,6 +65,10 @@ struct Cli {
     /// Do dump minimized learnts after after EA run?
     #[arg(long)]
     dump_minimized: bool,
+
+    /// Do dump records for each EA run?
+    #[arg(long)]
+    dump_records: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -121,6 +124,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters);
+        assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         if args.minimize {
             #[cfg(not(feature = "minimization"))]
@@ -188,7 +192,21 @@ fn main() -> color_eyre::Result<()> {
                 result.time.as_secs_f64() * 1000.0
             )?;
         }
-        assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
+
+        // Write the run records:
+        if args.dump_records {
+            let mut writer = csv::Writer::from_path(format!("run_{}.csv", run_number))?;
+            writer.write_record(&["iteration", "instance", "fitness", "num_hard", "rho"])?;
+            for record in result.records {
+                writer.serialize((
+                    record.iteration,
+                    record.instance.get_variables().iter().map(|v| v.to_external()).join(","),
+                    record.fitness.value,
+                    record.fitness.num_hard,
+                    record.fitness.rho,
+                ))?;
+            }
+        }
     }
 
     let elapsed = Instant::now() - start_time;

@@ -1,8 +1,8 @@
-use itertools::Itertools;
-use rand::prelude::*;
-
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Index, IndexMut};
+
+use itertools::Itertools;
+use rand::prelude::*;
 
 use simple_sat::var::Var;
 
