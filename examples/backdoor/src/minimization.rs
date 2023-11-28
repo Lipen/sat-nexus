@@ -1,4 +1,5 @@
 use itertools::Itertools;
+
 use pyo3_example::backdoor_to_clauses;
 use simple_sat::lit::Lit;
 
