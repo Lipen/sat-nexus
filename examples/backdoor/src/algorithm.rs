@@ -145,6 +145,7 @@ impl Algorithm {
             // Break upon reaching the maximum required rho:
             if let Some(max_rho) = max_rho {
                 if i > min_iter && best_fitness.rho >= max_rho {
+                    debug!("Reached maximum required rho {} >= {}", best_fitness.rho, max_rho);
                     break;
                 }
             }
