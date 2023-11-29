@@ -50,6 +50,18 @@ struct Cli {
     #[arg(long, value_name = "INT...")]
     bans: Option<String>,
 
+    /// Number of stagnated iterations before re-initialization.
+    #[arg(long)]
+    stagnation_limit: Option<usize>,
+
+    /// Maximum required rho value (break EA upon reaching).
+    #[arg(long, default_value_t = 1.0)]
+    max_rho: f64,
+
+    /// Minimum number of EA iterations.
+    #[arg(long, default_value_t = 0)]
+    min_iter: usize,
+
     /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
     #[arg(long)]
     add_learnts: bool,
@@ -130,7 +142,13 @@ fn main() -> color_eyre::Result<()> {
         debug!("algorithm.learnt_clauses.len() = {}", algorithm.learnt_clauses.len());
 
         // Run the evolutionary algorithm:
-        let result = algorithm.run(args.backdoor_size, args.num_iters);
+        let result = algorithm.run(
+            args.backdoor_size,
+            args.num_iters,
+            args.stagnation_limit,
+            Some(args.max_rho),
+            args.min_iter,
+        );
 
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 

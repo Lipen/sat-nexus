@@ -84,7 +84,14 @@ pub struct Record {
 }
 
 impl Algorithm {
-    pub fn run(&mut self, weight: usize, num_iter: usize) -> RunResult {
+    pub fn run(
+        &mut self,
+        weight: usize,
+        num_iter: usize,
+        stagnation_limit: Option<usize>,
+        max_rho: Option<f64>,
+        min_iter: usize,
+    ) -> RunResult {
         let start_time = Instant::now();
 
         info!("Running EA for {} iterations with weight {}", num_iter, weight);
@@ -134,6 +141,13 @@ impl Algorithm {
 
         for i in 1..=num_iter {
             let start_time_iter = Instant::now();
+
+            // Break upon reaching the maximum required rho:
+            if let Some(max_rho) = max_rho {
+                if i > min_iter && best_fitness.rho >= max_rho {
+                    break;
+                }
+            }
 
             let mutated_instance = if num_stagnation < 50 {
                 // Mutate the instance:
