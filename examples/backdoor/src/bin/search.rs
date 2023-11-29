@@ -131,6 +131,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters);
+
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         if args.minimize {
