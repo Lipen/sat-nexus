@@ -149,16 +149,24 @@ impl Algorithm {
                 }
             }
 
-            let mutated_instance = if num_stagnation < 50 {
-                // Mutate the instance:
-                let mut mutated_instance = instance.clone();
-                self.mutate(&mut mutated_instance);
-                mutated_instance
-            } else {
-                // Re-initialize:
-                // debug!("Re-initializing");
-                num_stagnation = 0;
-                self.initial_instance(genome_size, weight)
+            // Produce the new instance (either mutate the previous, or re-init):
+            let mutated_instance = {
+                let mut need_reinit = false;
+                if let Some(stagnation_limit) = stagnation_limit {
+                    if num_stagnation >= stagnation_limit {
+                        need_reinit = true;
+                    }
+                }
+                if need_reinit {
+                    // Re-initialize:
+                    num_stagnation = 0;
+                    self.initial_instance(genome_size, weight)
+                } else {
+                    // Mutate the instance:
+                    let mut mutated_instance = instance.clone();
+                    self.mutate(&mut mutated_instance);
+                    mutated_instance
+                }
             };
 
             // Evaluate the mutated instance:
