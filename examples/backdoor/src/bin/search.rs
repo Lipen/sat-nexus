@@ -34,6 +34,10 @@ struct Cli {
     #[arg(long, value_name = "INT", default_value_t = 1)]
     num_runs: usize,
 
+    /// Path to a file with results.
+    #[arg(long = "results", value_name = "FILE")]
+    path_results: Option<PathBuf>,
+
     /// Random seed.
     #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
     seed: u64,
@@ -45,10 +49,6 @@ struct Cli {
     /// Comma-separated list of banned variables (1-based indices).
     #[arg(long, value_name = "INT...")]
     bans: Option<String>,
-
-    /// Path to a file with results.
-    #[arg(long = "results", value_name = "FILE")]
-    path_results: Option<PathBuf>,
 
     /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
     #[arg(long)]
