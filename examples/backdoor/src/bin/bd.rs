@@ -99,7 +99,7 @@ fn main() -> color_eyre::Result<()> {
 
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
-    for _ in 0..args.num_runs {
+    for i in 1..=args.num_runs {
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters, None, Some(0.999), 0);
         let backdoor = result.best_instance.get_variables();
@@ -179,7 +179,7 @@ fn main() -> color_eyre::Result<()> {
         info!("Size of product after retain: {}", cubes_product.len());
 
         if cubes_product.is_empty() {
-            info!("No more cubes to solve!");
+            info!("No more cubes to solve after {} runs", i);
             break;
         }
     }
