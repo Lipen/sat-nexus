@@ -4,9 +4,8 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
+use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
-use kdam::tqdm;
-use kdam::BarExt;
 use log::{debug, info, trace};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
@@ -137,9 +136,13 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Size of product before retain: {}", cubes_product.len());
         let c = CString::new("conflicts").expect("CString::new failed");
-        let mut pb = tqdm!(total = cubes_product.len(), ncols = 40);
+        let pb = ProgressBar::new(cubes_product.len() as u64);
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
+                .progress_chars("#>-"),
+        );
         cubes_product.retain(|cube| {
-            pb.update(1).unwrap();
+            pb.inc(1);
 
             // let res = algorithm.solver.propcheck(cube);
             // if res {
@@ -172,9 +175,13 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
         });
-        pb.refresh()?;
-        eprintln!();
+        pb.finish_and_clear();
         info!("Size of product after retain: {}", cubes_product.len());
+
+        if cubes_product.is_empty() {
+            info!("No more cubes to solve!");
+            break;
+        }
     }
 
     let elapsed = Instant::now() - start_time;
