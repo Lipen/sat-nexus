@@ -5,6 +5,8 @@ use std::time::Instant;
 
 use clap::Parser;
 use itertools::Itertools;
+use kdam::tqdm;
+use kdam::BarExt;
 use log::{debug, info, trace};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
@@ -135,7 +137,10 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Size of product before retain: {}", cubes_product.len());
         let c = CString::new("conflicts").expect("CString::new failed");
+        let mut pb = tqdm!(total = cubes_product.len(), ncols = 40);
         cubes_product.retain(|cube| {
+            pb.update(1).unwrap();
+
             // let res = algorithm.solver.propcheck(cube);
             // if res {
             //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
@@ -167,6 +172,8 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
         });
+        pb.refresh()?;
+        eprintln!();
         info!("Size of product after retain: {}", cubes_product.len());
     }
 
