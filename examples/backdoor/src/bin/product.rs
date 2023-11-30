@@ -16,7 +16,7 @@ use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 
 // Run this example:
-// cargo run -p backdoor --bin bd -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 10000 --num-runs 1000
+// cargo run -p backdoor --bin product -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 10000 --num-runs 1000
 
 #[derive(Parser, Debug)]
 #[command(author, version)]
