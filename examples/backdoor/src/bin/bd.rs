@@ -35,6 +35,10 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     num_runs: usize,
 
+    /// Number of conflicts.
+    #[arg(long, value_name = "INT", default_value_t = 1000)]
+    num_conflicts: usize,
+
     /// Path to a file with results.
     #[arg(long = "results", value_name = "FILE")]
     path_results: Option<PathBuf>,
@@ -145,7 +149,7 @@ fn main() -> color_eyre::Result<()> {
                 for &lit in cube.iter() {
                     ccadical_assume(solver_full, lit.to_external());
                 }
-                ccadical_limit(solver_full, c.as_ptr(), 100);
+                ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
                 match ccadical_solve(solver_full) {
                     0 => {
                         // UNKNOWN
