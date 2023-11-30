@@ -14,6 +14,9 @@ use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 
+// Run this example:
+// cargo run -p backdoor --bin bd -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 10000 --num-runs 1000
+
 #[derive(Parser, Debug)]
 #[command(author, version)]
 struct Cli {
@@ -27,6 +30,10 @@ struct Cli {
     /// Number of EA iterations.
     #[arg(long, value_name = "INT")]
     num_iters: usize,
+
+    /// Number of runs.
+    #[arg(long, value_name = "INT")]
+    num_runs: usize,
 
     /// Path to a file with results.
     #[arg(long = "results", value_name = "FILE")]
@@ -87,7 +94,7 @@ fn main() -> color_eyre::Result<()> {
 
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
-    for _ in 0..100 {
+    for _ in 0..args.num_runs {
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters, None, Some(0.999), 0);
         let backdoor = result.best_instance.get_variables();
