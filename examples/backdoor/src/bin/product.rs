@@ -132,7 +132,7 @@ fn main() -> color_eyre::Result<()> {
         );
 
         if hard.len() == 1 {
-            info!("Adding {} units to the solver", hard.len());
+            info!("Adding {} units to the solver", hard[0].len());
             for &lit in &hard[0] {
                 algorithm.solver.add_clause(&[lit]);
                 unsafe {
