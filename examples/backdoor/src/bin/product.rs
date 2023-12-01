@@ -1,5 +1,8 @@
 use std::collections::HashSet;
 use std::ffi::CString;
+use std::fs::File;
+use std::io::LineWriter;
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -97,9 +100,22 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
+    // Create and open the file with results:
+    let mut file_results = if let Some(path_results) = &args.path_results {
+        let f = File::create(path_results)?;
+        let f = LineWriter::new(f);
+        Some(f)
+    } else {
+        None
+    };
+
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
-    for i in 1..=args.num_runs {
+    if let Some(f) = &mut file_results {
+        writeln!(f, "i,retain,size")?;
+    }
+
+    for run_number in 1..=args.num_runs {
         // Run the evolutionary algorithm:
         let result = algorithm.run(args.backdoor_size, args.num_iters, None, Some(0.999), 0);
         let backdoor = result.best_instance.get_variables();
@@ -133,6 +149,10 @@ fn main() -> color_eyre::Result<()> {
             .cartesian_product(hard)
             .map(|(a, b)| concat_cubes(a, b))
             .collect_vec();
+
+        if let Some(f) = &mut file_results {
+            writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
+        }
 
         info!("Size of product before retain: {}", cubes_product.len());
         let c = CString::new("conflicts").expect("CString::new failed");
@@ -178,8 +198,12 @@ fn main() -> color_eyre::Result<()> {
         pb.finish_and_clear();
         info!("Size of product after retain: {}", cubes_product.len());
 
+        if let Some(f) = &mut file_results {
+            writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
+        }
+
         if cubes_product.is_empty() {
-            info!("No more cubes to solve after {} runs", i);
+            info!("No more cubes to solve after {} runs", run_number);
             break;
         }
     }
