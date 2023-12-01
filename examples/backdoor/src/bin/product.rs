@@ -58,6 +58,10 @@ struct Cli {
     /// Comma-separated list of banned variables (1-based indices).
     #[arg(long, value_name = "INT...")]
     bans: Option<String>,
+
+    /// Number of stagnated iterations before re-initialization.
+    #[arg(long)]
+    stagnation_limit: Option<usize>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -117,7 +121,7 @@ fn main() -> color_eyre::Result<()> {
 
     for run_number in 1..=args.num_runs {
         // Run the evolutionary algorithm:
-        let result = algorithm.run(args.backdoor_size, args.num_iters, None, Some(0.999), 0);
+        let result = algorithm.run(args.backdoor_size, args.num_iters, args.stagnation_limit, Some(0.999), 0);
         let backdoor = result.best_instance.get_variables();
         let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
         debug!(
