@@ -51,15 +51,15 @@ struct Cli {
     bans: Option<String>,
 
     /// Number of stagnated iterations before re-initialization.
-    #[arg(long)]
+    #[arg(long, value_name = "INT")]
     stagnation_limit: Option<usize>,
 
     /// Maximum required rho value (break EA upon reaching).
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(long, value_name = "FLOAT", default_value_t = 1.0)]
     max_rho: f64,
 
     /// Minimum number of EA iterations.
-    #[arg(long, default_value_t = 0)]
+    #[arg(long, value_name = "INT", default_value_t = 0)]
     min_iter: usize,
 
     /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
