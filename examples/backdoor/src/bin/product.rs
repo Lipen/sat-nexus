@@ -60,7 +60,7 @@ struct Cli {
     bans: Option<String>,
 
     /// Number of stagnated iterations before re-initialization.
-    #[arg(long)]
+    #[arg(long, value_name = "INT")]
     stagnation_limit: Option<usize>,
 }
 
