@@ -386,7 +386,7 @@ impl Solver {
 
             // Propagate the assigned unit:
             if let Some(conflict) = self.propagate() {
-                debug!("Conflict during propagation of learn unit: {}", self.clause(conflict));
+                debug!("Conflict during propagation of learnt unit: {}", self.clause(conflict));
                 self.ok = false;
             }
         } else {
