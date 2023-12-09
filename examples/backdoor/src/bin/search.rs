@@ -76,9 +76,9 @@ struct Cli {
     #[arg(long)]
     dump_learnts: bool,
 
-    /// Do minimize the best backdoors into clauses using Espresso?
+    /// Do derive clauses from backdoors?
     #[arg(long)]
-    minimize: bool,
+    derive: bool,
 
     /// Do dump derived clauses after each EA run?
     #[arg(long)]
@@ -154,8 +154,8 @@ fn main() -> color_eyre::Result<()> {
 
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
-        if args.minimize {
-            // Minimize the best backdoor:
+        // Derive clauses from the best backdoor:
+        if args.derive {
             let backdoor = result.best_instance.get_variables();
             let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
             debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
