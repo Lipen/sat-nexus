@@ -165,9 +165,11 @@ fn main() -> color_eyre::Result<()> {
                 derived_clauses.iter().map(|c| DisplaySlice(c)).join(", ")
             );
 
-            // Add the derived clauses as learnts:
-            for lemma in derived_clauses.iter() {
-                algorithm.solver.add_learnt(lemma);
+            // Add the derived clauses to the solver:
+            for mut lemma in derived_clauses {
+                lemma.sort_by_key(|lit| lit.var().0);
+
+                algorithm.solver.add_learnt(&lemma);
 
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
@@ -175,10 +177,7 @@ fn main() -> color_eyre::Result<()> {
                     }
                     writeln!(f, "0")?;
                 }
-            }
 
-            for mut lemma in derived_clauses {
-                lemma.sort_by_key(|lit| lit.var().0);
                 algorithm.derived_clauses.insert(lemma);
             }
         }
