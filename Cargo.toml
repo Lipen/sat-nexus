@@ -17,7 +17,7 @@ members = [
     "lib/simple-sat",
     "examples/partition",
     "examples/backdoor",
-    "examples/pyo3-example",
+    "examples/pyeda",
 ]
 
 [dependencies]

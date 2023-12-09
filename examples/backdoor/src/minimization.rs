@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use pyo3_example::backdoor_to_clauses;
+use pyeda::backdoor_to_clauses;
 use simple_sat::lit::Lit;
 
 pub fn minimize_backdoor(cubes: &[Vec<Lit>]) -> Vec<Vec<Lit>> {

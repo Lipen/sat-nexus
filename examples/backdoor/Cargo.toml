@@ -7,7 +7,6 @@ publish = false
 
 [features]
 default = []
-minimization = ["pyo3-example"]
 
 [dependencies]
 log = "0.4.20"
@@ -15,7 +14,7 @@ rand = "0.8.5"
 itertools = "0.12.0"
 
 simple-sat = { path = "../../lib/simple-sat" }
-pyo3-example = { path = "../pyo3-example", optional = true }
+pyeda = { path = "../pyeda", optional = true }
 
 clap = { version = "4.4.8", features = ["derive"] }
 color-eyre = "0.6.2"
