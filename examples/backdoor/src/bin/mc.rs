@@ -1,11 +1,12 @@
+use std::path::PathBuf;
+use std::time::Instant;
+
 use clap::Parser;
 use itertools::Itertools;
 use log::{debug, info};
 use rand::prelude::*;
 
-use std::path::PathBuf;
-use std::time::Instant;
-
+use backdoor::utils::parse_comma_separated_intervals;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
@@ -87,24 +88,4 @@ fn main() -> color_eyre::Result<()> {
     let elapsed = Instant::now() - start_time;
     println!("\nAll done in {:.3} s", elapsed.as_secs_f64());
     Ok(())
-}
-
-fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
-    let mut result = Vec::new();
-    for part in input.split(',') {
-        let range_parts: Vec<&str> = part.splitn(2, "-").collect();
-        if range_parts.len() == 2 {
-            let start: usize = range_parts[0].parse().unwrap();
-            let end: usize = range_parts[1].parse().unwrap();
-            if start <= end {
-                result.extend(start..=end);
-            } else {
-                result.extend((end..=start).rev());
-            }
-        } else {
-            let single: usize = part.parse().unwrap();
-            result.push(single);
-        }
-    }
-    result
 }

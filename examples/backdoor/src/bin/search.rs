@@ -9,7 +9,7 @@ use log::{debug, info, trace};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::partition_tasks;
+use backdoor::utils::{parse_comma_separated_intervals, partition_tasks};
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 
@@ -242,24 +242,4 @@ fn main() -> color_eyre::Result<()> {
     let elapsed = Instant::now() - start_time;
     println!("\nAll done in {:.3} s", elapsed.as_secs_f64());
     Ok(())
-}
-
-fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
-    let mut result = Vec::new();
-    for part in input.split(',') {
-        let range_parts: Vec<&str> = part.splitn(2, "-").collect();
-        if range_parts.len() == 2 {
-            let start: usize = range_parts[0].parse().unwrap();
-            let end: usize = range_parts[1].parse().unwrap();
-            if start <= end {
-                result.extend(start..=end);
-            } else {
-                result.extend((end..=start).rev());
-            }
-        } else {
-            let single: usize = part.parse().unwrap();
-            result.push(single);
-        }
-    }
-    result
 }

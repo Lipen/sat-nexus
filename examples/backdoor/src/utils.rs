@@ -1,8 +1,30 @@
+use std::collections::HashSet;
+
 use itertools::{Itertools, MultiProduct};
 
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::var::Var;
+
+pub fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
+    let mut result = Vec::new();
+    for part in input.split(',') {
+        let range_parts: Vec<&str> = part.splitn(2, "-").collect();
+        if range_parts.len() == 2 {
+            let start: usize = range_parts[0].parse().unwrap();
+            let end: usize = range_parts[1].parse().unwrap();
+            if start <= end {
+                result.extend(start..=end);
+            } else {
+                result.extend((end..=start).rev());
+            }
+        } else {
+            let single: usize = part.parse().unwrap();
+            result.push(single);
+        }
+    }
+    result
+}
 
 pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
     let mut hard = Vec::new();
@@ -37,4 +59,11 @@ where
     I::Item: Clone,
 {
     std::iter::repeat(it).take(repeat).multi_cartesian_product()
+}
+
+pub fn concat_cubes(a: Vec<Lit>, b: Vec<Lit>) -> Vec<Lit> {
+    let mut r = HashSet::new();
+    r.extend(a);
+    r.extend(b);
+    r.into_iter().collect()
 }
