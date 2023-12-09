@@ -64,6 +64,10 @@ struct Cli {
     #[arg(long, value_name = "INT", default_value_t = 0)]
     min_iter: usize,
 
+    /// Do dump records for each EA run?
+    #[arg(long)]
+    dump_records: bool,
+
     /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
     #[arg(long)]
     add_learnts: bool,
@@ -83,10 +87,6 @@ struct Cli {
     /// Do dump derived clauses after each EA run?
     #[arg(long)]
     dump_derived: bool,
-
-    /// Do dump records for each EA run?
-    #[arg(long)]
-    dump_records: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
