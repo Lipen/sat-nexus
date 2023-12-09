@@ -65,5 +65,15 @@ pub fn concat_cubes(a: Vec<Lit>, b: Vec<Lit>) -> Vec<Lit> {
     let mut r = HashSet::new();
     r.extend(a);
     r.extend(b);
-    r.into_iter().collect()
+    let mut r = r.into_iter().collect_vec();
+    r.sort_by_key(|lit| lit.var().0);
+    r
+    // let mut r = Vec::new();
+    // r.extend(a);
+    // for x in b {
+    //     if !r.contains(&x) {
+    //         r.push(x);
+    //     }
+    // }
+    // r
 }

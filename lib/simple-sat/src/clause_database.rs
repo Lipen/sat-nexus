@@ -111,8 +111,9 @@ impl ClauseDatabase {
                     clause.mark_deleted();
                 }
                 LBool::False => {
-                    trace!("{} contains falsified literal => shrinking", clause);
-                    clause.remove_falsified_literals(assignment);
+                    // TODO: fix the situation when the clause becomes unit/empty after shrinking!
+                    // trace!("{} contains falsified literal => shrinking", clause);
+                    // clause.remove_falsified_literals(assignment);
                 }
                 LBool::Undef => {
                     // do nothing

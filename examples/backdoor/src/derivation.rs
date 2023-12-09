@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use log::info;
+use itertools::Itertools;
+use log::debug;
 
 pub use _pyeda::*;
 use simple_sat::lit::Lit;
+use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
 #[cfg(feature = "pyeda")]
@@ -47,6 +49,10 @@ mod _pyeda {
 }
 
 pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
+    // Note: currently, derives only units and binary clauses.
+
+    debug!("derive_clauses(hard = [{}])", hard.iter().map(|c| DisplaySlice(c)).join(", "));
+
     let mut derived_clauses = Vec::new();
 
     // count :: {Var: (pos, neg)}
@@ -62,15 +68,15 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
         }
     }
     for (&var, &(pos, neg)) in count.iter() {
-        info!("Count (pos/neg) for {} is {} / {}", var, pos, neg);
+        debug!("Count (pos/neg) for {} is {} / {}", var, pos, neg);
     }
     for (&var, &(pos, neg)) in count.iter() {
         if pos == 0 {
-            info!("variable {} is always negative", var);
+            debug!("variable {} is never positive", var);
             derived_clauses.push(vec![Lit::new(var, true)]);
         }
         if neg == 0 {
-            info!("variable {} is always positive", var);
+            debug!("variable {} is never negative", var);
             derived_clauses.push(vec![Lit::new(var, false)]);
         }
     }
@@ -88,6 +94,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
                 if count[&b.var()].0 == 0 || count[&b.var()].1 == 0 {
                     continue;
                 }
+                let (a, b) = if a.index() > b.index() { (b, a) } else { (a, b) };
                 let e = count_pair.entry((a.var(), b.var())).or_default();
                 match (a.negated(), b.negated()) {
                     (false, false) => (*e).0 += 1, // pos-pos
@@ -99,11 +106,11 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
         }
     }
     for (&(a, b), &(pp, pn, np, nn)) in count_pair.iter() {
-        info!("Count (pp/pn/np/nn) for {}-{} is {} / {} / {} / {}", a, b, pp, pn, np, nn);
+        debug!("Count (pp/pn/np/nn) for {}-{} is {} / {} / {} / {}", a, b, pp, pn, np, nn);
     }
     for (&(a, b), &(pp, pn, np, nn)) in count_pair.iter() {
         if pp == 0 {
-            info!(
+            debug!(
                 "pair {}-{} is never pos-pos |= clause ({}, {})",
                 a,
                 b,
@@ -113,7 +120,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, true)]);
         }
         if pn == 0 {
-            info!(
+            debug!(
                 "pair {}-{} is never pos-neg |= clause ({}, {})",
                 a,
                 b,
@@ -123,7 +130,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, false)]);
         }
         if np == 0 {
-            info!(
+            debug!(
                 "pair {}-{} is never neg-pos |= clause ({}, {})",
                 a,
                 b,
@@ -133,7 +140,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, true)]);
         }
         if nn == 0 {
-            info!(
+            debug!(
                 "pair {}-{} is never neg-neg |= clause ({}, {})",
                 a,
                 b,
