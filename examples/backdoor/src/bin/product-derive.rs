@@ -216,11 +216,11 @@ fn main() -> color_eyre::Result<()> {
         cubes_product.retain(|cube| {
             pb.inc(1);
             let res = algorithm.solver.propcheck(cube);
-            if res {
-                // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-            } else {
-                // debug!("UNSAT {} via UP", DisplaySlice(cube));
-            }
+            // if res {
+            //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
+            // } else {
+            //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
+            // }
             res
         });
         pb.finish_and_clear();
