@@ -114,7 +114,7 @@ fn main() -> color_eyre::Result<()> {
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
     if let Some(f) = &mut file_results {
-        writeln!(f, "i,retain,size")?;
+        writeln!(f, "i,filter,size")?;
     }
 
     for run_number in 1..=args.num_runs {
@@ -197,6 +197,9 @@ fn main() -> color_eyre::Result<()> {
             hard.len(),
             cubes_product.len() * hard.len()
         );
+        if let Some(f) = &mut file_results {
+            writeln!(f, "{},before,{}", run_number, cubes_product.len() * hard.len())?;
+        }
 
         let variables = concat_cubes(cubes_product[0].clone(), hard[0].clone())
             .iter()
@@ -220,7 +223,7 @@ fn main() -> color_eyre::Result<()> {
         drop(trie);
         cubes_product = valid;
 
-        info!("Size of product after retain: {}", cubes_product.len());
+        info!("Size of product after filtering: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
         }
@@ -248,7 +251,7 @@ fn main() -> color_eyre::Result<()> {
         debug!("Deriving clauses for {} cubes...", cubes_product.len());
         let derived_clauses = derive_clauses(&cubes_product);
         debug!(
-            "Total {} derived clauses ({} units, {} binary, {} other) AFTER retain",
+            "Total {} derived clauses ({} units, {} binary, {} other) AFTER filtering",
             derived_clauses.len(),
             derived_clauses.iter().filter(|c| c.len() == 1).count(),
             derived_clauses.iter().filter(|c| c.len() == 2).count(),
@@ -271,7 +274,7 @@ fn main() -> color_eyre::Result<()> {
             }
         }
         debug!(
-            "NEW {} derived clauses ({} units, {} binary, {} other) AFTER retain",
+            "NEW {} derived clauses ({} units, {} binary, {} other) AFTER filtering",
             new_clauses.len(),
             new_clauses.iter().filter(|c| c.len() == 1).count(),
             new_clauses.iter().filter(|c| c.len() == 2).count(),
@@ -302,7 +305,7 @@ fn main() -> color_eyre::Result<()> {
         });
         pb.finish_and_clear();
 
-        info!("Size of product after second retain: {}", cubes_product.len());
+        info!("Size of product after second filtering: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},after2,{}", run_number, cubes_product.len())?;
         }
@@ -330,7 +333,7 @@ fn main() -> color_eyre::Result<()> {
         debug!("Deriving clauses for {} cubes...", cubes_product.len());
         let derived_clauses = derive_clauses(&cubes_product);
         debug!(
-            "Total {} derived clauses ({} units, {} binary, {} other) after second retain",
+            "Total {} derived clauses ({} units, {} binary, {} other) after second filtering",
             derived_clauses.len(),
             derived_clauses.iter().filter(|c| c.len() == 1).count(),
             derived_clauses.iter().filter(|c| c.len() == 2).count(),
@@ -370,7 +373,7 @@ fn main() -> color_eyre::Result<()> {
         });
         pb.finish_and_clear();
 
-        info!("Size of product after third retain: {}", cubes_product.len());
+        info!("Size of product after third filtering: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},after3,{}", run_number, cubes_product.len())?;
         }
