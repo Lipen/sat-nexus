@@ -1167,38 +1167,35 @@ impl Solver {
                         total_count += 1;
                         state = State::Ascending;
                     } else {
-                        while self.decision_level() < variables.len() {
-                            self.assignment.new_decision_level();
-                            let v = variables[self.decision_level() - 1];
-                            let s = cube[self.decision_level() - 1];
-                            let p = Lit::new(v, s);
-                            trace!("Trying to assign p = {} at new level {}", p, self.decision_level());
-                            match self.value(p) {
-                                LBool::True => {
-                                    trace!("Literal {} already has True value", p);
-                                    // do nothing
-                                }
-                                LBool::False => {
-                                    trace!(
-                                        "Propagated different value for p = {} with trail = [{}]",
-                                        p,
-                                        variables
-                                            .iter()
-                                            .zip(cube.iter())
-                                            .take(self.decision_level())
-                                            .map(|(&v, &s)| Lit::new(v, s))
-                                            .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
-                                            .join(", ")
-                                    );
-                                    state = State::Ascending;
-                                    break;
-                                }
-                                LBool::Undef => {
-                                    trace!("Enqueueing {}", p);
-                                    self.assignment.unchecked_enqueue(p, None);
-                                    state = State::Propagating;
-                                    break;
-                                }
+                        self.assignment.new_decision_level();
+                        let v = variables[self.decision_level() - 1];
+                        let s = cube[self.decision_level() - 1];
+                        let p = Lit::new(v, s);
+                        trace!("Trying to assign p = {} at new level {}", p, self.decision_level());
+                        match self.value(p) {
+                            LBool::True => {
+                                trace!("Literal {} already has True value", p);
+                                // do nothing
+                                // state = State::Descending;
+                            }
+                            LBool::False => {
+                                trace!(
+                                    "Propagated different value for p = {} with trail = [{}]",
+                                    p,
+                                    variables
+                                        .iter()
+                                        .zip(cube.iter())
+                                        .take(self.decision_level())
+                                        .map(|(&v, &s)| Lit::new(v, s))
+                                        .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                        .join(", ")
+                                );
+                                state = State::Ascending;
+                            }
+                            LBool::Undef => {
+                                trace!("Enqueueing {}", p);
+                                self.assignment.unchecked_enqueue(p, None);
+                                state = State::Propagating;
                             }
                         }
                     }
@@ -1341,6 +1338,194 @@ impl Solver {
         debug!("Checked {} cubes, {} valid", total_checked, total_count);
         total_count
     }
+
+    pub fn propcheck_all_trie(&mut self, variables: &[Var], cubes: &[Vec<bool>], valid: &mut Vec<Vec<Lit>>) -> u64 {
+        debug!(
+            "propcheck_all_trie(variables = {}, cubes = [{} cubes])",
+            DisplaySlice(variables),
+            cubes.len()
+        );
+
+        // TODO: backtrack(0) manually instead of asserting.
+        assert_eq!(self.decision_level(), 0);
+
+        // Propagate everything that needs to be propagated:
+        if let Some(_conflict) = self.propagate() {
+            warn!("Conflict during pre-propagation");
+            self.ok = false;
+        }
+
+        if !self.ok {
+            return 0;
+        }
+
+        // Trivial case:
+        if cubes.is_empty() {
+            return 0;
+        }
+
+        let trie = crate::trie::build_trie(cubes);
+        // let mut current = trie.root();
+
+        let mut cube = vec![false; variables.len()];
+
+        let mut total_checked = 0u64;
+        let mut total_count = 0u64;
+
+        #[derive(Debug)]
+        enum State {
+            Descending,
+            Ascending,
+            Propagating,
+        }
+        let mut state = State::Descending;
+
+        loop {
+            trace!(
+                "state = {:?}, cube = {}, level = {}, trail = [{}]",
+                state,
+                DisplaySlice(&cube),
+                self.decision_level(),
+                variables
+                    .iter()
+                    .zip(cube.iter())
+                    .take(self.decision_level())
+                    .map(|(&v, &s)| Lit::new(v, s))
+                    .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                    .join(", ")
+            );
+            assert!(self.decision_level() <= variables.len());
+
+            match state {
+                State::Descending => {
+                    if self.decision_level() == variables.len() {
+                        trace!("Found valid cube: {}", DisplaySlice(&cube));
+                        valid.push(
+                            variables
+                                .iter()
+                                .zip(cube.iter())
+                                .take(self.decision_level())
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                .collect_vec(),
+                        );
+                        total_count += 1;
+                        state = State::Ascending;
+                    } else {
+                        self.assignment.new_decision_level();
+                        let v = variables[self.decision_level() - 1];
+                        let s = cube[self.decision_level() - 1];
+
+                        let mut ok = true;
+                        let current = trie.search(&cube[..self.decision_level()]);
+                        if current == 0 {
+                            ok = false;
+                            state = State::Ascending;
+                        }
+
+                        if ok {
+                            let p = Lit::new(v, s);
+                            trace!("Trying to assign p = {} at new level {}", p, self.decision_level());
+                            match self.value(p) {
+                                LBool::True => {
+                                    trace!("Literal {} already has True value", p);
+                                    // do nothing
+                                    // state = State::Descending;
+                                }
+                                LBool::False => {
+                                    trace!(
+                                        "Propagated different value for p = {} with trail = [{}]",
+                                        p,
+                                        variables
+                                            .iter()
+                                            .zip(cube.iter())
+                                            .take(self.decision_level())
+                                            .map(|(&v, &s)| Lit::new(v, s))
+                                            .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                            .join(", ")
+                                    );
+                                    state = State::Ascending;
+                                }
+                                LBool::Undef => {
+                                    trace!("Enqueueing {}", p);
+                                    self.assignment.unchecked_enqueue(p, None);
+                                    state = State::Propagating;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                State::Ascending => {
+                    assert!(self.decision_level() > 0);
+
+                    // Find the 1-based index of the last 'false' value in 'cube':
+                    let mut j = self.decision_level(); // 1-based
+                    while j > 0 && (cube[j - 1] || trie.right(trie.search(&cube[..j - 1])) == 0) {
+                        j -= 1;
+                    }
+                    if j == 0 {
+                        break;
+                    }
+
+                    // Increment the 'cube':
+                    assert!(!cube[j - 1]);
+                    cube[j - 1] = true;
+                    for i in j..variables.len() {
+                        cube[i] = false;
+                    }
+
+                    // Backtrack to the level before `j`:
+                    self.backtrack(j - 1);
+
+                    // Switch state to descending:
+                    state = State::Descending;
+                }
+
+                State::Propagating => {
+                    total_checked += 1;
+                    if let Some(conflict) = self.propagate() {
+                        trace!(
+                            "Conflict {} for trail = [{}]",
+                            self.clause(conflict),
+                            variables
+                                .iter()
+                                .zip(cube.iter())
+                                .take(self.decision_level())
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                .join(", ")
+                        );
+                        state = State::Ascending;
+                    } else {
+                        trace!(
+                            "No conflict for trail = [{}]",
+                            variables
+                                .iter()
+                                .zip(cube.iter())
+                                .take(self.decision_level())
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
+                                .join(", ")
+                        );
+                        state = State::Descending;
+                    }
+                }
+            }
+        }
+
+        // Post-backtrack to zero level:
+        self.backtrack(0);
+
+        // Post-propagate:
+        if let Some(_conflict) = self.propagate() {
+            warn!("Conflict during post-propagation");
+            self.ok = false;
+            return 0;
+        }
+
+        debug!("Checked {} cubes, {} valid", total_checked, total_count);
+        total_count
+    }
 }
 
 // Additional methods.
@@ -1441,6 +1626,14 @@ mod tests {
         info!("count_tree = {}", count_tree);
 
         assert_eq!(count, count_tree);
+
+        info!("----------------------");
+        let cubes = vec![vec![false, false], vec![true, true], vec![true, false], vec![false, true]];
+        let mut valid = Vec::new();
+        let count_trie = solver.propcheck_all_trie(&variables, &cubes, &mut valid);
+        info!("count_trie = {}", count_trie);
+
+        assert_eq!(count, count_trie);
     }
 
     #[test]

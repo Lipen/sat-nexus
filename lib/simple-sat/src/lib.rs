@@ -15,3 +15,6 @@ pub mod utils;
 pub mod var;
 pub mod var_order;
 pub mod watch;
+
+pub mod arena;
+pub mod trie;
