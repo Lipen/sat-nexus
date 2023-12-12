@@ -23,6 +23,7 @@ use crate::lit::Lit;
 use crate::options::Options;
 use crate::options::DEFAULT_OPTIONS;
 use crate::restart::RestartStrategy;
+use crate::trie::Trie;
 use crate::utils::parse_dimacs_clause;
 use crate::utils::read_maybe_gzip;
 use crate::utils::DisplaySlice;
@@ -1339,12 +1340,8 @@ impl Solver {
         total_count
     }
 
-    pub fn propcheck_all_trie(&mut self, variables: &[Var], cubes: &[Vec<bool>], valid: &mut Vec<Vec<Lit>>) -> u64 {
-        debug!(
-            "propcheck_all_trie(variables = {}, cubes = [{} cubes])",
-            DisplaySlice(variables),
-            cubes.len()
-        );
+    pub fn propcheck_all_trie(&mut self, variables: &[Var], trie: &Trie, valid: &mut Vec<Vec<Lit>>) -> u64 {
+        debug!("propcheck_all_trie(variables = {})", DisplaySlice(variables));
 
         // TODO: backtrack(0) manually instead of asserting.
         assert_eq!(self.decision_level(), 0);
@@ -1360,12 +1357,9 @@ impl Solver {
         }
 
         // Trivial case:
-        if cubes.is_empty() {
+        if trie.is_empty() {
             return 0;
         }
-
-        let trie = crate::trie::build_trie(cubes);
-        // let mut current = trie.root();
 
         let mut cube = vec![false; variables.len()];
 
@@ -1551,6 +1545,7 @@ impl Solver {
 
 #[cfg(test)]
 mod tests {
+    use crate::trie::build_trie;
     use test_log::test;
 
     use super::*;
@@ -1629,8 +1624,9 @@ mod tests {
 
         info!("----------------------");
         let cubes = vec![vec![false, false], vec![true, true], vec![true, false], vec![false, true]];
+        let trie = build_trie(&cubes);
         let mut valid = Vec::new();
-        let count_trie = solver.propcheck_all_trie(&variables, &cubes, &mut valid);
+        let count_trie = solver.propcheck_all_trie(&variables, &trie, &mut valid);
         info!("count_trie = {}", count_trie);
 
         assert_eq!(count, count_trie);

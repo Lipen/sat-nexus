@@ -4,16 +4,16 @@ use crate::arena::Arena;
 
 #[derive(Debug)]
 pub struct TrieNode {
-    parent: usize,
+    // parent: usize,
     left: usize,  // "false"-child
     right: usize, // "true"-child
     is_end: bool,
 }
 
 impl TrieNode {
-    pub fn new(parent: usize) -> Self {
+    pub fn new(_parent: usize) -> Self {
         Self {
-            parent,
+            // parent,
             left: 0,
             right: 0,
             is_end: false,
@@ -46,9 +46,9 @@ impl Trie {
     pub fn root(&self) -> usize {
         self.root
     }
-    pub fn parent(&self, index: usize) -> usize {
-        self.node(index).parent
-    }
+    // pub fn parent(&self, index: usize) -> usize {
+    //     self.node(index).parent
+    // }
     pub fn left(&self, index: usize) -> usize {
         self.node(index).left
     }
@@ -57,6 +57,13 @@ impl Trie {
     }
     pub fn is_end(&self, index: usize) -> bool {
         self.node(index).is_end
+    }
+
+    pub fn len(&self) -> usize {
+        self.nodes.len() - 1
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn insert(&mut self, word: &[bool]) -> usize {
@@ -100,19 +107,19 @@ impl Trie {
         current
     }
 
-    pub(crate) fn level(&self, index: usize) -> usize {
-        let mut i = 0;
-        let mut current = index;
-        loop {
-            let p = self.parent(current);
-            if p == 0 {
-                break;
-            }
-            current = p;
-            i += 1;
-        }
-        i
-    }
+    // pub(crate) fn level(&self, index: usize) -> usize {
+    //     let mut i = 0;
+    //     let mut current = index;
+    //     loop {
+    //         let p = self.parent(current);
+    //         if p == 0 {
+    //             break;
+    //         }
+    //         current = p;
+    //         i += 1;
+    //     }
+    //     i
+    // }
 }
 
 impl Index<usize> for Trie {

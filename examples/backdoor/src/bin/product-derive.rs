@@ -14,6 +14,7 @@ use backdoor::derivation::derive_clauses;
 use backdoor::utils::{concat_cubes, parse_comma_separated_intervals, partition_tasks};
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
+use simple_sat::trie::Trie;
 use simple_sat::utils::DisplaySlice;
 
 // Run this example:
@@ -196,84 +197,29 @@ fn main() -> color_eyre::Result<()> {
             hard.len(),
             cubes_product.len() * hard.len()
         );
-        cubes_product = cubes_product
-            .into_iter()
-            .cartesian_product(hard)
-            .map(|(a, b)| concat_cubes(a, b))
-            .collect_vec();
 
-        info!("Size of product before retain: {}", cubes_product.len());
-        if let Some(f) = &mut file_results {
-            writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
-        }
-
-        // // ------------------------------------------------------------------------
-        //
-        // debug!("Deriving clauses for {} cubes...", cubes_product.len());
-        // let derived_clauses = derive_clauses(&cubes_product);
-        // debug!(
-        //     "Total {} derived clauses ({} units, {} binary, {} other) BEFORE retain",
-        //     derived_clauses.len(),
-        //     derived_clauses.iter().filter(|c| c.len() == 1).count(),
-        //     derived_clauses.iter().filter(|c| c.len() == 2).count(),
-        //     derived_clauses.iter().filter(|c| c.len() > 2).count()
-        // );
-        // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-        //
-        // let mut new_clauses = Vec::new();
-        // // for mut lemma in derived_clauses {
-        // //     lemma.sort_by_key(|lit| lit.var().0);
-        // //     if algorithm.derived_clauses.insert(lemma.clone()) {
-        // //         if let Some(f) = &mut file_derived_clauses {
-        // //             for lit in lemma.iter() {
-        // //                 write!(f, "{} ", lit)?;
-        // //             }
-        // //             writeln!(f, "0")?;
-        // //         }
-        // //         algorithm.solver.add_learnt(&lemma);
-        // //         new_clauses.push(lemma);
-        // //     }
-        // // }
-        // for mut lemma in derived_clauses {
-        //     lemma.sort_by_key(|lit| lit.var().0);
-        //     if !algorithm.derived_clauses.contains(&lemma) {
-        //         new_clauses.push(lemma);
-        //     }
-        // }
-        // debug!(
-        //     "NEW {} derived clauses ({} units, {} binary, {} other) BEFORE retain",
-        //     new_clauses.len(),
-        //     new_clauses.iter().filter(|c| c.len() == 1).count(),
-        //     new_clauses.iter().filter(|c| c.len() == 2).count(),
-        //     new_clauses.iter().filter(|c| c.len() > 2).count()
-        // );
-        // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-        //
-        // // ------------------------------------------------------------------------
-
-        // let pb = ProgressBar::new(cubes_product.len() as u64);
-        // pb.set_style(
-        //     ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
-        //         .progress_chars("#>-"),
-        // );
-        // cubes_product.retain(|cube| {
-        //     pb.inc(1);
-        //     let res = algorithm.solver.propcheck(cube);
-        //     // if res {
-        //     //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-        //     // } else {
-        //     //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
-        //     // }
-        //     res
-        // });
-        // pb.finish_and_clear();
-        let variables = cubes_product[0].iter().map(|lit| lit.var()).collect_vec();
-        let cubes = cubes_product
+        let variables = concat_cubes(cubes_product[0].clone(), hard[0].clone())
             .iter()
-            .map(|cube| cube.iter().map(|lit| lit.negated()).collect_vec())
+            .map(|lit| lit.var())
             .collect_vec();
+        let mut trie = Trie::new();
+        let pb = ProgressBar::new((cubes_product.len() * hard.len()) as u64);
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
+                .progress_chars("#>-"),
+        );
+        for cube in cubes_product.into_iter().cartesian_product(hard).map(|(a, b)| concat_cubes(a, b)) {
+            let cube = cube.iter().map(|lit| lit.negated()).collect_vec();
+
+            pb.inc(1);
+            trie.insert(&cube);
+        }
+        pb.finish_and_clear();
+
         let mut valid = Vec::new();
-        algorithm.solver.propcheck_all_trie(&variables, &cubes, &mut valid);
+        info!("Filtering hard cubes via trie of size {}...", trie.len());
+        algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        drop(trie);
         cubes_product = valid;
 
         info!("Size of product after retain: {}", cubes_product.len());
