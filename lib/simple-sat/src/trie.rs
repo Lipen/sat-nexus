@@ -66,9 +66,9 @@ impl Trie {
         self.len() == 0
     }
 
-    pub fn insert(&mut self, word: &[bool]) -> usize {
+    pub fn insert(&mut self, word: impl IntoIterator<Item = bool>) -> usize {
         let mut current = self.root;
-        for &bit in word {
+        for bit in word.into_iter() {
             current = if bit {
                 if self.nodes[current].right == 0 {
                     self.nodes[current].right = self.nodes.alloc(TrieNode::new(current));
@@ -139,7 +139,7 @@ impl IndexMut<usize> for Trie {
 pub fn build_trie(cubes: &[Vec<bool>]) -> Trie {
     let mut trie = Trie::new();
     for cube in cubes {
-        trie.insert(&cube);
+        trie.insert(cube.clone());
     }
     trie
 }
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_insert_single_word() {
         let mut trie = Trie::new();
-        trie.insert(&[true, false, true]);
+        trie.insert([true, false, true]);
 
         assert_eq!(trie.left(trie.root), 0);
         assert_ne!(trie.right(trie.root), 0);
@@ -183,9 +183,9 @@ mod tests {
     #[test]
     fn test_insert_multiple_words() {
         let mut trie = Trie::new();
-        let a = trie.insert(&[true, false, true]);
-        let b = trie.insert(&[false, true, false]);
-        let c = trie.insert(&[true, true, true]);
+        let a = trie.insert([true, false, true]);
+        let b = trie.insert([false, true, false]);
+        let c = trie.insert([true, true, true]);
         assert!(!trie.is_end(trie.root));
         assert!(trie.is_end(a));
         assert!(trie.is_end(b));

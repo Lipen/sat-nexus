@@ -209,10 +209,8 @@ fn main() -> color_eyre::Result<()> {
                 .progress_chars("#>-"),
         );
         for cube in cubes_product.into_iter().cartesian_product(hard).map(|(a, b)| concat_cubes(a, b)) {
-            let cube = cube.iter().map(|lit| lit.negated()).collect_vec();
-
+            trie.insert(cube.iter().map(|lit| lit.negated()));
             pb.inc(1);
-            trie.insert(&cube);
         }
         pb.finish_and_clear();
 
