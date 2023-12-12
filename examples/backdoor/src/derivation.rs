@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use log::debug;
 
@@ -55,9 +56,17 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
 
     let mut derived_clauses = Vec::new();
 
+    let pb = ProgressBar::new(hard.len() as u64);
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
     // count :: {Var: (pos, neg)}
     let mut count = HashMap::<Var, (u64, u64)>::new();
     for cube in hard.iter() {
+        pb.inc(1);
         for &lit in cube.iter() {
             let e = count.entry(lit.var()).or_default();
             if lit.negated() {
@@ -67,6 +76,8 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             }
         }
     }
+    pb.finish_and_clear();
+
     for (&var, &(pos, neg)) in count.iter() {
         debug!("Count (pos/neg) for {} is {} / {}", var, pos, neg);
     }
@@ -81,9 +92,17 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
         }
     }
 
+    let pb = ProgressBar::new(hard.len() as u64);
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
     // count_pair :: {(a, b): (+a+b, +a-b, -a+b, -a-b)}
     let mut count_pair = HashMap::<(Var, Var), (u64, u64, u64, u64)>::new();
     for cube in hard.iter() {
+        pb.inc(1);
         for i in 0..cube.len() {
             let a = cube[i];
             if count[&a.var()].0 == 0 || count[&a.var()].1 == 0 {
@@ -105,6 +124,8 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             }
         }
     }
+    pb.finish_and_clear();
+
     for (&(a, b), &(pp, pn, np, nn)) in count_pair.iter() {
         debug!("Count (pp/pn/np/nn) for {}-{} is {} / {} / {} / {}", a, b, pp, pn, np, nn);
     }
