@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use itertools::Itertools;
+use itertools::{iproduct, Itertools};
 use log::{debug, info, trace};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
@@ -211,7 +211,8 @@ fn main() -> color_eyre::Result<()> {
             ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
                 .progress_chars("#>-"),
         );
-        for cube in cubes_product.into_iter().cartesian_product(hard).map(|(a, b)| concat_cubes(a, b)) {
+        for (old, new) in iproduct!(cubes_product, hard) {
+            let cube = concat_cubes(old, new);
             trie.insert(cube.iter().map(|lit| lit.negated()));
             pb.inc(1);
         }
