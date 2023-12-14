@@ -382,7 +382,7 @@ impl Solver {
 
         if lits.len() == 1 {
             // Learn a unit clause:
-            self.assignment.unchecked_enqueue(lits[0], None);
+            self.assignment.enqueue(lits[0], None);
             // FIXME: handle (ignore, in fact) the bool returned from 'enqueue'
 
             // Propagate the assigned unit:
