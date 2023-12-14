@@ -77,3 +77,47 @@ pub fn concat_cubes(a: Vec<Lit>, b: Vec<Lit>) -> Vec<Lit> {
     // }
     // r
 }
+
+pub fn bits_to_number(bits: &[bool]) -> u32 {
+    let mut result: u32 = 0;
+    for &bit in bits.iter() {
+        result <<= 1;
+        result |= bit as u32;
+    }
+    result
+}
+
+pub fn gray_to_index(bits: &[bool]) -> u32 {
+    let mut num = bits_to_number(bits);
+    num ^= num >> 16;
+    num ^= num >> 8;
+    num ^= num >> 4;
+    num ^= num >> 2;
+    num ^= num >> 1;
+    num
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gray_to_number() {
+        assert_eq!(0, gray_to_index(&[false, false, false, false]));
+        assert_eq!(1, gray_to_index(&[false, false, false, true]));
+        assert_eq!(2, gray_to_index(&[false, false, true, true]));
+        assert_eq!(3, gray_to_index(&[false, false, true, false]));
+        assert_eq!(4, gray_to_index(&[false, true, true, false]));
+        assert_eq!(5, gray_to_index(&[false, true, true, true]));
+        assert_eq!(6, gray_to_index(&[false, true, false, true]));
+        assert_eq!(7, gray_to_index(&[false, true, false, false]));
+        assert_eq!(8, gray_to_index(&[true, true, false, false]));
+        assert_eq!(9, gray_to_index(&[true, true, false, true]));
+        assert_eq!(10, gray_to_index(&[true, true, true, true]));
+        assert_eq!(11, gray_to_index(&[true, true, true, false]));
+        assert_eq!(12, gray_to_index(&[true, false, true, false]));
+        assert_eq!(13, gray_to_index(&[true, false, true, true]));
+        assert_eq!(14, gray_to_index(&[true, false, false, true]));
+        assert_eq!(15, gray_to_index(&[true, false, false, false]));
+    }
+}
