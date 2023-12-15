@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::iter::zip;
 
 use itertools::{Itertools, MultiProduct};
 
@@ -31,7 +32,7 @@ pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>
     let mut easy = Vec::new();
 
     for cube in product_repeat([true, false].into_iter(), variables.len()) {
-        let assumptions = variables.iter().zip(cube.iter()).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
+        let assumptions = zip(variables, cube).map(|(&v, s)| Lit::new(v, s)).collect_vec();
         let result = solver.propcheck(&assumptions);
         if result {
             hard.push(assumptions);
