@@ -1454,7 +1454,7 @@ impl Solver {
 
                     // Find the 1-based index of the last 'false' value in 'cube':
                     let mut j = self.decision_level(); // 1-based
-                    while j > 0 && (cube[j - 1] || trie.right(trie.search(&cube[..j - 1])) == 0) {
+                    while j > 0 && cube[j - 1] {
                         j -= 1;
                     }
                     if j == 0 {
