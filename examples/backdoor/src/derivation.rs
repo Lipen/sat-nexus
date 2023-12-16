@@ -1,6 +1,9 @@
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use std::collections::HashMap;
+
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use log::{debug, trace};
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 
 pub use _pyeda::*;
 use simple_sat::lit::Lit;
@@ -56,37 +59,40 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
     //     assert!(std::iter::zip(cube, &hard[0]).all(|(a, b)| a.var() == b.var()));
     // }
 
+    let n = hard[0].len();
     let mut derived_clauses = Vec::new();
 
-    // count :: [(pos,neg)]
-    let n = hard[0].len();
-    let mut count: Vec<(u64, u64)> = vec![(0, 0); n];
-
-    let pb = ProgressBar::new(hard.len() as u64);
+    let pb = ProgressBar::new(n as u64);
     pb.set_style(
         ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")
             .unwrap()
             .progress_chars("#>-"),
     );
     pb.set_message("units");
-    for cube in hard.iter().progress_with(pb) {
-        for (i, &lit) in cube.iter().enumerate() {
-            if lit.negated() {
-                count[i].1 += 1;
-            } else {
-                count[i].0 += 1;
+    // count_unit :: {i: (pos,neg)}
+    let count_unit: HashMap<usize, (u64, u64)> = (0..n)
+        .into_par_iter()
+        .progress_with(pb)
+        .map(|i| {
+            let mut pos = 0;
+            let mut neg = 0;
+            for cube in hard.iter() {
+                if cube[i].negated() {
+                    neg += 1;
+                } else {
+                    pos += 1;
+                }
             }
-        }
-    }
+            (i, (pos, neg))
+        })
+        .collect();
 
-    // for i in 0..n {
-    //     let var = hard[0][i].var();
-    //     let (pos, neg) = count[i];
-    //     debug!("Count (pos/neg) for {} is {} / {}", var, pos, neg);
-    // }
-    for i in 0..n {
+    for (&i, &(pos, neg)) in count_unit.iter() {
         let var = hard[0][i].var();
-        let (pos, neg) = count[i];
+        debug!("Count (pos/neg) for {} is {} / {}", var, pos, neg);
+    }
+    for (&i, &(pos, neg)) in count_unit.iter() {
+        let var = hard[0][i].var();
         if pos == 0 {
             debug!("variable {} is never positive", var);
             derived_clauses.push(vec![Lit::new(var, true)]);
@@ -97,110 +103,98 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
         }
     }
 
-    // count_pair :: [(+a+b, +a-b, -a+b, -a-b)]
-    let n = hard[0].len();
-    let mut count_pair: Vec<(u64, u64, u64, u64)> = vec![(0, 0, 0, 0); n * n];
-
-    let pb = ProgressBar::new(hard.len() as u64);
+    let pb = ProgressBar::new((n * (n - 1) / 2) as u64);
     pb.set_style(
         ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")
             .unwrap()
             .progress_chars("#>-"),
     );
     pb.set_message("binary");
-    for cube in hard.iter().progress_with(pb) {
-        for i in 0..n {
-            if count[i].0 == 0 || count[i].1 == 0 {
-                // Skip units
-                continue;
+    // count_binary :: {(i,j): (++, +-, -+, --)}
+    let count_binary: HashMap<(usize, usize), (u64, u64, u64, u64)> = (0..n)
+        .tuple_combinations()
+        .par_bridge()
+        .progress_with(pb)
+        .filter_map(|(i, j)| {
+            // Skip units:
+            let (pos, neg) = count_unit[&i];
+            if pos == 0 || neg == 0 {
+                return None;
             }
-            for j in (i + 1)..n {
-                if count[j].0 == 0 || count[j].1 == 0 {
-                    // Skip units
-                    continue;
-                }
-                let e = &mut count_pair[i * n + j];
+            let (pos, neg) = count_unit[&j];
+            if pos == 0 || neg == 0 {
+                return None;
+            }
+
+            let (mut pp, mut pn, mut np, mut nn) = (0, 0, 0, 0);
+            for cube in hard.iter() {
                 match (cube[i].negated(), cube[j].negated()) {
-                    (false, false) => (*e).0 += 1, // pos-pos
-                    (false, true) => (*e).1 += 1,  // pos-neg
-                    (true, false) => (*e).2 += 1,  // neg-pos
-                    (true, true) => (*e).3 += 1,   // neg-neg
+                    (false, false) => pp += 1, // pos-pos
+                    (false, true) => pn += 1,  // pos-neg
+                    (true, false) => np += 1,  // neg-pos
+                    (true, true) => nn += 1,   // neg-neg
                 };
             }
+            Some(((i, j), (pp, pn, np, nn)))
+        })
+        .collect();
+
+    for (&(i, j), &(pp, pn, np, nn)) in count_binary.iter() {
+        let a = hard[0][i].var();
+        let b = hard[0][j].var();
+        debug!("Count (pp/pn/np/nn) for {}-{} is {} / {} / {} / {}", a, b, pp, pn, np, nn);
+    }
+    for (&(i, j), &(pp, pn, np, nn)) in count_binary.iter() {
+        let a = hard[0][i].var();
+        let b = hard[0][j].var();
+        if pp == 0 {
+            debug!(
+                "pair {}-{} is never pos-pos |= clause ({}, {})",
+                a,
+                b,
+                Lit::new(a, true),
+                Lit::new(b, true)
+            );
+            derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, true)]);
+        }
+        if pn == 0 {
+            debug!(
+                "pair {}-{} is never pos-neg |= clause ({}, {})",
+                a,
+                b,
+                Lit::new(a, true),
+                Lit::new(b, false)
+            );
+            derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, false)]);
+        }
+        if np == 0 {
+            debug!(
+                "pair {}-{} is never neg-pos |= clause ({}, {})",
+                a,
+                b,
+                Lit::new(a, false),
+                Lit::new(b, true)
+            );
+            derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, true)]);
+        }
+        if nn == 0 {
+            debug!(
+                "pair {}-{} is never neg-neg |= clause ({}, {})",
+                a,
+                b,
+                Lit::new(a, false),
+                Lit::new(b, false)
+            );
+            derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, false)]);
         }
     }
 
-    // for i in 0..n {
-    //     if count[i].0 == 0 || count[i].1 == 0 {
-    //         // Skip units
-    //         continue;
-    //     }
-    //     for j in (i + 1)..n {
-    //         if count[j].0 == 0 || count[j].1 == 0 {
-    //             // Skip units
-    //             continue;
-    //         }
-    //         let (pp, pn, np, nn) = count_pair[i * n + j];
-    //         let a = hard[0][i].var();
-    //         let b = hard[0][j].var();
-    //         debug!("Count (pp/pn/np/nn) for {}-{} is {} / {} / {} / {}", a, b, pp, pn, np, nn);
-    //     }
-    // }
-    for i in 0..n {
-        if count[i].0 == 0 || count[i].1 == 0 {
-            // Skip units
-            continue;
-        }
-        for j in (i + 1)..n {
-            if count[j].0 == 0 || count[j].1 == 0 {
-                // Skip units
-                continue;
-            }
-            let (pp, pn, np, nn) = count_pair[i * n + j];
-            let a = hard[0][i].var();
-            let b = hard[0][j].var();
-            if pp == 0 {
-                debug!(
-                    "pair {}-{} is never pos-pos |= clause ({}, {})",
-                    a,
-                    b,
-                    Lit::new(a, true),
-                    Lit::new(b, true)
-                );
-                derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, true)]);
-            }
-            if pn == 0 {
-                debug!(
-                    "pair {}-{} is never pos-neg |= clause ({}, {})",
-                    a,
-                    b,
-                    Lit::new(a, true),
-                    Lit::new(b, false)
-                );
-                derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, false)]);
-            }
-            if np == 0 {
-                debug!(
-                    "pair {}-{} is never neg-pos |= clause ({}, {})",
-                    a,
-                    b,
-                    Lit::new(a, false),
-                    Lit::new(b, true)
-                );
-                derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, true)]);
-            }
-            if nn == 0 {
-                debug!(
-                    "pair {}-{} is never neg-neg |= clause ({}, {})",
-                    a,
-                    b,
-                    Lit::new(a, false),
-                    Lit::new(b, false)
-                );
-                derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, false)]);
-            }
-        }
+    // Sort each clause:
+    for clause in derived_clauses.iter_mut() {
+        clause.sort_by_key(|lit| lit.var().0);
     }
+    // Sort all clauses:
+    derived_clauses.sort_by_key(|clause| (clause.len(), clause.iter().map(|lit| lit.var().0).collect_vec()));
 
     derived_clauses
 }

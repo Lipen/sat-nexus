@@ -229,15 +229,9 @@ fn main() -> color_eyre::Result<()> {
         //     .cartesian_product(hard)
         //     .map(|(a, b)| concat_cubes(a, b))
         //     .collect_vec();
-
         // info!("Size of product before retain: {}", cubes_product.len());
         // if let Some(f) = &mut file_results {
         //     writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
-        // }
-
-        // debug!("Previous product has size {}", cubes_product.len());
-        // for cube in cubes_product.iter() {
-        //     debug!("cube = {}", DisplaySlice(&cube));
         // }
 
         debug!(
@@ -247,7 +241,7 @@ fn main() -> color_eyre::Result<()> {
             cubes_product.len() * hard.len()
         );
         if let Some(f) = &mut file_results {
-            writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
+            writeln!(f, "{},before,{}", run_number, cubes_product.len() * hard.len())?;
         }
         let variables = {
             let mut s = HashSet::new();
