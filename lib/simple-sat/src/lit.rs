@@ -5,7 +5,7 @@ use crate::var::Var;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct Lit(pub(crate) u32);
+pub struct Lit(pub u32);
 
 impl Lit {
     pub const fn new(var: Var, negated: bool) -> Self {

@@ -382,7 +382,8 @@ impl Solver {
 
         if lits.len() == 1 {
             // Learn a unit clause:
-            self.assignment.enqueue(lits[0], None);
+            let res = self.assignment.enqueue(lits[0], None);
+            assert!(res);
             // FIXME: handle (ignore, in fact) the bool returned from 'enqueue'
 
             // Propagate the assigned unit:
@@ -1011,6 +1012,7 @@ impl Solver {
 
         // First, propagate everything that needs to be propagated:
         if let Some(_conflict) = self.propagate() {
+            warn!("Conflict during pre-propagation");
             self.ok = false;
         }
 

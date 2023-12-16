@@ -1,17 +1,17 @@
 use std::ops::{Index, IndexMut};
 
-use crate::arena::Arena;
+use crate::arena::{Arena, Id};
 
 #[derive(Debug)]
 pub struct TrieNode {
     // parent: usize,
-    left: usize,  // "false"-child
-    right: usize, // "true"-child
+    left: Id,  // "false"-child
+    right: Id, // "true"-child
     is_end: bool,
 }
 
 impl TrieNode {
-    pub fn new(_parent: usize) -> Self {
+    pub fn new(_parent: Id) -> Self {
         Self {
             // parent,
             left: 0,
@@ -24,7 +24,7 @@ impl TrieNode {
 #[derive(Debug)]
 pub struct Trie {
     nodes: Arena<TrieNode>,
-    root: usize,
+    root: Id,
 }
 
 impl Trie {
@@ -36,26 +36,26 @@ impl Trie {
 }
 
 impl Trie {
-    pub fn node(&self, index: usize) -> &TrieNode {
+    pub fn node(&self, index: Id) -> &TrieNode {
         &self.nodes[index]
     }
-    pub fn node_mut(&mut self, index: usize) -> &mut TrieNode {
+    pub fn node_mut(&mut self, index: Id) -> &mut TrieNode {
         &mut self.nodes[index]
     }
 
-    pub fn root(&self) -> usize {
+    pub fn root(&self) -> Id {
         self.root
     }
-    // pub fn parent(&self, index: usize) -> usize {
+    // pub fn parent(&self, index: Id) -> usize {
     //     self.node(index).parent
     // }
-    pub fn left(&self, index: usize) -> usize {
+    pub fn left(&self, index: Id) -> Id {
         self.node(index).left
     }
-    pub fn right(&self, index: usize) -> usize {
+    pub fn right(&self, index: Id) -> Id {
         self.node(index).right
     }
-    pub fn is_end(&self, index: usize) -> bool {
+    pub fn is_end(&self, index: Id) -> bool {
         self.node(index).is_end
     }
 
@@ -66,7 +66,7 @@ impl Trie {
         self.len() == 0
     }
 
-    pub fn insert(&mut self, word: impl IntoIterator<Item = bool>) -> usize {
+    pub fn insert(&mut self, word: impl IntoIterator<Item = bool>) -> Id {
         let mut current = self.root;
         for bit in word.into_iter() {
             current = if bit {
@@ -96,7 +96,7 @@ impl Trie {
         self.nodes[current].is_end
     }
 
-    pub fn search(&self, word: &[bool]) -> usize {
+    pub fn search(&self, word: &[bool]) -> Id {
         let mut current = self.root;
         for &bit in word {
             current = if bit { self.right(current) } else { self.left(current) };
@@ -122,16 +122,16 @@ impl Trie {
     // }
 }
 
-impl Index<usize> for Trie {
+impl Index<Id> for Trie {
     type Output = TrieNode;
 
-    fn index(&self, index: usize) -> &Self::Output {
+    fn index(&self, index: Id) -> &Self::Output {
         self.node(index)
     }
 }
 
-impl IndexMut<usize> for Trie {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+impl IndexMut<Id> for Trie {
+    fn index_mut(&mut self, index: Id) -> &mut Self::Output {
         self.node_mut(index)
     }
 }

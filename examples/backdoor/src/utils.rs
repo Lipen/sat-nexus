@@ -67,7 +67,7 @@ pub fn concat_cubes(a: Vec<Lit>, b: Vec<Lit>) -> Vec<Lit> {
     r.extend(a);
     r.extend(b);
     let mut r = r.into_iter().collect_vec();
-    r.sort_by_key(|lit| lit.var().0);
+    r.sort_by_key(|lit| lit.0);
     r
     // let mut r = Vec::new();
     // r.extend(a);

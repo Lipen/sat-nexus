@@ -1,4 +1,4 @@
-use indicatif::{ProgressBar, ProgressFinish, ProgressIterator, ProgressStyle};
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::Itertools;
 use log::{debug, trace};
 
@@ -51,6 +51,11 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
 
     trace!("derive_clauses(hard = [{}])", hard.iter().map(|c| DisplaySlice(c)).join(", "));
 
+    // for cube in hard.iter() {
+    //     assert_eq!(cube.len(), hard[0].len());
+    //     assert!(std::iter::zip(cube, &hard[0]).all(|(a, b)| a.var() == b.var()));
+    // }
+
     let mut derived_clauses = Vec::new();
 
     // count :: [(pos,neg)]
@@ -64,7 +69,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             .progress_chars("#>-"),
     );
     pb.set_message("units");
-    for cube in hard.iter().progress_with(pb).with_finish(ProgressFinish::AndClear) {
+    for cube in hard.iter().progress_with(pb) {
         for (i, &lit) in cube.iter().enumerate() {
             if lit.negated() {
                 count[i].1 += 1;
@@ -103,7 +108,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
             .progress_chars("#>-"),
     );
     pb.set_message("binary");
-    for cube in hard.iter().progress_with(pb).with_finish(ProgressFinish::AndClear) {
+    for cube in hard.iter().progress_with(pb) {
         for i in 0..n {
             if count[i].0 == 0 || count[i].1 == 0 {
                 // Skip units

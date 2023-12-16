@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::LineWriter;
 use std::io::Write;
@@ -5,7 +6,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, Itertools};
 use log::{debug, info, trace};
 
@@ -170,17 +171,19 @@ fn main() -> color_eyre::Result<()> {
 
         // ------------------------------------------------------------------------
 
-        debug!("Deriving clauses for {} cubes...", hard.len());
+        info!("Deriving clauses for {} cubes...", hard.len());
+        let time_derive = Instant::now();
         for cube in hard.iter() {
             debug!("cube = {}", DisplaySlice(&cube));
         }
         let derived_clauses = derive_clauses(&hard);
-        debug!(
-            "Total {} derived clauses ({} units, {} binary, {} other) for backdoor",
+        info!(
+            "Total {} derived clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
             derived_clauses.len(),
             derived_clauses.iter().filter(|c| c.len() == 1).count(),
             derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            derived_clauses.iter().filter(|c| c.len() > 2).count()
+            derived_clauses.iter().filter(|c| c.len() > 2).count(),
+            time_derive.elapsed().as_secs_f64()
         );
         debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
@@ -232,7 +235,12 @@ fn main() -> color_eyre::Result<()> {
         //     writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
         // }
 
-        info!(
+        // debug!("Previous product has size {}", cubes_product.len());
+        // for cube in cubes_product.iter() {
+        //     debug!("cube = {}", DisplaySlice(&cube));
+        // }
+
+        debug!(
             "Going to produce a product of size {} * {} = {}",
             cubes_product.len(),
             hard.len(),
@@ -241,11 +249,16 @@ fn main() -> color_eyre::Result<()> {
         if let Some(f) = &mut file_results {
             writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
         }
-        let variables = concat_cubes(cubes_product[0].clone(), hard[0].clone())
-            .iter()
-            .map(|lit| lit.var())
-            .collect_vec();
-        debug!("variables = {}", DisplaySlice(&variables));
+        let variables = {
+            let mut s = HashSet::new();
+            s.extend(cubes_product[0].iter().map(|lit| lit.var()));
+            s.extend(hard[0].iter().map(|lit| lit.var()));
+            s.into_iter().sorted_by_key(|var| var.0).collect_vec()
+        };
+        debug!("Total {} variables: {}", variables.len(), DisplaySlice(&variables));
+
+        info!("Constructing trie out of {} cubes...", cubes_product.len() * hard.len());
+        let time_trie_construct = Instant::now();
         let mut trie = Trie::new();
         let pb = ProgressBar::new((cubes_product.len() * hard.len()) as u64);
         pb.set_style(
@@ -254,22 +267,48 @@ fn main() -> color_eyre::Result<()> {
         );
         pb.set_message("trie construction");
         // let mut count: u64 = 0; // !
-        for (old, new) in iproduct!(cubes_product, hard) {
+        let mut num_normal_cubes = 0u64;
+        'out: for (old, new) in iproduct!(cubes_product, hard).progress_with(pb) {
             let cube = concat_cubes(old, new);
-            // if algorithm.solver.propcheck(&cube) { // !
-            //     count += 1; // !
-            // } // !
+            for i in 1..cube.len() {
+                if cube[i] == -cube[i - 1] {
+                    // Skip the cube with inconsistent literals:
+                    // log::warn!("Skipping the concatenated cube {} with inconsistent literals", DisplaySlice(&cube));
+                    continue 'out;
+                }
+            }
+            // if algorithm.solver.propcheck(&cube) {
+            //     count += 1;
+            // }
+            // assert!(std::iter::zip(&cube, &variables).all(|(lit, var)| lit.var() == *var));
             trie.insert(cube.iter().map(|lit| lit.negated()));
-            pb.inc(1);
+            num_normal_cubes += 1;
         }
-        pb.finish_and_clear();
+        info!(
+            "Trie of size {} constructed out of {} cubes in {:.1}s",
+            trie.len(),
+            num_normal_cubes,
+            time_trie_construct.elapsed().as_secs_f64()
+        );
 
-        info!("Filtering hard cubes via trie of size {}...", trie.len());
+        info!("Filtering hard cubes via trie...");
+        let time_filter = Instant::now();
         let mut valid = Vec::new();
         algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        // if valid.len() as u64 != count {
+        //     log::error!("Mismatch: trie->{}, propcheck->{}", valid.len(), count);
+        // }
         // assert_eq!(valid.len() as u64, count); // !
         drop(trie);
         cubes_product = valid;
+        info!(
+            "Filtered down to {} cubes in {:.1}s",
+            cubes_product.len(),
+            time_filter.elapsed().as_secs_f64()
+        );
+        if let Some(f) = &mut file_results {
+            writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
+        }
 
         // let c = CString::new("conflicts").expect("CString::new failed");
         // let pb = ProgressBar::new(cubes_product.len() as u64);
@@ -315,11 +354,6 @@ fn main() -> color_eyre::Result<()> {
         // });
         // pb.finish_and_clear();
 
-        info!("Size of product after filtering: {}", cubes_product.len());
-        if let Some(f) = &mut file_results {
-            writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
-        }
-
         if cubes_product.is_empty() {
             info!("No more cubes to solve after {} runs", run_number);
             break;
@@ -344,14 +378,16 @@ fn main() -> color_eyre::Result<()> {
 
         // ------------------------------------------------------------------------
 
-        debug!("Deriving clauses for {} cubes...", cubes_product.len());
+        info!("Deriving clauses for {} cubes...", cubes_product.len());
+        let time_derive = Instant::now();
         let derived_clauses = derive_clauses(&cubes_product);
-        debug!(
-            "Total {} derived clauses ({} units, {} binary, {} other) AFTER filtering",
+        info!(
+            "Total {} derived clauses ({} units, {} binary, {} other) in {:.1}s",
             derived_clauses.len(),
             derived_clauses.iter().filter(|c| c.len() == 1).count(),
             derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            derived_clauses.iter().filter(|c| c.len() > 2).count()
+            derived_clauses.iter().filter(|c| c.len() > 2).count(),
+            time_derive.elapsed().as_secs_f64()
         );
         debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
@@ -491,7 +527,6 @@ fn main() -> color_eyre::Result<()> {
         // }
     }
 
-    let elapsed = Instant::now() - start_time;
-    println!("\nAll done in {:.3} s", elapsed.as_secs_f64());
+    println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());
     Ok(())
 }
