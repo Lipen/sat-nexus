@@ -5,9 +5,9 @@ use crate::arena::{Arena, Id};
 #[derive(Debug)]
 pub struct TrieNode {
     // parent: usize,
+    // is_end: bool,
     left: Id,  // "false"-child
     right: Id, // "true"-child
-    is_end: bool,
 }
 
 impl TrieNode {
@@ -16,7 +16,7 @@ impl TrieNode {
             // parent,
             left: 0,
             right: 0,
-            is_end: false,
+            // is_end: false,
         }
     }
 }
@@ -55,9 +55,9 @@ impl Trie {
     pub fn right(&self, index: Id) -> Id {
         self.node(index).right
     }
-    pub fn is_end(&self, index: Id) -> bool {
-        self.node(index).is_end
-    }
+    // pub fn is_end(&self, index: Id) -> bool {
+    //     self.node(index).is_end
+    // }
 
     pub fn len(&self) -> usize {
         self.nodes.len() - 1
@@ -81,20 +81,20 @@ impl Trie {
                 self.nodes[current].left
             };
         }
-        self.nodes[current].is_end = true;
+        // self.nodes[current].is_end = true;
         current
     }
 
-    pub fn contains(&self, word: &[bool]) -> bool {
-        let mut current = self.root;
-        for &bit in word {
-            current = if bit { self.right(current) } else { self.left(current) };
-            if current == 0 {
-                return false;
-            }
-        }
-        self.nodes[current].is_end
-    }
+    // pub fn contains(&self, word: &[bool]) -> bool {
+    //     let mut current = self.root;
+    //     for &bit in word {
+    //         current = if bit { self.right(current) } else { self.left(current) };
+    //         if current == 0 {
+    //             return false;
+    //         }
+    //     }
+    //     self.nodes[current].is_end
+    // }
 
     pub fn search(&self, word: &[bool]) -> Id {
         let mut current = self.root;
@@ -153,7 +153,7 @@ mod tests {
         let trie = Trie::new();
         assert_eq!(trie.nodes.len(), 1);
         assert_ne!(trie.root, 0);
-        assert!(!trie.nodes[trie.root].is_end);
+        // assert!(!trie.nodes[trie.root].is_end);
         assert_eq!(trie.left(trie.root), 0);
         assert_eq!(trie.right(trie.root), 0);
     }
@@ -165,19 +165,19 @@ mod tests {
 
         assert_eq!(trie.left(trie.root), 0);
         assert_ne!(trie.right(trie.root), 0);
-        assert!(!trie.is_end(trie.root));
+        // assert!(!trie.is_end(trie.root));
 
         assert_eq!(trie.right(trie.right(trie.root)), 0);
         assert_ne!(trie.left(trie.right(trie.root)), 0);
-        assert!(!trie.is_end(trie.right(trie.root)));
+        // assert!(!trie.is_end(trie.right(trie.root)));
 
         assert_eq!(trie.left(trie.left(trie.right(trie.root))), 0);
         assert_ne!(trie.right(trie.left(trie.right(trie.root))), 0);
-        assert!(!trie.is_end(trie.left(trie.right(trie.root))));
+        // assert!(!trie.is_end(trie.left(trie.right(trie.root))));
 
         assert_eq!(trie.left(trie.right(trie.left(trie.right(trie.root)))), 0);
         assert_eq!(trie.right(trie.right(trie.left(trie.right(trie.root)))), 0);
-        assert!(trie.is_end(trie.right(trie.left(trie.right(trie.root)))));
+        // assert!(trie.is_end(trie.right(trie.left(trie.right(trie.root)))));
     }
 
     #[test]
@@ -186,10 +186,10 @@ mod tests {
         let a = trie.insert([true, false, true]);
         let b = trie.insert([false, true, false]);
         let c = trie.insert([true, true, true]);
-        assert!(!trie.is_end(trie.root));
-        assert!(trie.is_end(a));
-        assert!(trie.is_end(b));
-        assert!(trie.is_end(c));
+        // assert!(!trie.is_end(trie.root));
+        // assert!(trie.is_end(a));
+        // assert!(trie.is_end(b));
+        // assert!(trie.is_end(c));
     }
 
     #[test]
@@ -197,7 +197,7 @@ mod tests {
         let cubes = vec![vec![true, false, true], vec![false, true, false], vec![true, true, true]];
         let trie = build_trie(&cubes);
         for cube in cubes.iter() {
-            assert!(trie.contains(cube));
+            // assert!(trie.contains(cube));
         }
     }
 }
