@@ -153,11 +153,11 @@ fn main() -> color_eyre::Result<()> {
             .map(|(a, b)| concat_cubes(a, b))
             .collect_vec();
 
+        info!("Size of product before retain: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
         }
 
-        info!("Size of product before retain: {}", cubes_product.len());
         let c = CString::new("conflicts").expect("CString::new failed");
         let pb = ProgressBar::new(cubes_product.len() as u64);
         pb.set_style(
@@ -199,8 +199,8 @@ fn main() -> color_eyre::Result<()> {
             }
         });
         pb.finish_and_clear();
-        info!("Size of product after retain: {}", cubes_product.len());
 
+        info!("Size of product after retain: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
         }

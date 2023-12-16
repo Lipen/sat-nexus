@@ -12,6 +12,7 @@ use log::{debug, info, trace};
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
 use backdoor::utils::{concat_cubes, parse_comma_separated_intervals, partition_tasks};
+// use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
@@ -75,6 +76,16 @@ fn main() -> color_eyre::Result<()> {
     // Initialize the SAT solver:
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
+
+    // let solver_full = unsafe { ccadical_init() };
+    // unsafe {
+    //     for clause in solver.clauses_iter() {
+    //         for lit in clause.lits() {
+    //             ccadical_add(solver_full, lit.to_external());
+    //         }
+    //         ccadical_add(solver_full, 0)
+    //     }
+    // }
 
     // Setup the evolutionary algorithm:
     let options = Options {
@@ -147,7 +158,11 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
                     }
-                    algorithm.solver.add_clause(&[lit]);
+                    algorithm.solver.add_learnt(&[lit]);
+                    // unsafe {
+                    //     ccadical_add(solver_full, lit.to_external());
+                    //     ccadical_add(solver_full, 0);
+                    // }
                 }
             }
             continue;
@@ -156,6 +171,9 @@ fn main() -> color_eyre::Result<()> {
         // ------------------------------------------------------------------------
 
         debug!("Deriving clauses for {} cubes...", hard.len());
+        for cube in hard.iter() {
+            debug!("cube = {}", DisplaySlice(&cube));
+        }
         let derived_clauses = derive_clauses(&hard);
         debug!(
             "Total {} derived clauses ({} units, {} binary, {} other) for backdoor",
@@ -166,7 +184,7 @@ fn main() -> color_eyre::Result<()> {
         );
         debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        let mut new_clauses = Vec::new();
+        // let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
             lemma.sort_by_key(|lit| lit.var().0);
             if algorithm.derived_clauses.insert(lemma.clone()) {
@@ -177,19 +195,42 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_learnt(&lemma);
-                new_clauses.push(lemma);
+                // unsafe {
+                //     for lit in lemma.iter() {
+                //         ccadical_add(solver_full, lit.to_external());
+                //     }
+                //     ccadical_add(solver_full, 0);
+                // }
+                // new_clauses.push(lemma);
             }
         }
-        debug!(
-            "NEW {} derived clauses ({} units, {} binary, {} other) for backdoor",
-            new_clauses.len(),
-            new_clauses.iter().filter(|c| c.len() == 1).count(),
-            new_clauses.iter().filter(|c| c.len() == 2).count(),
-            new_clauses.iter().filter(|c| c.len() > 2).count()
-        );
-        debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+        // debug!(
+        //     "NEW {} derived clauses ({} units, {} binary, {} other) for backdoor",
+        //     new_clauses.len(),
+        //     new_clauses.iter().filter(|c| c.len() == 1).count(),
+        //     new_clauses.iter().filter(|c| c.len() == 2).count(),
+        //     new_clauses.iter().filter(|c| c.len() > 2).count()
+        // );
+        // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
         // ------------------------------------------------------------------------
+
+        // info!(
+        //     "Going to produce a product of size {} * {} = {}",
+        //     cubes_product.len(),
+        //     hard.len(),
+        //     cubes_product.len() * hard.len()
+        // );
+        // cubes_product = cubes_product
+        //     .into_iter()
+        //     .cartesian_product(hard)
+        //     .map(|(a, b)| concat_cubes(a, b))
+        //     .collect_vec();
+
+        // info!("Size of product before retain: {}", cubes_product.len());
+        // if let Some(f) = &mut file_results {
+        //     writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
+        // }
 
         info!(
             "Going to produce a product of size {} * {} = {}",
@@ -198,31 +239,81 @@ fn main() -> color_eyre::Result<()> {
             cubes_product.len() * hard.len()
         );
         if let Some(f) = &mut file_results {
-            writeln!(f, "{},before,{}", run_number, cubes_product.len() * hard.len())?;
+            writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
         }
-
         let variables = concat_cubes(cubes_product[0].clone(), hard[0].clone())
             .iter()
             .map(|lit| lit.var())
             .collect_vec();
+        debug!("variables = {}", DisplaySlice(&variables));
         let mut trie = Trie::new();
         let pb = ProgressBar::new((cubes_product.len() * hard.len()) as u64);
         pb.set_style(
-            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
+            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
                 .progress_chars("#>-"),
         );
+        pb.set_message("trie construction");
+        // let mut count: u64 = 0; // !
         for (old, new) in iproduct!(cubes_product, hard) {
             let cube = concat_cubes(old, new);
+            // if algorithm.solver.propcheck(&cube) { // !
+            //     count += 1; // !
+            // } // !
             trie.insert(cube.iter().map(|lit| lit.negated()));
             pb.inc(1);
         }
         pb.finish_and_clear();
 
-        let mut valid = Vec::new();
         info!("Filtering hard cubes via trie of size {}...", trie.len());
+        let mut valid = Vec::new();
         algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        // assert_eq!(valid.len() as u64, count); // !
         drop(trie);
         cubes_product = valid;
+
+        // let c = CString::new("conflicts").expect("CString::new failed");
+        // let pb = ProgressBar::new(cubes_product.len() as u64);
+        // pb.set_style(
+        //     ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
+        //         .progress_chars("#>-"),
+        // );
+        // pb.set_message("filtering");
+        // cubes_product.retain(|cube| {
+        //     pb.inc(1);
+        //
+        //     // let res = algorithm.solver.propcheck(cube);
+        //     // // if res {
+        //     // //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
+        //     // // } else {
+        //     // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
+        //     // // }
+        //     // res
+        //
+        //     unsafe {
+        //         // debug!("cube = {}", DisplaySlice(cube));
+        //         for &lit in cube.iter() {
+        //             ccadical_assume(solver_full, lit.to_external());
+        //         }
+        //         ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
+        //         match ccadical_solve(solver_full) {
+        //             0 => {
+        //                 // UNKNOWN
+        //                 true
+        //             }
+        //             10 => {
+        //                 // SAT
+        //                 panic!("unexpected SAT");
+        //                 // false
+        //             }
+        //             20 => {
+        //                 // UNSAT
+        //                 false
+        //             }
+        //             r => panic!("Unexpected result: {}", r),
+        //         }
+        //     }
+        // });
+        // pb.finish_and_clear();
 
         info!("Size of product after filtering: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
@@ -240,7 +331,11 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
                     }
-                    algorithm.solver.add_clause(&[lit]);
+                    algorithm.solver.add_learnt(&[lit]);
+                    // unsafe {
+                    //     ccadical_add(solver_full, lit.to_external());
+                    //     ccadical_add(solver_full, 0);
+                    // }
                 }
             }
             cubes_product = vec![vec![]];
@@ -260,7 +355,7 @@ fn main() -> color_eyre::Result<()> {
         );
         debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        let mut new_clauses = Vec::new();
+        // let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
             lemma.sort_by_key(|lit| lit.var().0);
             if algorithm.derived_clauses.insert(lemma.clone()) {
@@ -271,17 +366,17 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_learnt(&lemma);
-                new_clauses.push(lemma);
+                // new_clauses.push(lemma);
             }
         }
-        debug!(
-            "NEW {} derived clauses ({} units, {} binary, {} other) AFTER filtering",
-            new_clauses.len(),
-            new_clauses.iter().filter(|c| c.len() == 1).count(),
-            new_clauses.iter().filter(|c| c.len() == 2).count(),
-            new_clauses.iter().filter(|c| c.len() > 2).count()
-        );
-        debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+        // debug!(
+        //     "NEW {} derived clauses ({} units, {} binary, {} other) AFTER filtering",
+        //     new_clauses.len(),
+        //     new_clauses.iter().filter(|c| c.len() == 1).count(),
+        //     new_clauses.iter().filter(|c| c.len() == 2).count(),
+        //     new_clauses.iter().filter(|c| c.len() > 2).count()
+        // );
+        // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
         // ------------------------------------------------------------------------
 
@@ -289,111 +384,111 @@ fn main() -> color_eyre::Result<()> {
         continue;
         // ===
 
-        let pb = ProgressBar::new(cubes_product.len() as u64);
-        pb.set_style(
-            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
-                .progress_chars("#>-"),
-        );
-        cubes_product.retain(|cube| {
-            pb.inc(1);
-            let res = algorithm.solver.propcheck(cube);
-            // if res {
-            //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-            // } else {
-            //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
-            // }
-            res
-        });
-        pb.finish_and_clear();
-
-        info!("Size of product after second filtering: {}", cubes_product.len());
-        if let Some(f) = &mut file_results {
-            writeln!(f, "{},after2,{}", run_number, cubes_product.len())?;
-        }
-
-        if cubes_product.is_empty() {
-            info!("No more cubes to solve after {} runs", run_number);
-            break;
-        }
-        if cubes_product.len() == 1 {
-            info!("Adding {} units to the solver", cubes_product[0].len());
-            for &lit in &cubes_product[0] {
-                if algorithm.derived_clauses.insert(vec![lit]) {
-                    if let Some(f) = &mut file_derived_clauses {
-                        writeln!(f, "{} 0", lit)?;
-                    }
-                    algorithm.solver.add_clause(&[lit]);
-                }
-            }
-            cubes_product = vec![vec![]];
-            continue;
-        }
-
-        // ------------------------------------------------------------------------
-
-        debug!("Deriving clauses for {} cubes...", cubes_product.len());
-        let derived_clauses = derive_clauses(&cubes_product);
-        debug!(
-            "Total {} derived clauses ({} units, {} binary, {} other) after second filtering",
-            derived_clauses.len(),
-            derived_clauses.iter().filter(|c| c.len() == 1).count(),
-            derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            derived_clauses.iter().filter(|c| c.len() > 2).count()
-        );
-        debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-
-        for mut lemma in derived_clauses {
-            lemma.sort_by_key(|lit| lit.var().0);
-            if algorithm.derived_clauses.insert(lemma.clone()) {
-                if let Some(f) = &mut file_derived_clauses {
-                    for lit in lemma.iter() {
-                        write!(f, "{} ", lit)?;
-                    }
-                    writeln!(f, "0")?;
-                }
-                algorithm.solver.add_learnt(&lemma);
-            }
-        }
-
-        // ------------------------------------------------------------------------
-
-        let pb = ProgressBar::new(cubes_product.len() as u64);
-        pb.set_style(
-            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
-                .progress_chars("#>-"),
-        );
-        cubes_product.retain(|cube| {
-            pb.inc(1);
-            let res = algorithm.solver.propcheck(cube);
-            // if res {
-            //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-            // } else {
-            //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
-            // }
-            res
-        });
-        pb.finish_and_clear();
-
-        info!("Size of product after third filtering: {}", cubes_product.len());
-        if let Some(f) = &mut file_results {
-            writeln!(f, "{},after3,{}", run_number, cubes_product.len())?;
-        }
-
-        if cubes_product.is_empty() {
-            info!("No more cubes to solve after {} runs", run_number);
-            break;
-        }
-        if cubes_product.len() == 1 {
-            info!("Adding {} units to the solver", cubes_product[0].len());
-            for &lit in &cubes_product[0] {
-                if let Some(f) = &mut file_derived_clauses {
-                    writeln!(f, "{} 0", lit)?;
-                }
-                algorithm.solver.add_clause(&[lit]);
-            }
-            cubes_product = vec![vec![]];
-            continue;
-        }
+        // let pb = ProgressBar::new(cubes_product.len() as u64);
+        // pb.set_style(
+        //     ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
+        //         .progress_chars("#>-"),
+        // );
+        // cubes_product.retain(|cube| {
+        //     pb.inc(1);
+        //     let res = algorithm.solver.propcheck(cube);
+        //     // if res {
+        //     //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
+        //     // } else {
+        //     //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
+        //     // }
+        //     res
+        // });
+        // pb.finish_and_clear();
+        //
+        // info!("Size of product after second filtering: {}", cubes_product.len());
+        // if let Some(f) = &mut file_results {
+        //     writeln!(f, "{},after2,{}", run_number, cubes_product.len())?;
+        // }
+        //
+        // if cubes_product.is_empty() {
+        //     info!("No more cubes to solve after {} runs", run_number);
+        //     break;
+        // }
+        // if cubes_product.len() == 1 {
+        //     info!("Adding {} units to the solver", cubes_product[0].len());
+        //     for &lit in &cubes_product[0] {
+        //         if algorithm.derived_clauses.insert(vec![lit]) {
+        //             if let Some(f) = &mut file_derived_clauses {
+        //                 writeln!(f, "{} 0", lit)?;
+        //             }
+        //             algorithm.solver.add_learnt(&[lit]);
+        //         }
+        //     }
+        //     cubes_product = vec![vec![]];
+        //     continue;
+        // }
+        //
+        // // ------------------------------------------------------------------------
+        //
+        // debug!("Deriving clauses for {} cubes...", cubes_product.len());
+        // let derived_clauses = derive_clauses(&cubes_product);
+        // debug!(
+        //     "Total {} derived clauses ({} units, {} binary, {} other) after second filtering",
+        //     derived_clauses.len(),
+        //     derived_clauses.iter().filter(|c| c.len() == 1).count(),
+        //     derived_clauses.iter().filter(|c| c.len() == 2).count(),
+        //     derived_clauses.iter().filter(|c| c.len() > 2).count()
+        // );
+        // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+        //
+        // for mut lemma in derived_clauses {
+        //     lemma.sort_by_key(|lit| lit.var().0);
+        //     if algorithm.derived_clauses.insert(lemma.clone()) {
+        //         if let Some(f) = &mut file_derived_clauses {
+        //             for lit in lemma.iter() {
+        //                 write!(f, "{} ", lit)?;
+        //             }
+        //             writeln!(f, "0")?;
+        //         }
+        //         algorithm.solver.add_learnt(&lemma);
+        //     }
+        // }
+        //
+        // // ------------------------------------------------------------------------
+        //
+        // let pb = ProgressBar::new(cubes_product.len() as u64);
+        // pb.set_style(
+        //     ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
+        //         .progress_chars("#>-"),
+        // );
+        // cubes_product.retain(|cube| {
+        //     pb.inc(1);
+        //     let res = algorithm.solver.propcheck(cube);
+        //     // if res {
+        //     //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
+        //     // } else {
+        //     //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
+        //     // }
+        //     res
+        // });
+        // pb.finish_and_clear();
+        //
+        // info!("Size of product after third filtering: {}", cubes_product.len());
+        // if let Some(f) = &mut file_results {
+        //     writeln!(f, "{},after3,{}", run_number, cubes_product.len())?;
+        // }
+        //
+        // if cubes_product.is_empty() {
+        //     info!("No more cubes to solve after {} runs", run_number);
+        //     break;
+        // }
+        // if cubes_product.len() == 1 {
+        //     info!("Adding {} units to the solver", cubes_product[0].len());
+        //     for &lit in &cubes_product[0] {
+        //         if let Some(f) = &mut file_derived_clauses {
+        //             writeln!(f, "{} 0", lit)?;
+        //         }
+        //         algorithm.solver.add_learnt(&[lit]);
+        //     }
+        //     cubes_product = vec![vec![]];
+        //     continue;
+        // }
     }
 
     let elapsed = Instant::now() - start_time;
