@@ -191,10 +191,10 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
 
     // Sort each clause:
     for clause in derived_clauses.iter_mut() {
-        clause.sort_by_key(|lit| lit.var().0);
+        clause.sort_by_key(|lit| lit.0);
     }
     // Sort all clauses:
-    derived_clauses.sort_by_key(|clause| (clause.len(), clause.iter().map(|lit| lit.var().0).collect_vec()));
+    derived_clauses.sort_by_key(|clause| (clause.len(), clause.iter().map(|lit| lit.0).collect_vec()));
 
     derived_clauses
 }

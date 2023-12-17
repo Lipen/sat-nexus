@@ -185,11 +185,11 @@ fn main() -> color_eyre::Result<()> {
             derived_clauses.iter().filter(|c| c.len() > 2).count(),
             time_derive.elapsed().as_secs_f64()
         );
-        debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+        // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        // let mut new_clauses = Vec::new();
+        let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
-            lemma.sort_by_key(|lit| lit.var().0);
+            lemma.sort_by_key(|lit| lit.0);
             if algorithm.derived_clauses.insert(lemma.clone()) {
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
@@ -204,16 +204,16 @@ fn main() -> color_eyre::Result<()> {
                 //     }
                 //     ccadical_add(solver_full, 0);
                 // }
-                // new_clauses.push(lemma);
+                new_clauses.push(lemma);
             }
         }
-        // debug!(
-        //     "NEW {} derived clauses ({} units, {} binary, {} other) for backdoor",
-        //     new_clauses.len(),
-        //     new_clauses.iter().filter(|c| c.len() == 1).count(),
-        //     new_clauses.iter().filter(|c| c.len() == 2).count(),
-        //     new_clauses.iter().filter(|c| c.len() > 2).count()
-        // );
+        debug!(
+            "NEW {} derived clauses ({} units, {} binary, {} other)",
+            new_clauses.len(),
+            new_clauses.iter().filter(|c| c.len() == 1).count(),
+            new_clauses.iter().filter(|c| c.len() == 2).count(),
+            new_clauses.iter().filter(|c| c.len() > 2).count()
+        );
         // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
         // ------------------------------------------------------------------------
@@ -247,7 +247,7 @@ fn main() -> color_eyre::Result<()> {
             let mut s = HashSet::new();
             s.extend(cubes_product[0].iter().map(|lit| lit.var()));
             s.extend(hard[0].iter().map(|lit| lit.var()));
-            s.into_iter().sorted_by_key(|var| var.0).collect_vec()
+            s.into_iter().sorted().collect_vec()
         };
         debug!("Total {} variables: {}", variables.len(), DisplaySlice(&variables));
 
@@ -383,11 +383,11 @@ fn main() -> color_eyre::Result<()> {
             derived_clauses.iter().filter(|c| c.len() > 2).count(),
             time_derive.elapsed().as_secs_f64()
         );
-        debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+        // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        // let mut new_clauses = Vec::new();
+        let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
-            lemma.sort_by_key(|lit| lit.var().0);
+            lemma.sort_by_key(|lit| lit.0);
             if algorithm.derived_clauses.insert(lemma.clone()) {
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
@@ -396,16 +396,22 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_learnt(&lemma);
-                // new_clauses.push(lemma);
+                // unsafe {
+                //     for lit in lemma.iter() {
+                //         ccadical_add(solver_full, lit.to_external());
+                //     }
+                //     ccadical_add(solver_full, 0);
+                // }
+                new_clauses.push(lemma);
             }
         }
-        // debug!(
-        //     "NEW {} derived clauses ({} units, {} binary, {} other) AFTER filtering",
-        //     new_clauses.len(),
-        //     new_clauses.iter().filter(|c| c.len() == 1).count(),
-        //     new_clauses.iter().filter(|c| c.len() == 2).count(),
-        //     new_clauses.iter().filter(|c| c.len() > 2).count()
-        // );
+        debug!(
+            "NEW {} derived clauses ({} units, {} binary, {} other)",
+            new_clauses.len(),
+            new_clauses.iter().filter(|c| c.len() == 1).count(),
+            new_clauses.iter().filter(|c| c.len() == 2).count(),
+            new_clauses.iter().filter(|c| c.len() > 2).count()
+        );
         // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
         // ------------------------------------------------------------------------
@@ -468,7 +474,7 @@ fn main() -> color_eyre::Result<()> {
         // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
         //
         // for mut lemma in derived_clauses {
-        //     lemma.sort_by_key(|lit| lit.var().0);
+        //     lemma.sort_by_key(|lit| lit.0);
         //     if algorithm.derived_clauses.insert(lemma.clone()) {
         //         if let Some(f) = &mut file_derived_clauses {
         //             for lit in lemma.iter() {
