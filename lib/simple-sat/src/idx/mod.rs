@@ -21,12 +21,12 @@ pub trait Idx {
 
 impl Idx for Var {
     fn idx(&self) -> usize {
-        self.0 as usize
+        self.index()
     }
 }
 
 impl Idx for Lit {
     fn idx(&self) -> usize {
-        self.0 as usize
+        self.index()
     }
 }

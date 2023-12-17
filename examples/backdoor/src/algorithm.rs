@@ -107,7 +107,7 @@ impl Algorithm {
         // Ban already assigned variables:
         assert_eq!(self.banned.len(), self.solver.num_vars());
         for i in 0..self.solver.num_vars() {
-            let v = Var(i as u32);
+            let v = Var::new(i as u32);
             if self.solver.value_var(v) != LBool::Undef {
                 trace!("Skipping already assigned variable {} with value {:?}", v, self.solver.value_var(v));
                 self.banned[i] = true;

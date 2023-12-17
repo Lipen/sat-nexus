@@ -249,7 +249,7 @@ impl Solver {
 
     /// Allocate a new variable.
     pub fn new_var(&mut self) -> Var {
-        let var = Var(self.next_var);
+        let var = Var::new(self.next_var);
         self.next_var += 1;
 
         // Watch
@@ -345,9 +345,8 @@ impl Solver {
         // Note: We assume that the clause does not have duplicates or tautologies.
 
         // Auto-create missing variables.
-        let max_var = lits.iter().map(|&lit| lit.var().0 + 1).max().unwrap() as _; // 1-based
-        assert!(max_var > 0);
-        for _ in (self.num_vars() + 1)..=max_var {
+        let max_var = lits.iter().map(|&lit| lit.var()).max().unwrap();
+        for _ in self.num_vars()..=max_var.index() {
             self.new_var();
         }
 
@@ -1548,6 +1547,7 @@ impl Solver {
 #[cfg(test)]
 mod tests {
     use crate::trie::build_trie;
+
     use test_log::test;
 
     use super::*;
@@ -1586,6 +1586,21 @@ mod tests {
         // Problem is now finally unsatisfiable.
         let res = solver.solve();
         assert_eq!(res, SolveResult::Unsat);
+    }
+
+    #[test]
+    fn test_auto_create_variables() {
+        let mut solver = Solver::default();
+
+        solver.add_clause_external([-1, 2]);
+        solver.add_clause_external([1, 2]);
+        solver.add_clause_external([-1, -2]);
+
+        let res = solver.solve();
+        assert_eq!(res, SolveResult::Sat);
+
+        assert_eq!(solver.value(Lit::from_external(1)), LBool::False);
+        assert_eq!(solver.value(Lit::from_external(2)), LBool::True);
     }
 
     #[test]

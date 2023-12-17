@@ -10,7 +10,6 @@ use backdoor::utils::parse_comma_separated_intervals;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
-use simple_sat::var::Var;
 
 #[derive(Parser, Debug)]
 #[command(author, version)]
@@ -69,7 +68,7 @@ fn main() -> color_eyre::Result<()> {
         let assumptions = input_variables
             .iter()
             .zip(cube.iter())
-            .map(|(&i, &b)| Lit::new(Var(i as u32 - 1), b))
+            .map(|(&i, &b)| Lit::from_external(if b { i as i32 } else { -(i as i32) }))
             .collect_vec();
         // info!("Trying assumptions = {}", DisplaySlice(&assumptions));
         // let result = solver.propcheck(&assumptions);

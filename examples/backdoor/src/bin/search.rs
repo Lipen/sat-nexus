@@ -156,7 +156,12 @@ fn main() -> color_eyre::Result<()> {
         if args.derive {
             let backdoor = result.best_instance.get_variables();
             let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
-            debug!("Backdoor has {} hard and {} easy tasks", hard.len(), easy.len());
+            debug!(
+                "Backdoor {} has {} hard and {} easy tasks",
+                DisplaySlice(&backdoor),
+                hard.len(),
+                easy.len()
+            );
 
             let derived_clauses = derive_clauses(&hard);
             debug!(
@@ -167,7 +172,7 @@ fn main() -> color_eyre::Result<()> {
 
             // Add the derived clauses to the solver:
             for mut lemma in derived_clauses {
-                lemma.sort_by_key(|lit| lit.var().0);
+                lemma.sort_by_key(|lit| lit.var().inner());
 
                 algorithm.solver.add_learnt(&lemma);
 
@@ -199,8 +204,8 @@ fn main() -> color_eyre::Result<()> {
             // Note: variables in backdoors are reported 1-based.
             writeln!(
                 f,
-                "Backdoor [{}] of size {} on iter {} with fitness = {}, rho = {}, hard = {} in {:.3} ms",
-                result.best_instance.get_variables().iter().map(|v| v.0 + 1).join(", "),
+                "Backdoor {} of size {} on iter {} with fitness = {}, rho = {}, hard = {} in {:.3} ms",
+                DisplaySlice(&result.best_instance.get_variables()),
                 result.best_instance.weight(),
                 result.best_iteration,
                 result.best_fitness.value,

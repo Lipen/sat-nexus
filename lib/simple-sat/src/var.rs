@@ -2,11 +2,15 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
-pub struct Var(pub u32);
+pub struct Var(u32);
 
 impl Var {
     pub const fn new(var: u32) -> Self {
         Self(var)
+    }
+
+    pub const fn inner(self) -> u32 {
+        self.0
     }
 
     pub const fn index(self) -> usize {

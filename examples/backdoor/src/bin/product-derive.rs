@@ -189,7 +189,7 @@ fn main() -> color_eyre::Result<()> {
 
         let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
-            lemma.sort_by_key(|lit| lit.0);
+            lemma.sort_by_key(|lit| lit.inner());
             if algorithm.derived_clauses.insert(lemma.clone()) {
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
@@ -387,7 +387,7 @@ fn main() -> color_eyre::Result<()> {
 
         let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
-            lemma.sort_by_key(|lit| lit.0);
+            lemma.sort_by_key(|lit| lit.inner());
             if algorithm.derived_clauses.insert(lemma.clone()) {
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {

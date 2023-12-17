@@ -5,15 +5,19 @@ use crate::var::Var;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct Lit(pub u32);
+pub struct Lit(u32);
 
 impl Lit {
     pub const fn new(var: Var, negated: bool) -> Self {
-        Lit(var.0 << 1 | negated as u32)
+        Lit(var.inner() << 1 | negated as u32)
+    }
+
+    pub const fn inner(self) -> u32 {
+        self.0
     }
 
     pub const fn var(self) -> Var {
-        Var(self.0 >> 1)
+        Var::new(self.0 >> 1)
     }
 
     // TODO: rename to `sign` (with the same same semantics, to match MiniSat)
