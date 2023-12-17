@@ -54,6 +54,11 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
 
     trace!("derive_clauses(hard = [{}])", hard.iter().map(|c| DisplaySlice(c)).join(", "));
 
+    // Trivial case:
+    if hard.is_empty() {
+        return vec![];
+    }
+
     // for cube in hard.iter() {
     //     assert_eq!(cube.len(), hard[0].len());
     //     assert!(std::iter::zip(cube, &hard[0]).all(|(a, b)| a.var() == b.var()));
@@ -191,10 +196,10 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
 
     // Sort each clause:
     for clause in derived_clauses.iter_mut() {
-        clause.sort_by_key(|lit| lit.0);
+        clause.sort_by_key(|lit| lit.inner());
     }
     // Sort all clauses:
-    derived_clauses.sort_by_key(|clause| (clause.len(), clause.iter().map(|lit| lit.0).collect_vec()));
+    derived_clauses.sort_by_key(|clause| (clause.len(), clause.iter().map(|lit| lit.inner()).collect_vec()));
 
     derived_clauses
 }
