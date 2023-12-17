@@ -18,3 +18,4 @@ _bindings*.rs
 perf.data
 perf.data.old
 *.csv
+*.cnf
