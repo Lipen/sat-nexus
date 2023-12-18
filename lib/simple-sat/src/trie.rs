@@ -120,6 +120,10 @@ impl Trie {
     //     }
     //     i
     // }
+
+    pub fn num_leaves(&self) -> usize {
+        self.nodes.iter().filter(|node| node.left == 0 && node.right == 0).count()
+    }
 }
 
 impl Index<Id> for Trie {
@@ -142,6 +146,87 @@ pub fn build_trie(cubes: &[Vec<bool>]) -> Trie {
         trie.insert(cube.clone());
     }
     trie
+}
+
+impl Trie {
+    pub fn iter(&self) -> TrieIter<'_> {
+        TrieIter { trie: self, current: None }
+    }
+}
+
+pub struct TrieIter<'a> {
+    trie: &'a Trie,
+    current: Option<Vec<bool>>,
+}
+
+impl<'a> Iterator for TrieIter<'a> {
+    type Item = Vec<bool>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current.is_none() {
+            let mut word = Vec::new();
+            let mut node = self.trie.root();
+            loop {
+                let left = self.trie.left(node);
+                if left == 0 {
+                    let right = self.trie.right(node);
+                    if right == 0 {
+                        break;
+                    } else {
+                        word.push(true);
+                        node = right;
+                    }
+                } else {
+                    word.push(false);
+                    node = left;
+                }
+            }
+            // log::info!("First leaf: {}", node);
+            // log::info!("First word: {:?}", word);
+            self.current = Some(word);
+        } else {
+            let mut current = self.current.take().unwrap();
+            assert!(!current.is_empty());
+            loop {
+                // Ascend:
+                if let Some(b) = current.pop() {
+                    if b {
+                        continue;
+                    }
+                    let node = self.trie.search(&current);
+                    let right = self.trie.right(node);
+                    if right != 0 {
+                        current.push(true);
+                        // Descend:
+                        let mut node = right;
+                        loop {
+                            let left = self.trie.left(node);
+                            if left != 0 {
+                                current.push(false);
+                                node = left;
+                            } else {
+                                let right = self.trie.right(node);
+                                if right != 0 {
+                                    current.push(true);
+                                    node = right;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                } else {
+                    // log::warn!("stop iteration");
+                    return None;
+                }
+            }
+            self.current = Some(current);
+        }
+
+        // log::info!("TrieIter::next() -> {:?}", self.current);
+        self.current.clone()
+    }
 }
 
 #[cfg(test)]
