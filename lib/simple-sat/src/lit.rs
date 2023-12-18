@@ -37,11 +37,11 @@ impl Lit {
         self.0 as usize
     }
 
-    pub const fn to_external(self) -> i32 {
+    pub fn to_external(self) -> i32 {
         self.sign() * (self.var().to_external() as i32)
     }
 
-    pub const fn from_external(lit: i32) -> Self {
+    pub fn from_external(lit: i32) -> Self {
         let var = Var::from_external(lit.unsigned_abs());
         let sign = lit < 0;
         Self::new(var, sign)

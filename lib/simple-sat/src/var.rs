@@ -17,11 +17,12 @@ impl Var {
         self.0 as usize
     }
 
-    pub const fn to_external(self) -> u32 {
+    pub fn to_external(self) -> u32 {
         self.0 + 1
     }
 
-    pub const fn from_external(var: u32) -> Self {
+    pub fn from_external(var: u32) -> Self {
+        assert_ne!(var, 0);
         Self::new(var - 1)
     }
 }
