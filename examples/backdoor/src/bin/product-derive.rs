@@ -1,7 +1,9 @@
 use std::collections::HashSet;
+use std::ffi::CString;
 use std::fs::File;
 use std::io::LineWriter;
 use std::io::Write;
+use std::iter::zip;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -13,7 +15,7 @@ use log::{debug, info, trace};
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
 use backdoor::utils::{concat_cubes, parse_comma_separated_intervals, partition_tasks};
-// use cadical_sys::statik::*;
+use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
@@ -78,15 +80,15 @@ fn main() -> color_eyre::Result<()> {
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    // let solver_full = unsafe { ccadical_init() };
-    // unsafe {
-    //     for clause in solver.clauses_iter() {
-    //         for lit in clause.lits() {
-    //             ccadical_add(solver_full, lit.to_external());
-    //         }
-    //         ccadical_add(solver_full, 0)
-    //     }
-    // }
+    let solver_full = unsafe { ccadical_init() };
+    unsafe {
+        for clause in solver.clauses_iter() {
+            for lit in clause.lits() {
+                ccadical_add(solver_full, lit.to_external());
+            }
+            ccadical_add(solver_full, 0)
+        }
+    }
 
     // Setup the evolutionary algorithm:
     let options = Options {
@@ -160,10 +162,10 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "{} 0", lit)?;
                     }
                     algorithm.solver.add_learnt(&[lit]);
-                    // unsafe {
-                    //     ccadical_add(solver_full, lit.to_external());
-                    //     ccadical_add(solver_full, 0);
-                    // }
+                    unsafe {
+                        ccadical_add(solver_full, lit.to_external());
+                        ccadical_add(solver_full, 0);
+                    }
                 }
             }
             continue;
@@ -200,12 +202,12 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_learnt(&lemma);
-                // unsafe {
-                //     for lit in lemma.iter() {
-                //         ccadical_add(solver_full, lit.to_external());
-                //     }
-                //     ccadical_add(solver_full, 0);
-                // }
+                unsafe {
+                    for lit in lemma.iter() {
+                        ccadical_add(solver_full, lit.to_external());
+                    }
+                    ccadical_add(solver_full, 0);
+                }
                 new_clauses.push(lemma);
             }
         }
@@ -281,74 +283,90 @@ fn main() -> color_eyre::Result<()> {
             num_normal_cubes += 1;
         }
         info!(
-            "Trie of size {} constructed out of {} cubes in {:.1}s",
+            "Trie of size {} with {} leaves constructed out of {} cubes in {:.1}s",
             trie.len(),
+            trie.num_leaves(),
             num_normal_cubes,
             time_trie_construct.elapsed().as_secs_f64()
         );
 
-        info!("Filtering hard cubes via trie...");
-        let time_filter = Instant::now();
-        let mut valid = Vec::new();
-        algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
-        // if valid.len() as u64 != count {
-        //     log::error!("Mismatch: trie->{}, propcheck->{}", valid.len(), count);
+        // info!("Filtering hard cubes via trie...");
+        // let time_filter = Instant::now();
+        // let mut valid = Vec::new();
+        // algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        // // if valid.len() as u64 != count {
+        // //     log::error!("Mismatch: trie->{}, propcheck->{}", valid.len(), count);
+        // // }
+        // // assert_eq!(valid.len() as u64, count); // !
+        // drop(trie);
+        // cubes_product = valid;
+        // info!(
+        //     "Filtered down to {} cubes in {:.1}s",
+        //     cubes_product.len(),
+        //     time_filter.elapsed().as_secs_f64()
+        // );
+        // if let Some(f) = &mut file_results {
+        //     writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
         // }
-        // assert_eq!(valid.len() as u64, count); // !
-        drop(trie);
-        cubes_product = valid;
+
+        info!("Filtering hard cubes...");
+        let time_filter = Instant::now();
+        let c = CString::new("conflicts").expect("CString::new failed");
+        let pb = ProgressBar::new(trie.num_leaves() as u64);
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
+                .progress_chars("#>-"),
+        );
+        pb.set_message("filtering");
+        cubes_product = trie
+            .iter()
+            .map(|cube| zip(&variables, cube).map(|(&v, s)| Lit::new(v, s)).collect_vec())
+            .filter(|cube| {
+                pb.inc(1);
+
+                // let res = algorithm.solver.propcheck(cube);
+                // // if res {
+                // //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
+                // // } else {
+                // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
+                // // }
+                // res
+
+                unsafe {
+                    // debug!("cube = {}", DisplaySlice(cube));
+                    for &lit in cube.iter() {
+                        ccadical_assume(solver_full, lit.to_external());
+                    }
+                    ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
+                    match ccadical_solve(solver_full) {
+                        0 => {
+                            // UNKNOWN
+                            true
+                        }
+                        10 => {
+                            // SAT
+                            panic!("unexpected SAT");
+                            // false
+                        }
+                        20 => {
+                            // UNSAT
+                            false
+                        }
+                        r => panic!("Unexpected result: {}", r),
+                    }
+                }
+            })
+            .collect_vec();
+        pb.finish_and_clear();
+        let time_filter = time_filter.elapsed();
         info!(
             "Filtered down to {} cubes in {:.1}s",
             cubes_product.len(),
-            time_filter.elapsed().as_secs_f64()
+            time_filter.as_secs_f64()
         );
         if let Some(f) = &mut file_results {
             writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
         }
-
-        // let c = CString::new("conflicts").expect("CString::new failed");
-        // let pb = ProgressBar::new(cubes_product.len() as u64);
-        // pb.set_style(
-        //     ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
-        //         .progress_chars("#>-"),
-        // );
-        // pb.set_message("filtering");
-        // cubes_product.retain(|cube| {
-        //     pb.inc(1);
-        //
-        //     // let res = algorithm.solver.propcheck(cube);
-        //     // // if res {
-        //     // //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-        //     // // } else {
-        //     // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
-        //     // // }
-        //     // res
-        //
-        //     unsafe {
-        //         // debug!("cube = {}", DisplaySlice(cube));
-        //         for &lit in cube.iter() {
-        //             ccadical_assume(solver_full, lit.to_external());
-        //         }
-        //         ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
-        //         match ccadical_solve(solver_full) {
-        //             0 => {
-        //                 // UNKNOWN
-        //                 true
-        //             }
-        //             10 => {
-        //                 // SAT
-        //                 panic!("unexpected SAT");
-        //                 // false
-        //             }
-        //             20 => {
-        //                 // UNSAT
-        //                 false
-        //             }
-        //             r => panic!("Unexpected result: {}", r),
-        //         }
-        //     }
-        // });
-        // pb.finish_and_clear();
 
         if cubes_product.is_empty() {
             info!("No more cubes to solve after {} runs", run_number);
@@ -362,10 +380,10 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "{} 0", lit)?;
                     }
                     algorithm.solver.add_learnt(&[lit]);
-                    // unsafe {
-                    //     ccadical_add(solver_full, lit.to_external());
-                    //     ccadical_add(solver_full, 0);
-                    // }
+                    unsafe {
+                        ccadical_add(solver_full, lit.to_external());
+                        ccadical_add(solver_full, 0);
+                    }
                 }
             }
             cubes_product = vec![vec![]];
@@ -398,12 +416,12 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_learnt(&lemma);
-                // unsafe {
-                //     for lit in lemma.iter() {
-                //         ccadical_add(solver_full, lit.to_external());
-                //     }
-                //     ccadical_add(solver_full, 0);
-                // }
+                unsafe {
+                    for lit in lemma.iter() {
+                        ccadical_add(solver_full, lit.to_external());
+                    }
+                    ccadical_add(solver_full, 0);
+                }
                 new_clauses.push(lemma);
             }
         }
