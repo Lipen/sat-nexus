@@ -173,8 +173,10 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Deriving clauses for {} cubes...", hard.len());
         let time_derive = Instant::now();
-        for cube in hard.iter() {
-            debug!("cube = {}", DisplaySlice(&cube));
+        if hard.len() <= 30 {
+            for cube in hard.iter() {
+                debug!("cube = {}", DisplaySlice(&cube));
+            }
         }
         let derived_clauses = derive_clauses(&hard);
         info!(
