@@ -1,9 +1,8 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
 use std::fs::File;
 use std::io::LineWriter;
 use std::io::Write;
-use std::iter::zip;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -11,6 +10,7 @@ use clap::Parser;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, Itertools};
 use log::{debug, info, trace};
+use rand::prelude::*;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
@@ -245,7 +245,7 @@ fn main() -> color_eyre::Result<()> {
             cubes_product.len() * hard.len()
         );
         if let Some(f) = &mut file_results {
-            writeln!(f, "{},before,{}", run_number, cubes_product.len() * hard.len())?;
+            writeln!(f, "{},product,{}", run_number, cubes_product.len() * hard.len())?;
         }
         let variables = {
             let mut s = HashSet::new();
@@ -290,74 +290,103 @@ fn main() -> color_eyre::Result<()> {
             time_trie_construct.elapsed().as_secs_f64()
         );
 
-        // info!("Filtering hard cubes via trie...");
-        // let time_filter = Instant::now();
-        // let mut valid = Vec::new();
-        // algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
-        // // if valid.len() as u64 != count {
-        // //     log::error!("Mismatch: trie->{}, propcheck->{}", valid.len(), count);
-        // // }
-        // // assert_eq!(valid.len() as u64, count); // !
-        // drop(trie);
-        // cubes_product = valid;
-        // info!(
-        //     "Filtered down to {} cubes in {:.1}s",
-        //     cubes_product.len(),
-        //     time_filter.elapsed().as_secs_f64()
-        // );
-        // if let Some(f) = &mut file_results {
-        //     writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
-        // }
-
-        info!("Filtering hard cubes...");
+        info!("Filtering {} hard cubes via trie...", trie.num_leaves());
         let time_filter = Instant::now();
+        let mut valid = Vec::new();
+        algorithm.solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        // if valid.len() as u64 != count {
+        //     log::error!("Mismatch: trie->{}, propcheck->{}", valid.len(), count);
+        // }
+        // assert_eq!(valid.len() as u64, count); // !
+        // drop(trie);
+        cubes_product = valid;
+        info!(
+            "Filtered down to {} cubes in {:.1}s",
+            cubes_product.len(),
+            time_filter.elapsed().as_secs_f64()
+        );
+        if let Some(f) = &mut file_results {
+            writeln!(f, "{},propagate,{}", run_number, cubes_product.len())?;
+        }
+
+        info!("Filtering {} hard cubes via solver...", cubes_product.len());
+        let time_filter = Instant::now();
+        let cubes_product_set: HashSet<Vec<Lit>> = cubes_product.iter().cloned().collect();
+        let hard_neighbors: HashMap<Vec<Lit>, usize> = cubes_product
+            .iter()
+            .choose_multiple(&mut algorithm.rng, 50000)
+            .into_iter()
+            .map(|cube| {
+                let mut s = 0;
+                for i in 0..cube.len() {
+                    let mut other = cube.clone();
+                    other[i] = !other[i];
+                    if cubes_product_set.contains(&other) {
+                        s += 1;
+                    }
+                }
+                // info!("cube {} has {} hard and {} easy neighbors", DisplaySlice(&cube), s, cube.len() - s);
+                (cube.clone(), s)
+            })
+            .collect();
+        // debug!("hard neighbor counts: {:?}", hard_neighbors.values().sorted());
         let c = CString::new("conflicts").expect("CString::new failed");
-        let pb = ProgressBar::new(trie.num_leaves() as u64);
+        let pb = ProgressBar::new(cubes_product.len() as u64);
         pb.set_style(
             ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
                 .progress_chars("#>-"),
         );
         pb.set_message("filtering");
-        cubes_product = trie
-            .iter()
-            .map(|cube| zip(&variables, cube).map(|(&v, s)| Lit::new(v, s)).collect_vec())
-            .filter(|cube| {
-                pb.inc(1);
+        cubes_product.retain(|cube| {
+            pb.inc(1);
 
-                // let res = algorithm.solver.propcheck(cube);
-                // // if res {
-                // //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-                // // } else {
-                // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
-                // // }
-                // res
-
-                unsafe {
-                    // debug!("cube = {}", DisplaySlice(cube));
-                    for &lit in cube.iter() {
-                        ccadical_assume(solver_full, lit.to_external());
-                    }
-                    ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
-                    match ccadical_solve(solver_full) {
-                        0 => {
-                            // UNKNOWN
-                            true
-                        }
-                        10 => {
-                            // SAT
-                            panic!("unexpected SAT");
-                            // false
-                        }
-                        20 => {
-                            // UNSAT
-                            false
-                        }
-                        r => panic!("Unexpected result: {}", r),
-                    }
+            if let Some(&num_hard_neighbors) = hard_neighbors.get(cube) {
+                if num_hard_neighbors > 3 {
+                    // pb.println(format!(
+                    //     "skipping cube with {} hard neighbors: {}",
+                    //     num_hard_neighbors
+                    //     DisplaySlice(cube),
+                    // ));
+                    return true;
                 }
-            })
-            .collect_vec();
+            } else {
+                return true;
+            }
+
+            // let res = algorithm.solver.propcheck(cube);
+            // // if res {
+            // //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
+            // // } else {
+            // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
+            // // }
+            // res
+
+            unsafe {
+                // debug!("cube = {}", DisplaySlice(cube));
+                for &lit in cube.iter() {
+                    ccadical_assume(solver_full, lit.to_external());
+                }
+                ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
+                match ccadical_solve(solver_full) {
+                    0 => {
+                        // UNKNOWN
+                        true
+                    }
+                    10 => {
+                        // SAT
+                        panic!("unexpected SAT");
+                        // false
+                    }
+                    20 => {
+                        // UNSAT
+                        false
+                    }
+                    r => panic!("Unexpected result: {}", r),
+                }
+            }
+        });
         pb.finish_and_clear();
+        drop(trie);
         let time_filter = time_filter.elapsed();
         info!(
             "Filtered down to {} cubes in {:.1}s",
@@ -365,7 +394,7 @@ fn main() -> color_eyre::Result<()> {
             time_filter.as_secs_f64()
         );
         if let Some(f) = &mut file_results {
-            writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
+            writeln!(f, "{},limited,{}", run_number, cubes_product.len())?;
         }
 
         if cubes_product.is_empty() {
