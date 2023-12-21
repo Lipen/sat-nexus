@@ -34,9 +34,9 @@ struct Cli {
     #[arg(long, value_name = "INT", default_value_t = 1)]
     num_runs: usize,
 
-    /// Path to a file with results.
-    #[arg(long = "results", value_name = "FILE")]
-    path_results: Option<PathBuf>,
+    /// Path to a output file with backdoors.
+    #[arg(short = 'o', long = "output", value_name = "FILE")]
+    path_output: Option<PathBuf>,
 
     /// Random seed.
     #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
@@ -108,7 +108,7 @@ fn main() -> color_eyre::Result<()> {
     };
     let mut algorithm = Algorithm::new(solver, options);
 
-    // Bans some variables:
+    // Ban some variables:
     if let Some(bans) = args.bans {
         let bans = parse_comma_separated_intervals(&bans);
         trace!("bans = {:?}", bans);
@@ -118,9 +118,9 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    // Create and open the file with results:
-    let mut file_results = if let Some(path_results) = &args.path_results {
-        let f = File::create(path_results)?;
+    // Create and open the file with resulting backdoors:
+    let mut file_backdoors = if let Some(path) = &args.path_output {
+        let f = File::create(path)?;
         let f = LineWriter::new(f);
         Some(f)
     } else {
@@ -163,12 +163,15 @@ fn main() -> color_eyre::Result<()> {
                 easy.len()
             );
 
+            let time_derive = Instant::now();
             let derived_clauses = derive_clauses(&hard);
+            let time_derive = time_derive.elapsed();
             debug!(
-                "Total {} derived clauses: [{}]",
+                "Total {} derived clauses in {:.1} s",
                 derived_clauses.len(),
-                derived_clauses.iter().map(|c| DisplaySlice(c)).join(", ")
+                time_derive.as_secs_f64()
             );
+            debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
             // Add the derived clauses to the solver:
             for mut lemma in derived_clauses {
@@ -199,8 +202,8 @@ fn main() -> color_eyre::Result<()> {
             }
         }
 
-        // Write the best found backdoor into the resulting file:
-        if let Some(f) = &mut file_results {
+        // Write the best found backdoor to the output file:
+        if let Some(f) = &mut file_backdoors {
             // Note: variables in backdoors are reported 1-based.
             writeln!(
                 f,
