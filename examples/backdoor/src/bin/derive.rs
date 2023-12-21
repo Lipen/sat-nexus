@@ -1,8 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::ffi::CString;
 use std::fs::File;
-use std::io::{BufRead, LineWriter};
-use std::io::{BufReader, Write};
+use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -13,7 +12,7 @@ use clap::Parser;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, Itertools};
 use log::{debug, info};
-use rand::prelude::*;
+// use rand::prelude::*;
 
 use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
@@ -214,9 +213,11 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
     let mut all_derived_clauses: HashSet<Vec<Lit>> = HashSet::new();
 
     // Random number generator:
-    let mut rng = StdRng::seed_from_u64(42);
+    // let mut rng = StdRng::seed_from_u64(42);
 
     for (i, backdoor) in backdoors.iter().enumerate() {
+        info!("Run {} / {}", i + 1, backdoors.len());
+
         let (hard, easy) = partition_tasks(&backdoor, &mut solver);
         debug!(
             "Backdoor {} has {} hard and {} easy tasks",
@@ -394,24 +395,24 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
         let time_filter = Instant::now();
-        let cubes_product_set: HashSet<Vec<Lit>> = cubes_product.iter().cloned().collect();
-        let hard_neighbors: HashMap<Vec<Lit>, usize> = cubes_product
-            .iter()
-            .choose_multiple(&mut rng, 50000)
-            .into_iter()
-            .map(|cube| {
-                let mut s = 0;
-                for i in 0..cube.len() {
-                    let mut other = cube.clone();
-                    other[i] = !other[i];
-                    if cubes_product_set.contains(&other) {
-                        s += 1;
-                    }
-                }
-                // info!("cube {} has {} hard and {} easy neighbors", DisplaySlice(&cube), s, cube.len() - s);
-                (cube.clone(), s)
-            })
-            .collect();
+        // let cubes_product_set: HashSet<Vec<Lit>> = cubes_product.iter().cloned().collect();
+        // let hard_neighbors: HashMap<Vec<Lit>, usize> = cubes_product
+        //     .iter()
+        //     .choose_multiple(&mut rng, 50000)
+        //     .into_iter()
+        //     .map(|cube| {
+        //         let mut s = 0;
+        //         for i in 0..cube.len() {
+        //             let mut other = cube.clone();
+        //             other[i] = !other[i];
+        //             if cubes_product_set.contains(&other) {
+        //                 s += 1;
+        //             }
+        //         }
+        //         // info!("cube {} has {} hard and {} easy neighbors", DisplaySlice(&cube), s, cube.len() - s);
+        //         (cube.clone(), s)
+        //     })
+        //     .collect();
         // debug!("hard neighbor counts: {:?}", hard_neighbors.values().sorted());
         let c = CString::new("conflicts").expect("CString::new failed");
         let pb = ProgressBar::new(cubes_product.len() as u64);
@@ -423,18 +424,18 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         cubes_product.retain(|cube| {
             pb.inc(1);
 
-            if let Some(&num_hard_neighbors) = hard_neighbors.get(cube) {
-                if num_hard_neighbors > 3 {
-                    // pb.println(format!(
-                    //     "skipping cube with {} hard neighbors: {}",
-                    //     num_hard_neighbors
-                    //     DisplaySlice(cube),
-                    // ));
-                    return true;
-                }
-            } else {
-                return true;
-            }
+            // if let Some(&num_hard_neighbors) = hard_neighbors.get(cube) {
+            //     if num_hard_neighbors > 3 {
+            //         // pb.println(format!(
+            //         //     "skipping cube with {} hard neighbors: {}",
+            //         //     num_hard_neighbors
+            //         //     DisplaySlice(cube),
+            //         // ));
+            //         return true;
+            //     }
+            // } else {
+            //     return true;
+            // }
 
             // let res = algorithm.solver.propcheck(cube);
             // // if res {
