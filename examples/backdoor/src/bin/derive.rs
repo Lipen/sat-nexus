@@ -251,11 +251,11 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
 
         info!("Deriving clauses for {} cubes...", hard.len());
         let time_derive = Instant::now();
-        if hard.len() <= 30 {
-            for cube in hard.iter() {
-                debug!("cube = {}", DisplaySlice(&cube));
-            }
-        }
+        // if hard.len() <= 30 {
+        //     for cube in hard.iter() {
+        //         debug!("cube = {}", DisplaySlice(&cube));
+        //     }
+        // }
         let derived_clauses = derive_clauses(&hard);
         info!(
             "Total {} derived clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
