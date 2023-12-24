@@ -98,8 +98,15 @@ pub fn gray_to_index(bits: &[bool]) -> u32 {
     num
 }
 
+pub fn mask(base: &[Lit], data: &[Lit]) -> Vec<bool> {
+    let base = base.iter().map(|lit| lit.var()).collect::<HashSet<_>>();
+    data.iter().map(|lit| !base.contains(&lit.var())).collect()
+}
+
 #[cfg(test)]
 mod tests {
+    use itertools::assert_equal;
+
     use super::*;
 
     #[test]
@@ -120,5 +127,20 @@ mod tests {
         assert_eq!(13, gray_to_index(&[true, false, true, true]));
         assert_eq!(14, gray_to_index(&[true, false, false, true]));
         assert_eq!(15, gray_to_index(&[true, false, false, false]));
+    }
+
+    #[test]
+    fn test_mask() {
+        let x1 = Lit::from_external(1);
+        let x2 = Lit::from_external(2);
+        let x3 = Lit::from_external(3);
+        let x5 = Lit::from_external(5);
+        let x7 = Lit::from_external(7);
+        let x8 = Lit::from_external(8);
+        let x9 = Lit::from_external(9);
+        assert_equal(
+            mask(&[x1, x2, x3, x7, x9], &[x2, x3, x5, x7, x8]),
+            [false, false, true, false, true],
+        )
     }
 }
