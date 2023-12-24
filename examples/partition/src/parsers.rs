@@ -58,7 +58,7 @@ where
 }
 
 pub fn parse_interval(input: &str) -> Interval<usize> {
-    let range_parts: Vec<&str> = input.splitn(2, "-").collect();
+    let range_parts: Vec<&str> = input.splitn(2, '-').collect();
     if range_parts.len() == 2 {
         let start = range_parts[0].parse().unwrap();
         let end = range_parts[1].parse().unwrap();

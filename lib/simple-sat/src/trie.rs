@@ -275,6 +275,9 @@ mod tests {
         // assert!(trie.is_end(a));
         // assert!(trie.is_end(b));
         // assert!(trie.is_end(c));
+        assert_eq!(a, trie.search(&[true, false, true]));
+        assert_eq!(b, trie.search(&[false, true, false]));
+        assert_eq!(c, trie.search(&[true, true, true]));
     }
 
     #[test]
@@ -283,6 +286,7 @@ mod tests {
         let trie = build_trie(&cubes);
         for cube in cubes.iter() {
             // assert!(trie.contains(cube));
+            assert_ne!(trie.search(cube), 0);
         }
     }
 }

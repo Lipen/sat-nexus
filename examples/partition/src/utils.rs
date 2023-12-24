@@ -40,7 +40,7 @@ pub fn to_dimacs(clause: &[i32]) -> String {
     for &lit in clause {
         s += &format!("{} ", lit);
     }
-    s += &format!("0");
+    s += "0";
     s
 }
 

@@ -68,7 +68,7 @@ where
 {
     info!("solver = {}", solver);
 
-    let cnf = Cnf::from_file(&args.cnf);
+    let cnf = Cnf::from_file(args.cnf);
     info!("cnf.max_var = {}", cnf.max_var);
     info!("cnf.clauses = {}", cnf.clauses.len());
 

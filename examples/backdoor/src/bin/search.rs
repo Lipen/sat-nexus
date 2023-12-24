@@ -221,7 +221,7 @@ fn main() -> color_eyre::Result<()> {
         // Write the run records:
         if args.dump_records {
             let mut writer = csv::Writer::from_path(format!("run_{}.csv", run_number))?;
-            writer.write_record(&["iteration", "instance", "fitness", "num_hard", "rho"])?;
+            writer.write_record(["iteration", "instance", "fitness", "num_hard", "rho"])?;
             for record in result.records {
                 writer.serialize((
                     record.iteration,

@@ -174,20 +174,21 @@ fn main() -> color_eyre::Result<()> {
         // ------------------------------------------------------------------------
 
         info!("Deriving clauses for {} cubes...", hard.len());
+        // if hard.len() <= 30 {
+        //     for cube in hard.iter() {
+        //         debug!("cube = {}", DisplaySlice(cube));
+        //     }
+        // }
         let time_derive = Instant::now();
-        if hard.len() <= 30 {
-            for cube in hard.iter() {
-                debug!("cube = {}", DisplaySlice(&cube));
-            }
-        }
         let derived_clauses = derive_clauses(&hard);
+        let time_derive = time_derive.elapsed();
         info!(
             "Total {} derived clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
             derived_clauses.len(),
             derived_clauses.iter().filter(|c| c.len() == 1).count(),
             derived_clauses.iter().filter(|c| c.len() == 2).count(),
             derived_clauses.iter().filter(|c| c.len() > 2).count(),
-            time_derive.elapsed().as_secs_f64()
+            time_derive.as_secs_f64()
         );
         // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 

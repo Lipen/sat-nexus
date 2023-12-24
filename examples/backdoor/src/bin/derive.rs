@@ -218,7 +218,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
     for (i, backdoor) in backdoors.iter().enumerate() {
         info!("Run {} / {}", i + 1, backdoors.len());
 
-        let (hard, easy) = partition_tasks(&backdoor, &mut solver);
+        let (hard, easy) = partition_tasks(backdoor, &mut solver);
         debug!(
             "Backdoor {} has {} hard and {} easy tasks",
             DisplaySlice(backdoor),
@@ -566,7 +566,7 @@ where
 {
     let path = path.as_ref();
     debug!("Reading backdoors from '{}'", path.display());
-    let f = File::open(path).expect(&format!("Could not open '{}'", path.display()));
+    let f = File::open(path).unwrap_or_else(|_| panic!("Could not open '{}'", path.display()));
     let f = BufReader::new(f);
     f.lines().flatten().map(|line| parse_backdoor_from_string(&line)).collect()
 }

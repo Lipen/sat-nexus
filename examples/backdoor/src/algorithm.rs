@@ -249,7 +249,7 @@ impl Algorithm {
     }
 
     fn calculate_fitness(&mut self, instance: &Instance) -> Fitness {
-        if let Some(fit) = self.cache.get(&instance) {
+        if let Some(fit) = self.cache.get(instance) {
             self.cache_hits += 1;
             fit.clone()
         } else {
@@ -291,10 +291,8 @@ impl Algorithm {
         for (i, &b) in instance.genome.iter().enumerate() {
             if b {
                 ones.push(i);
-            } else {
-                if !self.banned[i] {
-                    zeros.push(i);
-                }
+            } else if !self.banned[i] {
+                zeros.push(i);
             }
         }
 
