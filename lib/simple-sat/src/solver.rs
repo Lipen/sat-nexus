@@ -1105,7 +1105,7 @@ impl Solver {
         total_count
     }
 
-    pub fn propcheck_all_tree(&mut self, variables: &[Var], add_learnts: bool, out_learnts: &mut Vec<Vec<Lit>>) -> u64 {
+    pub fn propcheck_all_tree(&mut self, variables: &[Var], limit: u64, add_learnts: bool, out_learnts: &mut Vec<Vec<Lit>>) -> u64 {
         debug!("propcheck_all_tree(variables = {})", DisplaySlice(variables));
 
         assert!(variables.len() < 30);
@@ -1167,6 +1167,9 @@ impl Solver {
                     if self.decision_level() == variables.len() {
                         trace!("Found valid cube: {}", DisplaySlice(&cube));
                         total_count += 1;
+                        if limit > 0 && total_count > limit {
+                            break;
+                        }
                         state = State::Ascending;
                     } else {
                         self.assignment.new_decision_level();

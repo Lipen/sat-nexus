@@ -120,7 +120,7 @@ impl Algorithm {
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
-        let mut fitness = self.calculate_fitness(&instance);
+        let mut fitness = self.calculate_fitness(&instance, None);
         info!("Initial fitness: {:?}", fitness);
 
         // Store the best result:
@@ -171,7 +171,7 @@ impl Algorithm {
             };
 
             // Evaluate the mutated instance:
-            let mutated_fitness = self.calculate_fitness(&mutated_instance);
+            let mutated_fitness = self.calculate_fitness(&mutated_instance, Some(&best_fitness));
 
             // Save the record about the new instance:
             records.push(Record {
@@ -248,7 +248,7 @@ impl Algorithm {
         instance
     }
 
-    fn calculate_fitness(&mut self, instance: &Instance) -> Fitness {
+    fn calculate_fitness(&mut self, instance: &Instance, best: Option<&Fitness>) -> Fitness {
         if let Some(fit) = self.cache.get(instance) {
             self.cache_hits += 1;
             fit.clone()
@@ -261,7 +261,10 @@ impl Algorithm {
             // Compute rho:
             let add_learnts = self.options.add_learnts_in_propcheck_all_tree;
             let mut learnts = Vec::new();
-            let num_hard = self.solver.propcheck_all_tree(&vars, add_learnts, &mut learnts);
+            // let limit = 0;
+            let limit = best.map_or(0, |b| b.num_hard);
+            let num_hard = self.solver.propcheck_all_tree(&vars, limit, add_learnts, &mut learnts);
+            // let num_hard = self.solver.propcheck_all_tree(&vars, 0, add_learnts, &mut learnts);
             self.learnt_clauses.extend(learnts);
             let num_total = 1u64 << vars.len();
             let rho = 1.0 - (num_hard as f64 / num_total as f64);
