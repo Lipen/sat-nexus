@@ -1326,15 +1326,17 @@ impl Solver {
             return 0;
         }
 
-        // Simplify DB:
-        self.simplify();
+        if add_learnts {
+            // Simplify DB:
+            self.simplify();
 
-        // Reduce DB:
-        let learnts_limit = self.learning_guard.limit(self.assignment.trail.len());
-        if self.num_learnts() >= learnts_limit {
-            // self.reduce_db();
-            debug!("Reducing DB");
-            self.db.reduce(&self.assignment, &mut self.ca);
+            // Reduce DB:
+            let learnts_limit = self.learning_guard.limit(self.assignment.trail.len());
+            if self.num_learnts() >= learnts_limit {
+                // self.reduce_db();
+                debug!("Reducing DB");
+                self.db.reduce(&self.assignment, &mut self.ca);
+            }
         }
 
         debug!("Checked {} cubes, {} valid", total_checked, total_count);
