@@ -129,6 +129,7 @@ fn main() -> color_eyre::Result<()> {
 
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
+        let time_run = Instant::now();
 
         let result = algorithm.run(
             args.backdoor_size,
@@ -216,9 +217,19 @@ fn main() -> color_eyre::Result<()> {
             new_clauses.iter().filter(|c| c.len() > 2).count()
         );
         // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
+        let time_run = time_run.elapsed();
+        info!("Done run {} / {} in {:.1}s", run_number, args.num_runs, time_run.as_secs_f64());
+        info!(
+            "So far derived {} clauses ({} units, {} binary, {} other)",
+            algorithm.derived_clauses.len(),
+            algorithm.derived_clauses.iter().filter(|c| c.len() == 1).count(),
+            algorithm.derived_clauses.iter().filter(|c| c.len() == 2).count(),
+            algorithm.derived_clauses.iter().filter(|c| c.len() > 2).count()
+        );
     }
 
-    info!("Finished {} runs", args.num_runs);
+    info!("Finished {} runs in {:.1}s", args.num_runs, start_time.elapsed().as_secs_f64());
     info!(
         "Total derived {} clauses ({} units, {} binary, {} other)",
         algorithm.derived_clauses.len(),
