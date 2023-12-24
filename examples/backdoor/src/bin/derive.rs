@@ -36,7 +36,7 @@ struct Cli {
 
     /// Backdoor(s).
     /// Format: either '@filename' for a file with comma-separated list of variables (1,2,3\n4,5,6)
-    /// on each line or slash-separated list of comma-separated lists of variables (1,2,3/1,2,3).
+    /// on each line or slash-separated list of comma-separated lists of variables (1,2,3/4,5,6).
     #[arg(short, long, value_name = "INT...|@FILE")]
     backdoors: String,
 
