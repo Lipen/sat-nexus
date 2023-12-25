@@ -68,6 +68,7 @@ fn build_static_lib() {
         .collect::<Vec<_>>();
     cc::Build::new()
         .cpp(true)
+        .std("c++11")
         .files(files)
         .flag_if_supported("-Wno-nonnull-compare")
         .define("NDEBUG", None)
