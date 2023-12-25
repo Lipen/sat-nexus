@@ -1639,7 +1639,7 @@ mod tests {
 
         info!("----------------------");
         let mut learnts = Vec::new();
-        let count_tree = solver.propcheck_all_tree(&variables, false, &mut learnts);
+        let count_tree = solver.propcheck_all_tree(&variables, 0, false, &mut learnts);
         info!("count_tree = {}", count_tree);
 
         assert_eq!(count, count_tree);
