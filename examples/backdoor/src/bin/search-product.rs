@@ -75,7 +75,7 @@ fn main() -> color_eyre::Result<()> {
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    let solver_full = unsafe { ccadical_init() };
+    let mut solver_full = unsafe { ccadical_init() };
     unsafe {
         for clause in solver.clauses_iter() {
             for lit in clause.lits() {
@@ -123,8 +123,17 @@ fn main() -> color_eyre::Result<()> {
     let mut units: Vec<Lit> = Vec::new();
 
     for run_number in 1..=args.num_runs {
+        info!("Run {} / {}", run_number, args.num_runs);
+        let time_run = Instant::now();
+
         // Run the evolutionary algorithm:
-        let result = algorithm.run(args.backdoor_size, args.num_iters, args.stagnation_limit, Some(0.999), 0);
+        let result = algorithm.run(
+            args.backdoor_size,
+            args.num_iters,
+            args.stagnation_limit,
+            Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
+            100,
+        );
         let backdoor = result.best_instance.get_variables();
         let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
         debug!(
@@ -169,6 +178,7 @@ fn main() -> color_eyre::Result<()> {
             ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
                 .progress_chars("#>-"),
         );
+        let mut cnt = 0;
         cubes_product.retain(|cube| {
             pb.inc(1);
 
@@ -179,6 +189,28 @@ fn main() -> color_eyre::Result<()> {
             // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
             // // }
             // res
+
+            cnt += 1;
+            if cnt > 100 {
+                cnt = 0;
+
+                // Restart (recreate) the solver:
+                // pb.println("Recreating the solver");
+                unsafe {
+                    ccadical_release(solver_full);
+                    solver_full = ccadical_init();
+                    for clause in algorithm.solver.clauses_iter() {
+                        for lit in clause.lits() {
+                            ccadical_add(solver_full, lit.to_external());
+                        }
+                        ccadical_add(solver_full, 0);
+                    }
+                    for &lit in units.iter() {
+                        ccadical_add(solver_full, lit.to_external());
+                        ccadical_add(solver_full, 0);
+                    }
+                }
+            }
 
             unsafe {
                 // debug!("cube = {}", DisplaySlice(cube));
@@ -214,7 +246,12 @@ fn main() -> color_eyre::Result<()> {
             info!("No more cubes to solve after {} runs", run_number);
             break;
         }
+
+        let time_run = time_run.elapsed();
+        info!("Finished run {} in {:.1}s", run_number, time_run.as_secs_f64());
     }
+
+    unsafe { ccadical_release(solver_full) };
 
     let elapsed = Instant::now() - start_time;
     println!("\nAll done in {:.3} s", elapsed.as_secs_f64());
