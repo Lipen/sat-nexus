@@ -95,7 +95,7 @@ fn main() -> color_eyre::Result<()> {
     };
     let mut algorithm = Algorithm::new(solver, options);
 
-    // Bans some variables:
+    // Ban some variables:
     if let Some(bans) = args.bans {
         let bans = parse_comma_separated_intervals(&bans);
         trace!("bans = {:?}", bans);

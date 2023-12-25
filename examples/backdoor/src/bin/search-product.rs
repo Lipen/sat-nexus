@@ -81,7 +81,7 @@ fn main() -> color_eyre::Result<()> {
             for lit in clause.lits() {
                 ccadical_add(solver_full, lit.to_external());
             }
-            ccadical_add(solver_full, 0)
+            ccadical_add(solver_full, 0);
         }
     }
 
@@ -93,7 +93,7 @@ fn main() -> color_eyre::Result<()> {
     };
     let mut algorithm = Algorithm::new(solver, options);
 
-    // Bans some variables:
+    // Ban some variables:
     if let Some(bans) = args.bans {
         let bans = parse_comma_separated_intervals(&bans);
         trace!("bans = {:?}", bans);
@@ -112,11 +112,15 @@ fn main() -> color_eyre::Result<()> {
         None
     };
 
+    if let Some(f) = &mut file_results {
+        writeln!(f, "i,filter,size")?;
+    }
+
+    // Cartesian product of hard tasks:
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
-    if let Some(f) = &mut file_results {
-        writeln!(f, "i,retain,size")?;
-    }
+    // Global derived units:
+    let mut units: Vec<Lit> = Vec::new();
 
     for run_number in 1..=args.num_runs {
         // Run the evolutionary algorithm:
@@ -133,6 +137,7 @@ fn main() -> color_eyre::Result<()> {
         if hard.len() == 1 {
             info!("Adding {} units to the solver", hard[0].len());
             for &lit in &hard[0] {
+                units.push(lit);
                 algorithm.solver.add_clause(&[lit]);
                 unsafe {
                     ccadical_add(solver_full, lit.to_external());
@@ -153,7 +158,7 @@ fn main() -> color_eyre::Result<()> {
             .map(|(a, b)| concat_cubes(a, b))
             .collect_vec();
 
-        info!("Size of product before retain: {}", cubes_product.len());
+        info!("Size of product before filtering: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
         }
@@ -200,7 +205,7 @@ fn main() -> color_eyre::Result<()> {
         });
         pb.finish_and_clear();
 
-        info!("Size of product after retain: {}", cubes_product.len());
+        info!("Size of product after filtering: {}", cubes_product.len());
         if let Some(f) = &mut file_results {
             writeln!(f, "{},after,{}", run_number, cubes_product.len())?;
         }

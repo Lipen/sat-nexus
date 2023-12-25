@@ -98,7 +98,7 @@ fn main() -> color_eyre::Result<()> {
     };
     let mut algorithm = Algorithm::new(solver, options);
 
-    // Bans some variables:
+    // Ban some variables:
     if let Some(bans) = args.bans {
         let bans = parse_comma_separated_intervals(&bans);
         trace!("bans = {:?}", bans);
@@ -125,11 +125,12 @@ fn main() -> color_eyre::Result<()> {
         None
     };
 
-    let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
-
     if let Some(f) = &mut file_results {
         writeln!(f, "i,filter,size")?;
     }
+
+    // Cartesian product of hard tasks:
+    let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
