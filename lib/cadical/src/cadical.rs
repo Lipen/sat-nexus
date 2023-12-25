@@ -218,8 +218,13 @@ impl Cadical {
         unsafe { self.ffi.ccadical_print_statistics(self.ptr) }
     }
 
+    /// Number of variables.
+    pub fn vars(&self) -> i64 {
+        unsafe { self.ffi.ccadical_vars(self.ptr) }
+    }
+
     /// Number of active variables.
-    pub fn active(&self) -> i32 {
+    pub fn active(&self) -> i64 {
         unsafe { self.ffi.ccadical_active(self.ptr) }
     }
 
