@@ -30,6 +30,7 @@ use simple_sat::var::Var;
 #[derive(Parser, Debug)]
 #[command(author, version)]
 struct Cli {
+    /// Path to a file with CNF in DIMACS format.
     #[arg(value_name = "CNF")]
     path_cnf: PathBuf,
 
