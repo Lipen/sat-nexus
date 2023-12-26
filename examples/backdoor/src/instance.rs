@@ -1,13 +1,14 @@
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::iter::zip;
 use std::ops::{Index, IndexMut};
 
-use itertools::Itertools;
+use itertools::{equal, Itertools};
 use rand::prelude::*;
 
 use simple_sat::var::Var;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone)]
 pub struct Instance {
     pub(crate) genome: Vec<bool>,
     pub(crate) pool: Vec<Var>, // TODO: consider `pool: Rc<Vec<Var>>`
@@ -62,6 +63,20 @@ impl Index<usize> for Instance {
 impl IndexMut<usize> for Instance {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.genome.index_mut(index)
+    }
+}
+
+impl PartialEq for Instance {
+    fn eq(&self, other: &Self) -> bool {
+        equal(zip(&self.genome, &self.pool), zip(&other.genome, &other.pool))
+    }
+}
+
+impl Eq for Instance {}
+
+impl Hash for Instance {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.genome.hash(state);
     }
 }
 
