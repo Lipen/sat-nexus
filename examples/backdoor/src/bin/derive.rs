@@ -372,12 +372,13 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
             trie.insert(cube.iter().map(|lit| lit.negated()));
             num_normal_cubes += 1;
         }
+        let time_trie_construct = time_trie_construct.elapsed();
         info!(
             "Trie of size {} with {} leaves constructed out of {} cubes in {:.1}s",
             trie.len(),
             trie.num_leaves(),
             num_normal_cubes,
-            time_trie_construct.elapsed().as_secs_f64()
+            time_trie_construct.as_secs_f64()
         );
 
         info!("Filtering {} hard cubes via trie...", trie.num_leaves());
