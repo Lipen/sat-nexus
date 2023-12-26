@@ -14,7 +14,7 @@ use simple_sat::utils::DisplaySlice;
 #[derive(Parser, Debug)]
 #[command(author, version)]
 struct Cli {
-    /// Path to a file with CNF in DIMACS format.
+    /// Input file with CNF in DIMACS format.
     #[arg(value_name = "CNF")]
     path_cnf: PathBuf,
 
