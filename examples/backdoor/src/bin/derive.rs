@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 use std::ffi::CString;
 use std::fs::File;
-use std::io::{BufRead, BufReader, LineWriter, Write};
-use std::path::{Path, PathBuf};
+use std::io::{LineWriter, Write};
+use std::path::PathBuf;
 use std::time::Instant;
 
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{concat_cubes, parse_comma_separated_intervals, partition_tasks};
+use backdoor::utils::parse_multiple_comma_separated_intervals;
+use backdoor::utils::parse_multiple_comma_separated_intervals_from;
+use backdoor::utils::{concat_cubes, partition_tasks};
 
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
@@ -67,11 +69,15 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     debug!("args = {:?}", args);
 
-    let mut backdoors = if args.backdoors.starts_with('@') {
-        parse_backdoors_from_file(&args.backdoors[1..])
+    let backdoors = if args.backdoors.starts_with('@') {
+        parse_multiple_comma_separated_intervals_from(&args.backdoors[1..])
     } else {
-        parse_backdoors_from_string(&args.backdoors)
+        parse_multiple_comma_separated_intervals(&args.backdoors)
     };
+    let mut backdoors: Vec<Vec<Var>> = backdoors
+        .into_iter()
+        .map(|bd| bd.into_iter().map(|i| Var::from_external(i as u32)).collect())
+        .collect();
     info!("Total backdoors: {}", backdoors.len());
     for backdoor in backdoors.iter() {
         debug!("backdoor = {}", DisplaySlice(backdoor));
@@ -560,26 +566,4 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
     );
 
     Ok(())
-}
-
-fn parse_backdoors_from_file<P>(path: P) -> Vec<Vec<Var>>
-where
-    P: AsRef<Path>,
-{
-    let path = path.as_ref();
-    debug!("Reading backdoors from '{}'", path.display());
-    let f = File::open(path).unwrap_or_else(|_| panic!("Could not open '{}'", path.display()));
-    let f = BufReader::new(f);
-    f.lines().flatten().map(|line| parse_backdoor_from_string(&line)).collect()
-}
-
-fn parse_backdoor_from_string(s: &str) -> Vec<Var> {
-    parse_comma_separated_intervals(s)
-        .into_iter()
-        .map(|i| Var::from_external(i as u32))
-        .collect()
-}
-
-fn parse_backdoors_from_string(s: &str) -> Vec<Vec<Var>> {
-    s.split('/').map(|part| parse_backdoor_from_string(part)).collect()
 }
