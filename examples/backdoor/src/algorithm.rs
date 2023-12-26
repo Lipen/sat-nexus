@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
-use itertools::Itertools;
 use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
@@ -21,7 +20,6 @@ pub struct Algorithm {
     pub cache: HashMap<Instance, Fitness>,
     pub cache_hits: usize,
     pub cache_misses: usize,
-    pub banned: Vec<bool>,
     pub options: Options,
     pub derived_clauses: HashSet<Vec<Lit>>,
     pub learnt_clauses: HashSet<Vec<Lit>>,
@@ -29,8 +27,6 @@ pub struct Algorithm {
 
 impl Algorithm {
     pub fn new(mut solver: Solver, options: Options) -> Self {
-        let banned = vec![false; solver.num_vars()];
-
         // Reset the limits for reduceDB:
         solver.learning_guard.reset(solver.num_clauses());
 
@@ -40,7 +36,6 @@ impl Algorithm {
             cache: HashMap::new(),
             cache_hits: 0,
             cache_misses: 0,
-            banned,
             options,
             derived_clauses: HashSet::new(),
             learnt_clauses: HashSet::new(),
@@ -86,6 +81,7 @@ pub struct Record {
 impl Algorithm {
     pub fn run(
         &mut self,
+        pool: &mut Vec<Var>,
         weight: usize,
         num_iter: usize,
         stagnation_limit: Option<usize>,
@@ -94,29 +90,31 @@ impl Algorithm {
     ) -> RunResult {
         let start_time = Instant::now();
 
-        info!("Running EA for {} iterations with weight {}", num_iter, weight);
+        info!(
+            "Running EA for {} iterations with pool size {} and weight {}",
+            num_iter,
+            pool.len(),
+            weight
+        );
 
         debug!("solver.num_vars() = {}", self.solver.num_vars());
         debug!("solver.num_clauses() = {}", self.solver.num_clauses());
         debug!("solver.num_learnts() = {}", self.solver.num_learnts());
 
-        // Determine the genome size:
-        let genome_size = self.solver.num_vars();
-        info!("Genome size: {}", genome_size);
-
         // Ban already assigned variables:
-        assert_eq!(self.banned.len(), self.solver.num_vars());
+        let mut already_assigned = HashSet::new();
         for i in 0..self.solver.num_vars() {
-            let v = Var::new(i as u32);
-            if self.solver.value_var(v) != LBool::Undef {
-                trace!("Skipping already assigned variable {} with value {:?}", v, self.solver.value_var(v));
-                self.banned[i] = true;
+            let var = Var::new(i as u32);
+            let value = self.solver.value_var(var);
+            if value != LBool::Undef {
+                trace!("Variable {} already assigned value {:?}", var, value);
+                already_assigned.insert(var);
             }
         }
-        info!("Total banned variables: {}", self.banned.iter().filter(|&&b| b).count());
+        pool.retain(|v| !already_assigned.contains(v));
 
         // Create an initial instance:
-        let mut instance = self.initial_instance(genome_size, weight);
+        let mut instance = self.initial_instance(pool.clone(), weight);
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
@@ -140,7 +138,7 @@ impl Algorithm {
         let mut num_stagnation: usize = 0;
 
         for i in 1..=num_iter {
-            let start_time_iter = Instant::now();
+            let time_iter = Instant::now();
 
             // Break upon reaching the maximum required rho:
             if let Some(max_rho) = max_rho {
@@ -161,7 +159,7 @@ impl Algorithm {
                 if need_reinit {
                     // Re-initialize:
                     num_stagnation = 0;
-                    self.initial_instance(genome_size, weight)
+                    self.initial_instance(pool.clone(), weight)
                 } else {
                     // Mutate the instance:
                     let mut mutated_instance = instance.clone();
@@ -180,7 +178,7 @@ impl Algorithm {
                 fitness: mutated_fitness.clone(),
             });
 
-            let elapsed_time_iter = Instant::now() - start_time_iter;
+            let time_iter = time_iter.elapsed();
             if i <= 10 || (i < 1000 && i % 100 == 0) || (i < 10000 && i % 1000 == 0) || i % 10000 == 0 {
                 debug!(
                     "[{} / {}] {:?} for weight={} in {:.3} ms",
@@ -188,7 +186,7 @@ impl Algorithm {
                     num_iter,
                     mutated_fitness,
                     mutated_instance.weight(),
-                    elapsed_time_iter.as_secs_f64() * 1000.0
+                    time_iter.as_secs_f64() * 1000.0
                 );
             }
 
@@ -219,12 +217,11 @@ impl Algorithm {
 
         // Ban used variables:
         if self.options.ban_used_variables {
-            for i in best_instance.indices_true() {
-                self.banned[i] = true;
-            }
+            let used_variables: HashSet<Var> = best_instance.get_variables().into_iter().collect();
+            pool.retain(|v| !used_variables.contains(v));
         }
 
-        let elapsed_time = Instant::now() - start_time;
+        let elapsed_time = start_time.elapsed();
         info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
 
         RunResult {
@@ -236,14 +233,8 @@ impl Algorithm {
         }
     }
 
-    fn initial_instance(&mut self, size: usize, weight: usize) -> Instance {
-        let mut genome = vec![false; size];
-        let available = (0..size).filter(|&i| !self.banned[i]).collect_vec();
-        for &i in available.choose_multiple(&mut self.rng, weight) {
-            genome[i] = true;
-        }
-
-        let instance = Instance::new(genome);
+    fn initial_instance(&mut self, pool: Vec<Var>, weight: usize) -> Instance {
+        let instance = Instance::new_random_with_weight(pool, weight, &mut self.rng);
         assert_eq!(instance.weight(), weight);
         instance
     }
@@ -264,19 +255,14 @@ impl Algorithm {
             // let limit = 0;
             let limit = best.map_or(0, |b| b.num_hard);
             let num_hard = self.solver.propcheck_all_tree(&vars, limit, add_learnts, &mut learnts);
-            // let num_hard = self.solver.propcheck_all_tree(&vars, 0, add_learnts, &mut learnts);
             self.learnt_clauses.extend(learnts);
             let num_total = 1u64 << vars.len();
             let rho = 1.0 - (num_hard as f64 / num_total as f64);
 
             // Calculate the fitness value:
-            let fitness = 1.0 - rho;
+            let value = 1.0 - rho;
 
-            let fit = Fitness {
-                value: fitness,
-                rho,
-                num_hard,
-            };
+            let fit = Fitness { value, rho, num_hard };
 
             self.cache.insert(instance.clone(), fit.clone());
             fit
@@ -294,7 +280,7 @@ impl Algorithm {
         for (i, &b) in instance.genome.iter().enumerate() {
             if b {
                 ones.push(i);
-            } else if !self.banned[i] {
+            } else {
                 zeros.push(i);
             }
         }

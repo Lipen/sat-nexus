@@ -1,11 +1,35 @@
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::iter::zip;
+use std::path::Path;
 
 use itertools::{Itertools, MultiProduct};
+use log::debug;
 
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::var::Var;
+
+pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) -> Vec<Vec<usize>> {
+    let path = path.as_ref();
+    debug!("Reading '{}'", path.display());
+    let f = File::open(path).unwrap_or_else(|_| panic!("Could not open '{}'", path.display()));
+    let f = BufReader::new(f);
+    let mut result = Vec::new();
+    for line in f.lines().flatten() {
+        result.push(parse_comma_separated_intervals(&line));
+    }
+    result
+}
+
+pub fn parse_multiple_comma_separated_intervals(input: &str) -> Vec<Vec<usize>> {
+    let mut result = Vec::new();
+    for part in input.split(':') {
+        result.push(parse_comma_separated_intervals(part));
+    }
+    result
+}
 
 pub fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
     let mut result = Vec::new();

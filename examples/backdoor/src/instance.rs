@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
+use std::iter::zip;
 use std::ops::{Index, IndexMut};
 
 use itertools::Itertools;
@@ -9,25 +10,28 @@ use simple_sat::var::Var;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Instance {
     pub(crate) genome: Vec<bool>,
+    pub(crate) pool: Vec<Var>, // TODO: consider `pool: Rc<Vec<Var>>`
 }
 
 impl Instance {
-    pub fn new(genome: Vec<bool>) -> Self {
-        Self { genome }
+    pub fn new(genome: Vec<bool>, pool: Vec<Var>) -> Self {
+        Self { genome, pool }
     }
 
-    pub fn new_random<R: Rng + ?Sized>(size: usize, rng: &mut R) -> Self {
+    pub fn new_random<R: Rng + ?Sized>(pool: Vec<Var>, rng: &mut R) -> Self {
+        let size = pool.len();
         let genome = (0..size).map(|_| rng.gen()).collect();
-        Self::new(genome)
+        Self::new(genome, pool)
     }
 
-    pub fn new_random_with_weight<R: Rng + ?Sized>(size: usize, weight: usize, rng: &mut R) -> Self {
+    pub fn new_random_with_weight<R: Rng + ?Sized>(pool: Vec<Var>, weight: usize, rng: &mut R) -> Self {
+        let size = pool.len();
         assert!(weight <= size);
         let mut genome = Vec::with_capacity(size);
         genome.resize_with(weight, || true);
         genome.resize_with(size, || false);
         genome.shuffle(rng);
-        Self::new(genome)
+        Self::new(genome, pool)
     }
 }
 
@@ -73,14 +77,16 @@ impl Instance {
         self.genome.iter().filter(|&&b| b).count()
     }
 
-    pub fn indices_true(&self) -> impl Iterator<Item = usize> + '_ {
-        self.genome.iter().enumerate().filter_map(|(i, &b)| if b { Some(i) } else { None })
-    }
-    pub fn indices_false(&self) -> impl Iterator<Item = usize> + '_ {
-        self.genome.iter().enumerate().filter_map(|(i, &b)| if !b { Some(i) } else { None })
+    pub fn get_variables(&self) -> Vec<Var> {
+        zip(&self.genome, &self.pool)
+            .filter_map(|(&b, &v)| if b { Some(v) } else { None })
+            .collect()
     }
 
-    pub fn get_variables(&self) -> Vec<Var> {
-        self.indices_true().map(|i| Var::new(i as u32)).collect()
-    }
+    // pub fn indices_true(&self) -> impl Iterator<Item = usize> + '_ {
+    //     self.genome.iter().enumerate().filter_map(|(i, &b)| if b { Some(i) } else { None })
+    // }
+    // pub fn indices_false(&self) -> impl Iterator<Item = usize> + '_ {
+    //     self.genome.iter().enumerate().filter_map(|(i, &b)| if !b { Some(i) } else { None })
+    // }
 }

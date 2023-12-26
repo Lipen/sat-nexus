@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::path::PathBuf;
@@ -5,13 +6,14 @@ use std::time::Instant;
 
 use clap::Parser;
 use itertools::Itertools;
-use log::{debug, info, trace};
+use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{parse_comma_separated_intervals, partition_tasks};
+use backdoor::utils::{parse_multiple_comma_separated_intervals, parse_multiple_comma_separated_intervals_from, partition_tasks};
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
+use simple_sat::var::Var;
 
 // Run this example:
 // cargo run -p backdoor --bin search -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 1000
@@ -42,13 +44,17 @@ struct Cli {
     #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
     seed: u64,
 
+    /// Comma-separated list of allowed variables (1-based indices).
+    #[arg(long = "allow", value_name = "INT...")]
+    allowed_vars: Option<String>,
+
+    /// Comma-separated list of banned variables (1-based indices).
+    #[arg(long = "ban", value_name = "INT...")]
+    banned_vars: Option<String>,
+
     /// Do ban variables used in best backdoors on previous runs?
     #[arg(long)]
     ban_used: bool,
-
-    /// Comma-separated list of banned variables (1-based indices).
-    #[arg(long, value_name = "INT...")]
-    bans: Option<String>,
 
     /// Number of stagnated iterations before re-initialization.
     #[arg(long, value_name = "INT")]
@@ -99,7 +105,40 @@ fn main() -> color_eyre::Result<()> {
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    // Setup the evolutionary algorithm:
+    // Determine the set of variables encountered in CNF:
+    let mut encountered_vars = HashSet::new();
+    for clause in solver.clauses_iter() {
+        for lit in clause.iter() {
+            encountered_vars.insert(lit.var());
+        }
+    }
+
+    // Ban some variables:
+    if let Some(banned_vars) = &args.banned_vars {
+        let chunks = if banned_vars.starts_with('@') {
+            parse_multiple_comma_separated_intervals_from(&banned_vars[1..])
+        } else {
+            parse_multiple_comma_separated_intervals(&banned_vars)
+        };
+        let banned_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
+        encountered_vars.retain(|v| !banned_vars.contains(v));
+    }
+
+    // Allow only some variables:
+    if let Some(allowed_vars) = &args.allowed_vars {
+        let chunks = if allowed_vars.starts_with('@') {
+            parse_multiple_comma_separated_intervals_from(&allowed_vars[1..])
+        } else {
+            parse_multiple_comma_separated_intervals(&allowed_vars)
+        };
+        let allowed_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
+        encountered_vars.retain(|v| allowed_vars.contains(v));
+    }
+
+    // Create the pool of variables available for EA:
+    let mut pool: Vec<Var> = encountered_vars.into_iter().sorted().collect();
+
+    // Set up the evolutionary algorithm:
     let options = Options {
         seed: args.seed,
         add_learnts_in_propcheck_all_tree: args.add_learnts,
@@ -107,16 +146,6 @@ fn main() -> color_eyre::Result<()> {
         ..DEFAULT_OPTIONS
     };
     let mut algorithm = Algorithm::new(solver, options);
-
-    // Ban some variables:
-    if let Some(bans) = args.bans {
-        let bans = parse_comma_separated_intervals(&bans);
-        trace!("bans = {:?}", bans);
-        for i in bans {
-            assert!(i > 0);
-            algorithm.banned[i - 1] = true;
-        }
-    }
 
     // Create and open the file with resulting backdoors:
     let mut file_backdoors = if let Some(path) = &args.path_output {
@@ -143,6 +172,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(
+            &mut pool,
             args.backdoor_size,
             args.num_iters,
             args.stagnation_limit,
