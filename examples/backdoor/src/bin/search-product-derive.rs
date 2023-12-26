@@ -1,7 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
-use std::fs::File;
-use std::io::LineWriter;
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -14,7 +12,7 @@ use rand::prelude::*;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{concat_cubes, determine_vars_pool, partition_tasks};
+use backdoor::utils::{concat_cubes, create_line_writer, determine_vars_pool, partition_tasks};
 
 use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
@@ -108,22 +106,11 @@ fn main() -> color_eyre::Result<()> {
     };
     let mut algorithm = Algorithm::new(solver, options);
 
-    // Create and open the file with results:
-    let mut file_results = if let Some(path_results) = &args.path_results {
-        let f = File::create(path_results)?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    // Create and open the file with derived clauses:
+    let mut file_derived_clauses = Some(create_line_writer("derived_clauses.txt"));
 
-    let mut file_derived_clauses = if true {
-        let f = File::create("derived_clauses.txt")?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    // Create and open the file with results:
+    let mut file_results = args.path_results.as_ref().map(create_line_writer);
 
     if let Some(f) = &mut file_results {
         writeln!(f, "i,filter,size")?;

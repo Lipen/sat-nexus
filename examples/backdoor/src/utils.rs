@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, LineWriter};
 use std::iter::zip;
 use std::path::Path;
 
@@ -161,6 +161,17 @@ pub fn determine_vars_pool(solver: &Solver, allowed_vars: &Option<String>, banne
     // Create the pool of variables:
     let pool: Vec<Var> = encountered_vars.into_iter().sorted().collect();
     pool
+}
+
+pub fn create_line_writer<P: AsRef<Path>>(path: P) -> LineWriter<File> {
+    let path = path.as_ref();
+    let f = File::create(path).unwrap_or_else(|_| panic!("Could not create '{}'", path.display()));
+    let f = LineWriter::new(f);
+    f
+}
+
+pub fn maybe_create<P: AsRef<Path>>(path: &Option<P>) -> Option<LineWriter<File>> {
+    path.as_ref().map(create_line_writer)
 }
 
 #[cfg(test)]

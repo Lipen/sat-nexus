@@ -1,6 +1,4 @@
 use std::ffi::CString;
-use std::fs::File;
-use std::io::LineWriter;
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -11,7 +9,7 @@ use itertools::Itertools;
 use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
-use backdoor::utils::{concat_cubes, determine_vars_pool, partition_tasks};
+use backdoor::utils::{concat_cubes, create_line_writer, determine_vars_pool, partition_tasks};
 
 use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
@@ -104,13 +102,7 @@ fn main() -> color_eyre::Result<()> {
     let mut algorithm = Algorithm::new(solver, options);
 
     // Create and open the file with results:
-    let mut file_results = if let Some(path_results) = &args.path_results {
-        let f = File::create(path_results)?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    let mut file_results = args.path_results.as_ref().map(create_line_writer);
 
     if let Some(f) = &mut file_results {
         writeln!(f, "i,filter,size")?;

@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::ffi::CString;
-use std::fs::File;
-use std::io::{LineWriter, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -14,7 +13,7 @@ use log::{debug, info};
 use backdoor::derivation::derive_clauses;
 use backdoor::utils::parse_multiple_comma_separated_intervals;
 use backdoor::utils::parse_multiple_comma_separated_intervals_from;
-use backdoor::utils::{concat_cubes, partition_tasks};
+use backdoor::utils::{concat_cubes, create_line_writer, partition_tasks};
 
 use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
@@ -98,22 +97,10 @@ fn one_backdoor(backdoor: Vec<Var>, args: &Cli) -> color_eyre::Result<()> {
     solver.init_from_file(&args.path_cnf);
 
     // Create and open the file with derived clauses:
-    let mut file_derived_clauses = if let Some(path) = &args.path_output {
-        let f = File::create(path)?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    let mut file_derived_clauses = args.path_output.as_ref().map(create_line_writer);
 
     // Create and open the file with results:
-    let mut file_results = if let Some(path_results) = &args.path_results {
-        let f = File::create(path_results)?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    let mut file_results = args.path_results.as_ref().map(create_line_writer);
 
     let (hard, easy) = partition_tasks(&backdoor, &mut solver);
     info!(
@@ -189,22 +176,10 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
     }
 
     // Create and open the file with derived clauses:
-    let mut file_derived_clauses = if let Some(path) = &args.path_output {
-        let f = File::create(path)?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    let mut file_derived_clauses = args.path_output.as_ref().map(create_line_writer);
 
     // Create and open the file with results:
-    // let mut file_results = if let Some(path) = &args.path_results {
-    //     let f = File::create(path)?;
-    //     let f = LineWriter::new(f);
-    //     Some(f)
-    // } else {
-    //     None
-    // };
+    // let mut file_results = args.path_results.as_ref().map(create_line_writer);
 
     // TODO: write some CSV header here
     // if let Some(f) = &mut file_results {

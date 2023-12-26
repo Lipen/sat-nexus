@@ -9,7 +9,7 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{determine_vars_pool, partition_tasks};
+use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks};
 
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
@@ -119,18 +119,10 @@ fn main() -> color_eyre::Result<()> {
     let mut algorithm = Algorithm::new(solver, options);
 
     // Create and open the file with resulting backdoors:
-    let mut file_backdoors = if let Some(path) = &args.path_output {
-        let f = File::create(path)?;
-        let f = LineWriter::new(f);
-        Some(f)
-    } else {
-        None
-    };
+    let mut file_backdoors = args.path_output.as_ref().map(create_line_writer);
 
     let mut file_derived_clauses = if args.dump_derived {
-        let f = File::create("derived_clauses.txt")?;
-        let f = LineWriter::new(f);
-        Some(f)
+        Some(create_line_writer("derived_clauses.txt"))
     } else {
         None
     };
