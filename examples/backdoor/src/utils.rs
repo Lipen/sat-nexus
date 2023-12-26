@@ -127,6 +127,42 @@ pub fn mask(base: &[Lit], data: &[Lit]) -> Vec<bool> {
     data.iter().map(|lit| !base.contains(&lit.var())).collect()
 }
 
+pub fn determine_vars_pool(solver: &Solver, allowed_vars: &Option<String>, banned_vars: &Option<String>) -> Vec<Var> {
+    // Determine the set of variables encountered in CNF:
+    let mut encountered_vars = HashSet::new();
+    for clause in solver.clauses_iter() {
+        for lit in clause.iter() {
+            encountered_vars.insert(lit.var());
+        }
+    }
+
+    // Ban some variables:
+    if let Some(banned_vars) = banned_vars {
+        let chunks = if banned_vars.starts_with('@') {
+            parse_multiple_comma_separated_intervals_from(&banned_vars[1..])
+        } else {
+            parse_multiple_comma_separated_intervals(&banned_vars)
+        };
+        let banned_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
+        encountered_vars.retain(|v| !banned_vars.contains(v));
+    }
+
+    // Allow only some variables:
+    if let Some(allowed_vars) = allowed_vars {
+        let chunks = if allowed_vars.starts_with('@') {
+            parse_multiple_comma_separated_intervals_from(&allowed_vars[1..])
+        } else {
+            parse_multiple_comma_separated_intervals(&allowed_vars)
+        };
+        let allowed_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
+        encountered_vars.retain(|v| allowed_vars.contains(v));
+    }
+
+    // Create the pool of variables:
+    let pool: Vec<Var> = encountered_vars.into_iter().sorted().collect();
+    pool
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::assert_equal;

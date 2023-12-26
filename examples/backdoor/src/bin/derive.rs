@@ -5,16 +5,16 @@ use std::io::{LineWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use backdoor::derivation::derive_clauses;
-use backdoor::utils::parse_multiple_comma_separated_intervals;
-use backdoor::utils::parse_multiple_comma_separated_intervals_from;
-use backdoor::utils::{concat_cubes, partition_tasks};
-
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, Itertools};
 use log::{debug, info};
 // use rand::prelude::*;
+
+use backdoor::derivation::derive_clauses;
+use backdoor::utils::parse_multiple_comma_separated_intervals;
+use backdoor::utils::parse_multiple_comma_separated_intervals_from;
+use backdoor::utils::{concat_cubes, partition_tasks};
 
 use cadical_sys::statik::*;
 use simple_sat::lit::Lit;
@@ -38,9 +38,7 @@ struct Cli {
     path_cnf: PathBuf,
 
     /// Backdoor(s).
-    /// Format: either '@filename' for a file with comma-separated list of variables (1,2,3\n4,5,6)
-    /// on each line or slash-separated list of comma-separated lists of variables (1,2,3/4,5,6).
-    #[arg(short, long, value_name = "INT...|@FILE")]
+    #[arg(short, long, value_name = "INT...")]
     backdoors: String,
 
     /// Path to a file with derived clauses.

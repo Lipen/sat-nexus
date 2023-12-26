@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::path::PathBuf;
@@ -10,7 +9,8 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{parse_multiple_comma_separated_intervals, parse_multiple_comma_separated_intervals_from, partition_tasks};
+use backdoor::utils::{determine_vars_pool, partition_tasks};
+
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
@@ -106,38 +106,8 @@ fn main() -> color_eyre::Result<()> {
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    // Determine the set of variables encountered in CNF:
-    let mut encountered_vars = HashSet::new();
-    for clause in solver.clauses_iter() {
-        for lit in clause.iter() {
-            encountered_vars.insert(lit.var());
-        }
-    }
-
-    // Ban some variables:
-    if let Some(banned_vars) = &args.banned_vars {
-        let chunks = if banned_vars.starts_with('@') {
-            parse_multiple_comma_separated_intervals_from(&banned_vars[1..])
-        } else {
-            parse_multiple_comma_separated_intervals(&banned_vars)
-        };
-        let banned_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
-        encountered_vars.retain(|v| !banned_vars.contains(v));
-    }
-
-    // Allow only some variables:
-    if let Some(allowed_vars) = &args.allowed_vars {
-        let chunks = if allowed_vars.starts_with('@') {
-            parse_multiple_comma_separated_intervals_from(&allowed_vars[1..])
-        } else {
-            parse_multiple_comma_separated_intervals(&allowed_vars)
-        };
-        let allowed_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
-        encountered_vars.retain(|v| allowed_vars.contains(v));
-    }
-
     // Create the pool of variables available for EA:
-    let mut pool: Vec<Var> = encountered_vars.into_iter().sorted().collect();
+    let mut pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
 
     // Set up the evolutionary algorithm:
     let options = Options {

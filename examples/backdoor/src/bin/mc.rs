@@ -7,6 +7,7 @@ use log::{debug, info};
 use rand::prelude::*;
 
 use backdoor::utils::parse_comma_separated_intervals;
+
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
