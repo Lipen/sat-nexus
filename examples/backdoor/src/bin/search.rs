@@ -1,6 +1,8 @@
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::time::Instant;
 
 use clap::Parser;
@@ -107,7 +109,8 @@ fn main() -> color_eyre::Result<()> {
     solver.init_from_file(&args.path_cnf);
 
     // Create the pool of variables available for EA:
-    let mut pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
+    let pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
+    let pool = Rc::new(RefCell::new(pool));
 
     // Set up the evolutionary algorithm:
     let options = Options {
@@ -135,7 +138,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(
-            &mut pool,
+            Rc::clone(&pool),
             args.backdoor_size,
             args.num_iters,
             args.stagnation_limit,

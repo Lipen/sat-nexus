@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use log::{debug, info, trace};
@@ -81,7 +83,7 @@ pub struct Record {
 impl Algorithm {
     pub fn run(
         &mut self,
-        pool: &mut Vec<Var>,
+        pool: Rc<RefCell<Vec<Var>>>,
         weight: usize,
         num_iter: usize,
         stagnation_limit: Option<usize>,
@@ -93,7 +95,7 @@ impl Algorithm {
         info!(
             "Running EA for {} iterations with pool size {} and weight {}",
             num_iter,
-            pool.len(),
+            pool.borrow().len(),
             weight
         );
 
@@ -111,10 +113,10 @@ impl Algorithm {
                 already_assigned.insert(var);
             }
         }
-        pool.retain(|v| !already_assigned.contains(v));
+        pool.borrow_mut().retain(|v| !already_assigned.contains(v));
 
         // Create an initial instance:
-        let mut instance = self.initial_instance(pool.clone(), weight);
+        let mut instance = self.initial_instance(Rc::clone(&pool), weight);
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
@@ -159,7 +161,7 @@ impl Algorithm {
                 if need_reinit {
                     // Re-initialize:
                     num_stagnation = 0;
-                    self.initial_instance(pool.clone(), weight)
+                    self.initial_instance(Rc::clone(&pool), weight)
                 } else {
                     // Mutate the instance:
                     let mut mutated_instance = instance.clone();
@@ -218,7 +220,7 @@ impl Algorithm {
         // Ban used variables:
         if self.options.ban_used_variables {
             let used_variables: HashSet<Var> = best_instance.get_variables().into_iter().collect();
-            pool.retain(|v| !used_variables.contains(v));
+            pool.borrow_mut().retain(|v| !used_variables.contains(v));
         }
 
         let elapsed_time = start_time.elapsed();
@@ -233,7 +235,7 @@ impl Algorithm {
         }
     }
 
-    fn initial_instance(&mut self, pool: Vec<Var>, weight: usize) -> Instance {
+    fn initial_instance(&mut self, pool: Rc<RefCell<Vec<Var>>>, weight: usize) -> Instance {
         let instance = Instance::new_random_with_weight(pool, weight, &mut self.rng);
         assert_eq!(instance.weight(), weight);
         instance

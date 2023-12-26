@@ -1,7 +1,9 @@
+use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::zip;
 use std::ops::{Index, IndexMut};
+use std::rc::Rc;
 
 use itertools::{equal, Itertools};
 use rand::prelude::*;
@@ -11,22 +13,22 @@ use simple_sat::var::Var;
 #[derive(Debug, Clone)]
 pub struct Instance {
     pub(crate) genome: Vec<bool>,
-    pub(crate) pool: Vec<Var>, // TODO: consider `pool: Rc<Vec<Var>>`
+    pub(crate) pool: Rc<RefCell<Vec<Var>>>,
 }
 
 impl Instance {
-    pub fn new(genome: Vec<bool>, pool: Vec<Var>) -> Self {
+    pub fn new(genome: Vec<bool>, pool: Rc<RefCell<Vec<Var>>>) -> Self {
         Self { genome, pool }
     }
 
-    pub fn new_random<R: Rng + ?Sized>(pool: Vec<Var>, rng: &mut R) -> Self {
-        let size = pool.len();
+    pub fn new_random<R: Rng + ?Sized>(pool: Rc<RefCell<Vec<Var>>>, rng: &mut R) -> Self {
+        let size = pool.borrow().len();
         let genome = (0..size).map(|_| rng.gen()).collect();
         Self::new(genome, pool)
     }
 
-    pub fn new_random_with_weight<R: Rng + ?Sized>(pool: Vec<Var>, weight: usize, rng: &mut R) -> Self {
-        let size = pool.len();
+    pub fn new_random_with_weight<R: Rng + ?Sized>(pool: Rc<RefCell<Vec<Var>>>, weight: usize, rng: &mut R) -> Self {
+        let size = pool.borrow().len();
         assert!(weight <= size);
         let mut genome = Vec::with_capacity(size);
         genome.resize_with(weight, || true);
@@ -68,7 +70,10 @@ impl IndexMut<usize> for Instance {
 
 impl PartialEq for Instance {
     fn eq(&self, other: &Self) -> bool {
-        equal(zip(&self.genome, &self.pool), zip(&other.genome, &other.pool))
+        equal(
+            zip(&self.genome, self.pool.borrow().iter()),
+            zip(&other.genome, other.pool.borrow().iter()),
+        )
     }
 }
 
@@ -93,7 +98,7 @@ impl Instance {
     }
 
     pub fn get_variables(&self) -> Vec<Var> {
-        zip(&self.genome, &self.pool)
+        zip(&self.genome, self.pool.borrow().iter())
             .filter_map(|(&b, &v)| if b { Some(v) } else { None })
             .collect()
     }
