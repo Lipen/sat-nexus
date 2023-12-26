@@ -510,13 +510,14 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         info!("Deriving clauses for {} cubes...", cubes_product.len());
         let time_derive = Instant::now();
         let derived_clauses = derive_clauses(&cubes_product);
+        let time_derive = time_derive.elapsed();
         info!(
             "Total {} derived clauses ({} units, {} binary, {} other) in {:.1}s",
             derived_clauses.len(),
             derived_clauses.iter().filter(|c| c.len() == 1).count(),
             derived_clauses.iter().filter(|c| c.len() == 2).count(),
             derived_clauses.iter().filter(|c| c.len() > 2).count(),
-            time_derive.elapsed().as_secs_f64()
+            time_derive.as_secs_f64()
         );
         // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
