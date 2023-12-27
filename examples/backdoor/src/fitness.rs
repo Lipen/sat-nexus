@@ -11,7 +11,7 @@ impl Eq for Fitness {}
 
 impl PartialEq<Self> for Fitness {
     fn eq(&self, other: &Self) -> bool {
-        self.value.eq(&other.value)
+        self.value == other.value
     }
 }
 
