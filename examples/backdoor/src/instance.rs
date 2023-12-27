@@ -71,8 +71,8 @@ impl IndexMut<usize> for Instance {
 impl PartialEq for Instance {
     fn eq(&self, other: &Self) -> bool {
         equal(
-            zip(&self.genome, self.pool.borrow().iter()),
-            zip(&other.genome, other.pool.borrow().iter()),
+            zip(self.genome.iter(), self.pool.borrow().iter()),
+            zip(other.genome.iter(), other.pool.borrow().iter()),
         )
     }
 }
@@ -98,15 +98,8 @@ impl Instance {
     }
 
     pub fn get_variables(&self) -> Vec<Var> {
-        zip(&self.genome, self.pool.borrow().iter())
+        zip(self.genome.iter(), self.pool.borrow().iter())
             .filter_map(|(&b, &v)| if b { Some(v) } else { None })
             .collect()
     }
-
-    // pub fn indices_true(&self) -> impl Iterator<Item = usize> + '_ {
-    //     self.genome.iter().enumerate().filter_map(|(i, &b)| if b { Some(i) } else { None })
-    // }
-    // pub fn indices_false(&self) -> impl Iterator<Item = usize> + '_ {
-    //     self.genome.iter().enumerate().filter_map(|(i, &b)| if !b { Some(i) } else { None })
-    // }
 }
