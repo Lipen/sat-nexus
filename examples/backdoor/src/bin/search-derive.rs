@@ -124,7 +124,7 @@ fn main() -> color_eyre::Result<()> {
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             100,
         );
-        let backdoor = result.best_instance.variables();
+        let backdoor = result.best_instance.get_variables();
         let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
         debug!(
             "Backdoor {} has {} hard and {} easy tasks",

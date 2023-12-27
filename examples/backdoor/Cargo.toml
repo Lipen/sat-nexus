@@ -13,6 +13,7 @@ log = "0.4.20"
 rand = "0.8.5"
 itertools = "0.12.0"
 rayon = "1.8.0"
+ahash = "0.8.6"
 
 simple-sat = { path = "../../lib/simple-sat" }
 cadical-sys = { path = "../../lib/cadical-sys", features = ["static"] }

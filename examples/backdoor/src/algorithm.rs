@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
+use ahash::AHashMap;
 use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
@@ -17,9 +17,9 @@ use crate::instance::Instance;
 #[derive(Debug)]
 pub struct Algorithm {
     pub solver: Solver,
-    pub pool: Rc<Vec<Var>>,
+    pub pool: Vec<Var>,
     pub rng: StdRng,
-    pub cache: HashMap<Instance, Fitness>,
+    pub cache: AHashMap<Vec<Var>, Fitness>,
     pub cache_hits: usize,
     pub cache_misses: usize,
     pub options: Options,
@@ -34,9 +34,9 @@ impl Algorithm {
 
         Self {
             solver,
-            pool: Rc::new(pool),
+            pool,
             rng: StdRng::seed_from_u64(options.seed),
-            cache: HashMap::new(),
+            cache: AHashMap::new(),
             cache_hits: 0,
             cache_misses: 0,
             options,
@@ -84,7 +84,7 @@ pub struct Record {
 impl Algorithm {
     pub fn run(
         &mut self,
-        weight: usize,
+        backdoor_size: usize,
         num_iter: usize,
         stagnation_limit: Option<usize>,
         max_rho: Option<f64>,
@@ -93,10 +93,10 @@ impl Algorithm {
         let start_time = Instant::now();
 
         info!(
-            "Running EA for {} iterations with pool size {} and weight {}",
+            "Running EA for {} iterations with pool size {} and backdoor size {}",
             num_iter,
             self.pool.len(),
-            weight
+            backdoor_size
         );
 
         debug!("solver.num_vars() = {}", self.solver.num_vars());
@@ -113,10 +113,10 @@ impl Algorithm {
                 already_assigned.insert(var);
             }
         }
-        self.pool = Rc::new(self.pool.iter().copied().filter(|v| !already_assigned.contains(v)).collect());
+        self.pool.retain(|v| !already_assigned.contains(v));
 
         // Create an initial instance:
-        let mut instance = self.initial_instance(weight);
+        let mut instance = self.initial_instance(backdoor_size);
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
@@ -161,7 +161,7 @@ impl Algorithm {
                 if need_reinit {
                     // Re-initialize:
                     num_stagnation = 0;
-                    self.initial_instance(weight)
+                    self.initial_instance(backdoor_size)
                 } else {
                     // Mutate the instance:
                     let mut mutated_instance = instance.clone();
@@ -183,11 +183,11 @@ impl Algorithm {
             let time_iter = time_iter.elapsed();
             if i <= 10 || (i < 1000 && i % 100 == 0) || (i < 10000 && i % 1000 == 0) || i % 10000 == 0 {
                 debug!(
-                    "[{} / {}] {:?} for weight={} in {:.3} ms",
+                    "[{} / {}] {:?} for size={} in {:.3} ms",
                     i,
                     num_iter,
                     mutated_fitness,
-                    mutated_instance.weight(),
+                    backdoor_size,
                     time_iter.as_secs_f64() * 1000.0
                 );
             }
@@ -219,12 +219,13 @@ impl Algorithm {
 
         // Ban used variables:
         if self.options.ban_used_variables {
-            let used_variables: HashSet<Var> = best_instance.variables_iter().collect();
-            self.pool = Rc::new(self.pool.iter().copied().filter(|v| !used_variables.contains(v)).collect());
+            // Note: even if `best_instance.variables` is Vec (if not yet switched to HashSet),
+            // it is OK to perform O(n) lookup since the instance size is generally very small.
+            self.pool.retain(|v| !best_instance.variables.contains(v));
         }
 
         // Clear the cache:
-        self.cache.clear();
+        // self.cache.clear();
 
         let elapsed_time = start_time.elapsed();
         info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
@@ -238,20 +239,19 @@ impl Algorithm {
         }
     }
 
-    fn initial_instance(&mut self, weight: usize) -> Instance {
-        let instance = Instance::new_random_with_weight(Rc::clone(&self.pool), weight, &mut self.rng);
-        assert_eq!(instance.weight(), weight);
-        instance
+    fn initial_instance(&mut self, size: usize) -> Instance {
+        Instance::new_random(size, &self.pool, &mut self.rng)
     }
 
     fn calculate_fitness(&mut self, instance: &Instance, best: Option<&Fitness>) -> Fitness {
-        if let Some(fit) = self.cache.get(instance) {
+        let key = instance.get_variables();
+        if let Some(fit) = self.cache.get(&key) {
             self.cache_hits += 1;
             fit.clone()
         } else {
             self.cache_misses += 1;
 
-            let vars = instance.variables();
+            let vars = instance.get_variables();
             assert!(vars.len() < 32);
 
             // Compute rho:
@@ -269,42 +269,33 @@ impl Algorithm {
 
             let fit = Fitness { value, rho, num_hard };
 
-            self.cache.insert(instance.clone(), fit.clone());
+            self.cache.insert(key, fit.clone());
             fit
         }
     }
 
     fn mutate(&mut self, instance: &mut Instance) {
-        let weight = instance.weight();
-        let p = 1.0 / weight as f64;
+        let n = instance.len();
+        let p = 1.0 / n as f64;
         let d = Bernoulli::new(p).unwrap();
 
-        // Determine the indices of ones and zeros in the instance's genome:
-        let mut ones = Vec::new();
-        let mut zeros = Vec::new();
-        for (i, &b) in instance.genome.iter().enumerate() {
-            if b {
-                ones.push(i);
-            } else {
-                zeros.push(i);
-            }
-        }
+        let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
 
-        // Flip some (`Binomial(1/p)` distributed) number of 1's to 0's:
-        let mut successes = 0;
-        for i in ones {
+        let mut k = 0;
+        instance.variables.retain(|_| {
             if d.sample(&mut self.rng) {
-                instance[i] = false;
-                successes += 1;
+                k += 1;
+                false
+            } else {
+                true
             }
+        });
+
+        for &v in other_vars.choose_multiple(&mut self.rng, k) {
+            instance.variables.insert(v);
         }
 
-        // Flip the exact number of original 0's to 1's:
-        for &j in zeros.choose_multiple(&mut self.rng, successes) {
-            instance[j] = true;
-        }
-
-        // At the end, the Hamming weight must not change:
-        assert_eq!(instance.weight(), weight);
+        // Instance size should stay the same:
+        assert_eq!(instance.len(), n);
     }
 }

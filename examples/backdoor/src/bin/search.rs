@@ -146,7 +146,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Derive clauses from the best backdoor:
         if args.derive {
-            let backdoor = result.best_instance.variables();
+            let backdoor = result.best_instance.get_variables();
             let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
             debug!(
                 "Backdoor {} has {} hard and {} easy tasks",
@@ -200,8 +200,8 @@ fn main() -> color_eyre::Result<()> {
             writeln!(
                 f,
                 "Backdoor {} of size {} on iter {} with fitness = {}, rho = {}, hard = {} in {:.3} ms",
-                DisplaySlice(&result.best_instance.variables()),
-                result.best_instance.weight(),
+                result.best_instance,
+                result.best_instance.len(),
                 result.best_iteration,
                 result.best_fitness.value,
                 result.best_fitness.rho,
@@ -217,7 +217,7 @@ fn main() -> color_eyre::Result<()> {
             for record in result.records {
                 writer.serialize((
                     record.iteration,
-                    record.instance.variables().iter().map(|v| v.to_external()).join(","),
+                    record.instance.get_variables().iter().map(|v| v.to_external()).join(","),
                     record.fitness.value,
                     record.fitness.num_hard,
                     record.fitness.rho,
