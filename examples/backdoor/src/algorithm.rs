@@ -219,7 +219,7 @@ impl Algorithm {
 
         // Ban used variables:
         if self.options.ban_used_variables {
-            let used_variables: HashSet<Var> = best_instance.get_variables().into_iter().collect();
+            let used_variables: HashSet<Var> = best_instance.variables_iter().collect();
             self.pool = Rc::new(self.pool.iter().copied().filter(|v| !used_variables.contains(v)).collect());
         }
 
@@ -251,7 +251,7 @@ impl Algorithm {
         } else {
             self.cache_misses += 1;
 
-            let vars = instance.get_variables();
+            let vars = instance.variables();
             assert!(vars.len() < 32);
 
             // Compute rho:

@@ -46,7 +46,7 @@ impl Instance {
 impl Display for Instance {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
-            write!(f, "{{{}}}", self.get_variables().iter().map(|v| v.to_external()).join(", "))
+            write!(f, "{{{}}}", self.variables_iter().map(|v| v.to_external()).join(", "))
         } else {
             write!(f, "{}", self.bitstring())
         }
@@ -93,9 +93,11 @@ impl Instance {
         self.genome.iter().filter(|&&b| b).count()
     }
 
-    pub fn get_variables(&self) -> Vec<Var> {
-        zip(self.genome.iter(), self.pool.iter())
-            .filter_map(|(&b, &v)| if b { Some(v) } else { None })
-            .collect()
+    pub fn variables_iter(&self) -> impl Iterator<Item = Var> + '_ {
+        zip(self.genome.iter(), self.pool.iter()).filter_map(|(&b, &v)| b.then_some(v))
+    }
+
+    pub fn variables(&self) -> Vec<Var> {
+        self.variables_iter().collect()
     }
 }
