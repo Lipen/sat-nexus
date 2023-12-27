@@ -4,6 +4,7 @@ use ahash::AHashSet;
 use itertools::Itertools;
 use rand::prelude::*;
 
+use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
 #[derive(Debug, Clone)]
@@ -24,7 +25,8 @@ impl Instance {
 
 impl Display for Instance {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{{}}}", self.variables.iter().map(|v| v.to_external()).join(", "))
+        let vars = self.get_variables();
+        write!(f, "{}", DisplaySlice(&vars))
     }
 }
 
