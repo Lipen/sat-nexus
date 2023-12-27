@@ -1,11 +1,10 @@
-use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::zip;
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 
-use itertools::{equal, Itertools};
+use itertools::Itertools;
 use rand::prelude::*;
 
 use simple_sat::var::Var;
@@ -13,22 +12,22 @@ use simple_sat::var::Var;
 #[derive(Debug, Clone)]
 pub struct Instance {
     pub(crate) genome: Vec<bool>,
-    pub(crate) pool: Rc<RefCell<Vec<Var>>>,
+    pub(crate) pool: Rc<Vec<Var>>,
 }
 
 impl Instance {
-    pub fn new(genome: Vec<bool>, pool: Rc<RefCell<Vec<Var>>>) -> Self {
+    pub fn new(genome: Vec<bool>, pool: Rc<Vec<Var>>) -> Self {
         Self { genome, pool }
     }
 
-    pub fn new_random<R: Rng + ?Sized>(pool: Rc<RefCell<Vec<Var>>>, rng: &mut R) -> Self {
-        let size = pool.borrow().len();
+    pub fn new_random<R: Rng + ?Sized>(pool: Rc<Vec<Var>>, rng: &mut R) -> Self {
+        let size = pool.len();
         let genome = (0..size).map(|_| rng.gen()).collect();
         Self::new(genome, pool)
     }
 
-    pub fn new_random_with_weight<R: Rng + ?Sized>(pool: Rc<RefCell<Vec<Var>>>, weight: usize, rng: &mut R) -> Self {
-        let size = pool.borrow().len();
+    pub fn new_random_with_weight<R: Rng + ?Sized>(pool: Rc<Vec<Var>>, weight: usize, rng: &mut R) -> Self {
+        let size = pool.len();
         assert!(weight <= size);
         let mut genome = Vec::with_capacity(size);
         genome.resize_with(weight, || true);
@@ -70,10 +69,7 @@ impl IndexMut<usize> for Instance {
 
 impl PartialEq for Instance {
     fn eq(&self, other: &Self) -> bool {
-        equal(
-            zip(self.genome.iter(), self.pool.borrow().iter()),
-            zip(other.genome.iter(), other.pool.borrow().iter()),
-        )
+        Rc::ptr_eq(&self.pool, &other.pool) && self.genome.eq(&other.genome)
     }
 }
 
@@ -98,7 +94,7 @@ impl Instance {
     }
 
     pub fn get_variables(&self) -> Vec<Var> {
-        zip(self.genome.iter(), self.pool.borrow().iter())
+        zip(self.genome.iter(), self.pool.iter())
             .filter_map(|(&b, &v)| if b { Some(v) } else { None })
             .collect()
     }

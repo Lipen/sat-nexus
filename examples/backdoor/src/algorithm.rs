@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -18,6 +17,7 @@ use crate::instance::Instance;
 #[derive(Debug)]
 pub struct Algorithm {
     pub solver: Solver,
+    pub pool: Rc<Vec<Var>>,
     pub rng: StdRng,
     pub cache: HashMap<Instance, Fitness>,
     pub cache_hits: usize,
@@ -28,12 +28,13 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
-    pub fn new(mut solver: Solver, options: Options) -> Self {
+    pub fn new(mut solver: Solver, pool: Vec<Var>, options: Options) -> Self {
         // Reset the limits for reduceDB:
         solver.learning_guard.reset(solver.num_clauses());
 
         Self {
             solver,
+            pool: Rc::new(pool),
             rng: StdRng::seed_from_u64(options.seed),
             cache: HashMap::new(),
             cache_hits: 0,
@@ -83,7 +84,6 @@ pub struct Record {
 impl Algorithm {
     pub fn run(
         &mut self,
-        pool: Rc<RefCell<Vec<Var>>>,
         weight: usize,
         num_iter: usize,
         stagnation_limit: Option<usize>,
@@ -95,7 +95,7 @@ impl Algorithm {
         info!(
             "Running EA for {} iterations with pool size {} and weight {}",
             num_iter,
-            pool.borrow().len(),
+            self.pool.len(),
             weight
         );
 
@@ -113,10 +113,10 @@ impl Algorithm {
                 already_assigned.insert(var);
             }
         }
-        pool.borrow_mut().retain(|v| !already_assigned.contains(v));
+        self.pool = Rc::new(self.pool.iter().copied().filter(|v| !already_assigned.contains(v)).collect());
 
         // Create an initial instance:
-        let mut instance = self.initial_instance(Rc::clone(&pool), weight);
+        let mut instance = self.initial_instance(Rc::clone(&self.pool), weight);
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
@@ -161,7 +161,7 @@ impl Algorithm {
                 if need_reinit {
                     // Re-initialize:
                     num_stagnation = 0;
-                    self.initial_instance(Rc::clone(&pool), weight)
+                    self.initial_instance(Rc::clone(&self.pool), weight)
                 } else {
                     // Mutate the instance:
                     let mut mutated_instance = instance.clone();
@@ -220,8 +220,11 @@ impl Algorithm {
         // Ban used variables:
         if self.options.ban_used_variables {
             let used_variables: HashSet<Var> = best_instance.get_variables().into_iter().collect();
-            pool.borrow_mut().retain(|v| !used_variables.contains(v));
+            self.pool = Rc::new(self.pool.iter().copied().filter(|v| !used_variables.contains(v)).collect());
         }
+
+        // Clear the cache:
+        self.cache.clear();
 
         let elapsed_time = start_time.elapsed();
         info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
@@ -235,7 +238,7 @@ impl Algorithm {
         }
     }
 
-    fn initial_instance(&mut self, pool: Rc<RefCell<Vec<Var>>>, weight: usize) -> Instance {
+    fn initial_instance(&mut self, pool: Rc<Vec<Var>>, weight: usize) -> Instance {
         let instance = Instance::new_random_with_weight(pool, weight, &mut self.rng);
         assert_eq!(instance.weight(), weight);
         instance
