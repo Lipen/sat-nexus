@@ -116,7 +116,7 @@ impl Algorithm {
         self.pool = Rc::new(self.pool.iter().copied().filter(|v| !already_assigned.contains(v)).collect());
 
         // Create an initial instance:
-        let mut instance = self.initial_instance(Rc::clone(&self.pool), weight);
+        let mut instance = self.initial_instance(weight);
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
@@ -161,7 +161,7 @@ impl Algorithm {
                 if need_reinit {
                     // Re-initialize:
                     num_stagnation = 0;
-                    self.initial_instance(Rc::clone(&self.pool), weight)
+                    self.initial_instance(weight)
                 } else {
                     // Mutate the instance:
                     let mut mutated_instance = instance.clone();
@@ -238,8 +238,8 @@ impl Algorithm {
         }
     }
 
-    fn initial_instance(&mut self, pool: Rc<Vec<Var>>, weight: usize) -> Instance {
-        let instance = Instance::new_random_with_weight(pool, weight, &mut self.rng);
+    fn initial_instance(&mut self, weight: usize) -> Instance {
+        let instance = Instance::new_random_with_weight(Rc::clone(&self.pool), weight, &mut self.rng);
         assert_eq!(instance.weight(), weight);
         instance
     }
