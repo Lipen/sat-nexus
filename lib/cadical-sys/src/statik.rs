@@ -6,3 +6,5 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings-ccadical-static.rs"));
 // include!("../_bindings-ccadical-static.rs");
+
+pub type CCadicalPtr = *mut CCaDiCaL;
