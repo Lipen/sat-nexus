@@ -48,6 +48,14 @@ fn main() -> color_eyre::Result<()> {
         println!("result = {} ({})", result, result2str(result));
         assert_eq!(result, UNSAT);
 
+        println!("Checking failed literals:");
+        for i in 1..=4 {
+            println!("failed({}) = {}", i, ccadical_failed(ptr, i));
+            println!("failed(-{}) = {}", i, ccadical_failed(ptr, -i));
+        }
+        assert_eq!(1, ccadical_failed(ptr, 1));
+        assert_eq!(1, ccadical_failed(ptr, -4));
+
         // `solve` automatically resets given assumptions: another call should be SAT
         let result = ccadical_solve(ptr);
         println!("result = {} ({})", result, result2str(result));
