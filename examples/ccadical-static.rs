@@ -61,6 +61,8 @@ fn main() -> color_eyre::Result<()> {
         for i in 1..=4 {
             println!("val({}) = {}", -i, ccadical_val(ptr, -i));
         }
+
+        ccadical_release(ptr);
     }
 
     Ok(())
