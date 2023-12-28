@@ -171,7 +171,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
             for lit in clause.lits() {
                 ccadical_add(solver_full, lit.to_external());
             }
-            ccadical_add(solver_full, 0)
+            ccadical_add(solver_full, 0);
         }
     }
 
