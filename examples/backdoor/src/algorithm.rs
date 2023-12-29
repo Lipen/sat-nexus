@@ -288,7 +288,7 @@ impl Algorithm {
         }
 
         let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
-        let substituted = other_vars.choose_multiple(&mut self.rng, n - instance.len());
+        let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());
         for (i, &v) in zip(to_replace, substituted) {
             instance.variables[i] = v;
         }
