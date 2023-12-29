@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::iter::zip;
 use std::time::{Duration, Instant};
 
 use ahash::AHashMap;
@@ -279,21 +280,17 @@ impl Algorithm {
         let p = 1.0 / n as f64;
         let d = Bernoulli::new(p).unwrap();
 
-        // Pre-compute "other" variables, i.e. pool minus the variables in the instance:
-        let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
-
-        // First, remove some variables, each with probability `1/n`:
-        instance.variables.retain(|_| {
+        let mut to_replace = Vec::new();
+        for i in 0..n {
             if d.sample(&mut self.rng) {
-                false // remove
-            } else {
-                true // keep
+                to_replace.push(i);
             }
-        });
+        }
 
-        // Second, add missing variables to restore the instance length `n`:
-        for &v in other_vars.choose_multiple(&mut self.rng, n - instance.len()) {
-            instance.variables.push(v);
+        let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
+        let substituted = other_vars.choose_multiple(&mut self.rng, n - instance.len());
+        for (i, &v) in zip(to_replace, substituted) {
+            instance.variables[i] = v;
         }
 
         // Instance size should stay the same:
