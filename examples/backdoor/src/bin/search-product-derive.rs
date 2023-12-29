@@ -302,7 +302,6 @@ fn main() -> color_eyre::Result<()> {
         let time_filter = Instant::now();
         let cubes_product_set: HashSet<Vec<Lit>> = cubes_product.iter().cloned().collect();
         let hard_neighbors: HashMap<Vec<Lit>, usize> = cubes_product
-            .iter()
             .choose_multiple(&mut algorithm.rng, 50000)
             .into_iter()
             .map(|cube| {
