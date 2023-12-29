@@ -279,20 +279,21 @@ impl Algorithm {
         let p = 1.0 / n as f64;
         let d = Bernoulli::new(p).unwrap();
 
+        // Pre-compute "other" variables, i.e. pool minus the variables in the instance:
         let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
 
-        let mut k = 0;
+        // First, remove some variables, each with probability `1/n`:
         instance.variables.retain(|_| {
             if d.sample(&mut self.rng) {
-                k += 1;
-                false
+                false // remove
             } else {
-                true
+                true // keep
             }
         });
 
-        for &v in other_vars.choose_multiple(&mut self.rng, k) {
-            instance.variables.insert(v);
+        // Second, add missing variables to restore the instance length `n`:
+        for &v in other_vars.choose_multiple(&mut self.rng, n - instance.len()) {
+            instance.variables.push(v);
         }
 
         // Instance size should stay the same:

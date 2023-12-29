@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 
-use ahash::AHashSet;
 use itertools::Itertools;
 use rand::prelude::*;
 
@@ -9,11 +8,11 @@ use simple_sat::var::Var;
 
 #[derive(Debug, Clone)]
 pub struct Instance {
-    pub(crate) variables: AHashSet<Var>,
+    pub(crate) variables: Vec<Var>,
 }
 
 impl Instance {
-    pub fn new(variables: AHashSet<Var>) -> Self {
+    pub fn new(variables: Vec<Var>) -> Self {
         Self { variables }
     }
 
@@ -25,8 +24,14 @@ impl Instance {
 
 impl Display for Instance {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let vars = self.get_variables();
-        write!(f, "{}", DisplaySlice(&vars))
+        if f.alternate() {
+            // Note: "alternate" style (`{:#}`) shows the ordered set of variables:
+            let vars = self.get_variables();
+            write!(f, "{}", DisplaySlice(&vars))
+        } else {
+            // Note: variables are unordered
+            write!(f, "{}", DisplaySlice(&self.variables))
+        }
     }
 }
 
