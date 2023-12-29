@@ -184,10 +184,11 @@ impl Algorithm {
             let time_iter = time_iter.elapsed();
             if i <= 10 || (i < 1000 && i % 100 == 0) || (i < 10000 && i % 1000 == 0) || i % 10000 == 0 {
                 debug!(
-                    "[{} / {}] {:?} for size={} in {:.3} ms",
+                    "[{} / {}] rho={:.3}, hard={}, size={}, time={:.3} ms",
                     i,
                     num_iter,
-                    mutated_fitness,
+                    mutated_fitness.rho,
+                    mutated_fitness.num_hard,
                     backdoor_size,
                     time_iter.as_secs_f64() * 1000.0
                 );
