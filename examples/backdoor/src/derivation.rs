@@ -99,12 +99,14 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
     for (&i, &(pos, neg)) in count_unit.iter() {
         let var = hard[0][i].var();
         if pos == 0 {
-            debug!("variable {} is never positive", var);
-            derived_clauses.push(vec![Lit::new(var, true)]);
+            let clause = vec![Lit::new(var, true)];
+            debug!("variable {} is never positive |= clause {}", var, DisplaySlice(&clause));
+            derived_clauses.push(clause);
         }
         if neg == 0 {
-            debug!("variable {} is never negative", var);
-            derived_clauses.push(vec![Lit::new(var, false)]);
+            let clause = vec![Lit::new(var, false)];
+            debug!("variable {} is never negative |= clause {}", var, DisplaySlice(&clause));
+            derived_clauses.push(clause);
         }
     }
 
@@ -131,6 +133,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
                 return None;
             }
 
+            // Count pairs:
             let (mut pp, mut pn, mut np, mut nn) = (0, 0, 0, 0);
             for cube in hard.iter() {
                 match (cube[i].negated(), cube[j].negated()) {
@@ -153,44 +156,140 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
         let a = hard[0][i].var();
         let b = hard[0][j].var();
         if pp == 0 {
-            debug!(
-                "pair {}-{} is never pos-pos |= clause ({}, {})",
-                a,
-                b,
-                Lit::new(a, true),
-                Lit::new(b, true)
-            );
-            derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, true)]);
+            let clause = vec![Lit::new(a, true), Lit::new(b, true)];
+            debug!("pair {}-{} is never pos-pos |= clause {}", a, b, DisplaySlice(&clause));
+            derived_clauses.push(clause);
         }
         if pn == 0 {
-            debug!(
-                "pair {}-{} is never pos-neg |= clause ({}, {})",
-                a,
-                b,
-                Lit::new(a, true),
-                Lit::new(b, false)
-            );
-            derived_clauses.push(vec![Lit::new(a, true), Lit::new(b, false)]);
+            let clause = vec![Lit::new(a, true), Lit::new(b, false)];
+            debug!("pair {}-{} is never pos-neg |= clause {}", a, b, DisplaySlice(&clause));
+            derived_clauses.push(clause);
         }
         if np == 0 {
-            debug!(
-                "pair {}-{} is never neg-pos |= clause ({}, {})",
-                a,
-                b,
-                Lit::new(a, false),
-                Lit::new(b, true)
-            );
-            derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, true)]);
+            let clause = vec![Lit::new(a, false), Lit::new(b, true)];
+            debug!("pair {}-{} is never neg-pos |= clause {}", a, b, DisplaySlice(&clause));
+            derived_clauses.push(clause);
         }
         if nn == 0 {
+            let clause = vec![Lit::new(a, false), Lit::new(b, false)];
+            debug!("pair {}-{} is never neg-neg |= clause {}", a, b, DisplaySlice(&clause));
+            derived_clauses.push(clause);
+        }
+    }
+
+    if false {
+        let pb = ProgressBar::new((n * (n - 1) * (n - 2) / 6) as u64);
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+        pb.set_message("ternary");
+        // count_ternary :: {(i,j,k): (+++, ++-, +-+, +--, -++, -+-, --+, ---)}
+        let count_ternary: HashMap<(usize, usize, usize), (u64, u64, u64, u64, u64, u64, u64, u64)> = (0..n)
+            .tuple_combinations()
+            .par_bridge()
+            .progress_with(pb)
+            .filter_map(|(i, j, k)| {
+                // Skip units:
+                let (pos, neg) = count_unit[&i];
+                if pos == 0 || neg == 0 {
+                    return None;
+                }
+                let (pos, neg) = count_unit[&j];
+                if pos == 0 || neg == 0 {
+                    return None;
+                }
+                let (pos, neg) = count_unit[&k];
+                if pos == 0 || neg == 0 {
+                    return None;
+                }
+
+                // Skip binary:
+                let (pp, pn, np, nn) = count_binary[&(i, j)];
+                if pp == 0 || pn == 0 || np == 0 || nn == 0 {
+                    return None;
+                }
+                let (pp, pn, np, nn) = count_binary[&(i, k)];
+                if pp == 0 || pn == 0 || np == 0 || nn == 0 {
+                    return None;
+                }
+                let (pp, pn, np, nn) = count_binary[&(j, k)];
+                if pp == 0 || pn == 0 || np == 0 || nn == 0 {
+                    return None;
+                }
+
+                // Count triples:
+                let (mut ppp, mut ppn, mut pnp, mut pnn, mut npp, mut npn, mut nnp, mut nnn) = (0, 0, 0, 0, 0, 0, 0, 0);
+                for cube in hard.iter() {
+                    match (cube[i].negated(), cube[j].negated(), cube[k].negated()) {
+                        (false, false, false) => ppp += 1, // pos-pos-pos
+                        (false, false, true) => ppn += 1,  // pos-pos-neg
+                        (false, true, false) => pnp += 1,  // pos-neg-pos
+                        (false, true, true) => pnn += 1,   // pos-neg-neg
+                        (true, false, false) => npp += 1,  // neg-pos-pos
+                        (true, false, true) => npn += 1,   // neg-pos-neg
+                        (true, true, false) => nnp += 1,   // neg-neg-pos
+                        (true, true, true) => nnn += 1,    // neg-neg-neg
+                    };
+                }
+                Some(((i, j, k), (ppp, ppn, pnp, pnn, npp, npn, nnp, nnn)))
+            })
+            .collect();
+
+        for (&(i, j, k), &(ppp, ppn, pnp, pnn, npp, npn, nnp, nnn)) in count_ternary.iter() {
+            let a = hard[0][i].var();
+            let b = hard[0][j].var();
+            let c = hard[0][k].var();
             debug!(
-                "pair {}-{} is never neg-neg |= clause ({}, {})",
-                a,
-                b,
-                Lit::new(a, false),
-                Lit::new(b, false)
+                "Count (ppp/ppn/pnp/pnn/npp/npn/nnp/nnn) for {}-{}-{} is {} / {} / {} / {} / {} / {} / {} / {}",
+                a, b, c, ppp, ppn, pnp, pnn, npp, npn, nnp, nnn
             );
-            derived_clauses.push(vec![Lit::new(a, false), Lit::new(b, false)]);
+        }
+        for (&(i, j, k), &(ppp, ppn, pnp, pnn, npp, npn, nnp, nnn)) in count_ternary.iter() {
+            let a = hard[0][i].var();
+            let b = hard[0][j].var();
+            let c = hard[0][k].var();
+            if ppp == 0 {
+                let clause = vec![Lit::new(a, true), Lit::new(b, true), Lit::new(c, true)];
+                debug!("triple {}-{}-{} is never pos-pos-pos |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if ppn == 0 {
+                let clause = vec![Lit::new(a, true), Lit::new(b, true), Lit::new(c, false)];
+                debug!("triple {}-{}-{} is never pos-pos-neg |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if pnp == 0 {
+                let clause = vec![Lit::new(a, true), Lit::new(b, false), Lit::new(c, true)];
+                debug!("triple {}-{}-{} is never pos-neg-pos |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if pnn == 0 {
+                let clause = vec![Lit::new(a, true), Lit::new(b, false), Lit::new(c, false)];
+                debug!("triple {}-{}-{} is never pos-neg-neg |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if npp == 0 {
+                let clause = vec![Lit::new(a, false), Lit::new(b, true), Lit::new(c, true)];
+                debug!("triple {}-{}-{} is never neg-pos-pos |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if npn == 0 {
+                let clause = vec![Lit::new(a, false), Lit::new(b, true), Lit::new(c, false)];
+                debug!("triple {}-{}-{} is never neg-pos-neg |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if nnp == 0 {
+                let clause = vec![Lit::new(a, false), Lit::new(b, false), Lit::new(c, true)];
+                debug!("triple {}-{}-{} is never neg-neg-pos |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+            if nnn == 0 {
+                let clause = vec![Lit::new(a, false), Lit::new(b, false), Lit::new(c, false)];
+                debug!("triple {}-{}-{} is never neg-neg-neg |= clause {}", a, b, c, DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
         }
     }
 
