@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -10,6 +11,7 @@ use backdoor::derivation::derive_clauses;
 use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks};
 
 // use cadical_sys::statik::*;
+use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
@@ -113,6 +115,15 @@ fn main() -> color_eyre::Result<()> {
     //     writeln!(f, "...")?;
     // }
 
+    let mut global_all_clauses: HashSet<Vec<Lit>> = HashSet::new();
+    for clause in algorithm.solver.clauses_iter() {
+        let mut clause = clause.lits().to_vec();
+        clause.sort_by_key(|lit| lit.inner());
+        global_all_clauses.insert(clause);
+    }
+
+    let mut global_new_clauses: HashSet<Vec<Lit>> = HashSet::new();
+
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
         let time_run = Instant::now();
@@ -140,6 +151,10 @@ fn main() -> color_eyre::Result<()> {
         if hard.len() == 1 {
             info!("Adding {} units to the solver", hard[0].len());
             for &lit in &hard[0] {
+                if global_all_clauses.insert(vec![lit]) {
+                    global_new_clauses.insert(vec![lit]);
+                }
+
                 if algorithm.derived_clauses.insert(vec![lit]) {
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
@@ -178,6 +193,9 @@ fn main() -> color_eyre::Result<()> {
         let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
             lemma.sort_by_key(|lit| lit.inner());
+            if global_all_clauses.insert(lemma.clone()) {
+                global_new_clauses.insert(lemma.clone());
+            }
             if algorithm.derived_clauses.insert(lemma.clone()) {
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
@@ -222,6 +240,14 @@ fn main() -> color_eyre::Result<()> {
         algorithm.derived_clauses.iter().filter(|c| c.len() == 1).count(),
         algorithm.derived_clauses.iter().filter(|c| c.len() == 2).count(),
         algorithm.derived_clauses.iter().filter(|c| c.len() > 2).count()
+    );
+
+    info!(
+        "Total derived {} NEW clauses ({} units, {} binary, {} other)",
+        global_new_clauses.len(),
+        global_new_clauses.iter().filter(|c| c.len() == 1).count(),
+        global_new_clauses.iter().filter(|c| c.len() == 2).count(),
+        global_new_clauses.iter().filter(|c| c.len() > 2).count()
     );
 
     println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());

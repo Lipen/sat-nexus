@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use flate2::read::GzDecoder;
 use itertools::{join, Itertools};
+use tracing::debug;
 
 use crate::lit::Lit;
 
@@ -30,13 +31,34 @@ where
     }
 }
 
+pub fn parse_dimacs<P>(path: P) -> impl Iterator<Item = Vec<Lit>>
+where
+    P: AsRef<Path>,
+{
+    read_maybe_gzip(path).unwrap().lines().flatten().filter_map(|line| {
+        if line.is_empty() {
+            debug!("Skipping empty line");
+            None
+        } else if line.starts_with('c') {
+            debug!("Skipping comment '{}'", line);
+            None
+        } else if line.starts_with('p') {
+            debug!("Skipping header '{}'", line);
+            None
+        } else {
+            let lits = parse_dimacs_clause(&line);
+            Some(lits)
+        }
+    })
+}
+
 pub fn parse_dimacs_clause(s: &str) -> Vec<Lit> {
     let clause = s
         .split_whitespace()
         .map(|x| x.parse::<i32>().expect("could not parse lit in clause"))
         .collect_vec();
     let (&last, lits) = clause.split_last().unwrap();
-    debug_assert_eq!(last, 0, "last lit in clause must be 0");
+    assert_eq!(last, 0, "last lit in clause must be 0");
     lits.iter().map(|&lit| Lit::from_external(lit)).collect()
 }
 
