@@ -73,5 +73,38 @@ fn main() -> color_eyre::Result<()> {
         ccadical_release(ptr);
     }
 
+    println!("----------");
+
+    unsafe {
+        let ptr = ccadical_init();
+        println!("ptr = {:?}", ptr);
+        println!("signature = {}", cstr2str(ccadical_signature()));
+
+        ccadical_add(ptr, 3);
+        ccadical_add(ptr, -1);
+        ccadical_add(ptr, -2);
+        ccadical_add(ptr, 0);
+
+        ccadical_add(ptr, -3);
+        ccadical_add(ptr, 1);
+        ccadical_add(ptr, 0);
+
+        ccadical_add(ptr, -3);
+        ccadical_add(ptr, 2);
+        ccadical_add(ptr, 0);
+
+        ccadical_add(ptr, -1);
+        ccadical_add(ptr, 2);
+        ccadical_add(ptr, 0);
+
+        ccadical_propcheck_tree_begin(ptr);
+        ccadical_propcheck_tree_add_variable(ptr, 1);
+        ccadical_propcheck_tree_add_variable(ptr, 2);
+        let count = ccadical_propcheck_tree(ptr, 0);
+        println!("count = {}", count);
+
+        ccadical_release(ptr);
+    }
+
     Ok(())
 }
