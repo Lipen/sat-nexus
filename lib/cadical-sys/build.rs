@@ -61,12 +61,41 @@ fn build_static_lib() {
     build_script::cargo_warning("Building Cadical static library...");
     build_script::cargo_rerun_if_changed("wrapper.h");
 
+    // Initialize the git submodule if necessary:
     if !Path::new("vendor/cadical/src").exists() {
         let _ = Command::new("git")
             .args(&["submodule", "update", "--init", "vendor/cadical"])
             .status();
     }
 
+    // Build configuration:
+    let mut cfg = cc::Build::new();
+    cfg.cpp(true);
+    cfg.std("c++11");
+    cfg.flag_if_supported("-Wno-nonnull-compare");
+    cfg.define("NBUILD", None);
+    cfg.define("NUNLOCKED", None);
+
+    // Handle Debug/Release profile:
+    let profile = std::env::var("PROFILE").unwrap();
+    match profile.as_str() {
+        "debug" => {
+            cfg.debug(true);
+        }
+        "release" => {
+            cfg.debug(false);
+            cfg.opt_level(3);
+            cfg.define("NDEBUG", None);
+        }
+        _ => {}
+    }
+
+    // On Windows, `psapi` is needed for `GetProcessMemoryInfo`
+    if cfg!(windows) {
+        build_script::cargo_rustc_link_lib("psapi");
+    }
+
+    // Find all source files:
     let files = glob::glob("vendor/cadical/src/*.cpp")
         .expect("Bad glob")
         .map(|p| p.expect("Could not read file in glob"))
@@ -75,21 +104,15 @@ fn build_static_lib() {
             name != "cadical.cpp" && name != "mobical.cpp"
         })
         .collect::<Vec<_>>();
+
+    // Rerun Cargo on changes in source files:
     for path in files.iter() {
         build_script::cargo_rerun_if_changed(path);
     }
-    cc::Build::new()
-        .cpp(true)
-        .std("c++11")
-        .files(files)
-        .flag_if_supported("-Wno-nonnull-compare")
-        .define("NDEBUG", None)
-        .define("NBUILD", None)
-        .define("NUNLOCKED", None)
-        .compile("cadical");
 
-    // On Windows, `psapi` is needed for `GetProcessMemoryInfo`
-    if cfg!(windows) {
-        build_script::cargo_rustc_link_lib("psapi");
-    }
+    // Specify source files to be compiled:
+    cfg.files(files);
+
+    // Compile:
+    cfg.compile("cadical");
 }
