@@ -55,8 +55,17 @@ fn generate_bindings_static() {
 
 #[cfg(feature = "static")]
 fn build_static_lib() {
+    use std::path::Path;
+    use std::process::Command;
+
     build_script::cargo_warning("Building Cadical static library...");
     build_script::cargo_rerun_if_changed("wrapper.h");
+
+    if !Path::new("vendor/cadical/src").exists() {
+        let _ = Command::new("git")
+            .args(&["submodule", "update", "--init", "vendor/cadical"])
+            .status();
+    }
 
     let files = glob::glob("vendor/cadical/src/*.cpp")
         .expect("Bad glob")
