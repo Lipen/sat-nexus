@@ -66,6 +66,9 @@ fn build_static_lib() {
             name != "cadical.cpp" && name != "mobical.cpp"
         })
         .collect::<Vec<_>>();
+    for path in files.iter() {
+        build_script::cargo_rerun_if_changed(path);
+    }
     cc::Build::new()
         .cpp(true)
         .std("c++11")
