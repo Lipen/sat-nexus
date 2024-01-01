@@ -80,14 +80,18 @@ fn build_static_lib() {
     let profile = std::env::var("PROFILE").unwrap();
     match profile.as_str() {
         "debug" => {
+            // build_script::cargo_warning("Using Debug profile");
             cfg.debug(true);
         }
         "release" => {
+            // build_script::cargo_warning("Using Release profile");
             cfg.debug(false);
             cfg.opt_level(3);
             cfg.define("NDEBUG", None);
         }
-        _ => {}
+        _ => {
+            build_script::cargo_warning(format!("Unsupported profile '{}'", profile));
+        }
     }
 
     // On Windows, `psapi` is needed for `GetProcessMemoryInfo`
