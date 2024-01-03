@@ -105,6 +105,7 @@ impl Clause {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn remove_falsified_literals(&mut self, assignment: &Assignment) {
         self.lits.retain(|&lit| assignment.fixed(lit) != LBool::False);
     }
