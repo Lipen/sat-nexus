@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::ffi::CString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -16,7 +15,7 @@ use backdoor::utils::parse_multiple_comma_separated_intervals;
 use backdoor::utils::parse_multiple_comma_separated_intervals_from;
 use backdoor::utils::{concat_cubes, create_line_writer, partition_tasks};
 
-use cadical_sys::statik::*;
+use cadical::statik::*;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
@@ -166,14 +165,9 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    let solver_full = unsafe { ccadical_init() };
-    unsafe {
-        for clause in parse_dimacs(&args.path_cnf) {
-            for lit in clause {
-                ccadical_add(solver_full, lit.to_external());
-            }
-            ccadical_add(solver_full, 0);
-        }
+    let solver_full = Cadical::new();
+    for clause in parse_dimacs(&args.path_cnf) {
+        solver_full.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
 
     // Create and open the file with derived clauses:
@@ -229,10 +223,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                         writeln!(f, "{} 0", lit)?;
                     }
                     solver.add_learnt(&[lit]);
-                    unsafe {
-                        ccadical_add(solver_full, lit.to_external());
-                        ccadical_add(solver_full, 0);
-                    }
+                    solver_full.add_clause([lit.to_external()]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -270,12 +261,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     writeln!(f, "0")?;
                 }
                 solver.add_learnt(&clause);
-                unsafe {
-                    for lit in clause.iter() {
-                        ccadical_add(solver_full, lit.to_external());
-                    }
-                    ccadical_add(solver_full, 0);
-                }
+                solver_full.add_clause(clause.iter().map(|lit| lit.to_external()));
                 new_derived_clauses.push(clause.clone());
                 all_derived_clauses.push(clause);
             }
@@ -370,7 +356,6 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
         let time_filter = Instant::now();
-        let c = CString::new("conflicts").expect("CString::new failed");
         let pb = ProgressBar::new(cubes_product.len() as u64);
         pb.set_style(
             ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
@@ -384,43 +369,48 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                 return true;
             }
 
-            unsafe {
-                // debug!("cube = {}", DisplaySlice(cube));
-                for &lit in cube.iter() {
-                    ccadical_assume(solver_full, lit.to_external());
-                }
-                ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
-                match ccadical_solve(solver_full) {
-                    0 => {
-                        // UNKNOWN
-                        true
+            // debug!("cube = {}", DisplaySlice(cube));
+            for &lit in cube.iter() {
+                solver_full.assume(lit.to_external()).unwrap();
+            }
+            solver_full.limit("conflicts", args.num_conflicts as i32);
+            match solver_full.solve().unwrap() {
+                SolveResponse::Interrupted => true,
+                SolveResponse::Sat => {
+                    let model = (1..=solver_full.vars())
+                        .map(|i| solver_full.val(i as i32).unwrap())
+                        .collect::<Vec<_>>();
+                    {
+                        let f = File::create("model.txt").unwrap();
+                        let mut f = BufWriter::new(f);
+                        writeln!(
+                            f,
+                            "{}",
+                            model
+                                .iter()
+                                .enumerate()
+                                .map(|(i, &value)| {
+                                    let lit = (i + 1) as i32;
+                                    match value {
+                                        LitValue::True => lit,
+                                        LitValue::False => -lit,
+                                    }
+                                })
+                                .join(" ")
+                        )
+                        .unwrap();
                     }
-                    10 => {
-                        // SAT
-                        let model = (1..=ccadical_vars(solver_full))
-                            .map(|i| ccadical_val(solver_full, i as i32))
-                            .collect::<Vec<_>>();
-                        {
-                            let f = File::create("model.txt").unwrap();
-                            let mut f = BufWriter::new(f);
-                            writeln!(f, "{}", model.iter().join(" ")).unwrap();
+                    {
+                        let f = File::create("model.cnf").unwrap();
+                        let mut f = BufWriter::new(f);
+                        for &lit in model.iter() {
+                            writeln!(f, "{} 0", <bool>::from(lit)).unwrap();
                         }
-                        {
-                            let f = File::create("model.cnf").unwrap();
-                            let mut f = BufWriter::new(f);
-                            for lit in model.iter() {
-                                writeln!(f, "{} 0", lit).unwrap();
-                            }
-                        }
-                        panic!("unexpected SAT");
-                        // false
                     }
-                    20 => {
-                        // UNSAT
-                        false
-                    }
-                    r => panic!("Unexpected result: {}", r),
+                    panic!("unexpected SAT");
+                    // false
                 }
+                SolveResponse::Unsat => false,
             }
         });
         pb.finish_and_clear();
@@ -446,10 +436,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                         writeln!(f, "{} 0", lit)?;
                     }
                     solver.add_learnt(&[lit]);
-                    unsafe {
-                        ccadical_add(solver_full, lit.to_external());
-                        ccadical_add(solver_full, 0);
-                    }
+                    solver_full.add_clause([lit.to_external()]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -484,12 +471,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     writeln!(f, "0")?;
                 }
                 solver.add_learnt(&clause);
-                unsafe {
-                    for lit in clause.iter() {
-                        ccadical_add(solver_full, lit.to_external());
-                    }
-                    ccadical_add(solver_full, 0);
-                }
+                solver_full.add_clause(clause.iter().map(|lit| lit.to_external()));
                 new_derived_clauses.push(clause.clone());
                 all_derived_clauses.push(clause);
             }
