@@ -249,6 +249,16 @@ impl Cadical {
         unsafe { ccadical_melt(self.ptr, lit) }
         Ok(())
     }
+
+    pub fn propcheck_tree(&self, vars: &[i32], limit: u64) -> u64 {
+        unsafe {
+            ccadical_propcheck_tree_begin(self.ptr);
+            for &v in vars {
+                ccadical_propcheck_tree_add_variable(self.ptr, v);
+            }
+            ccadical_propcheck_tree(self.ptr, limit)
+        }
+    }
 }
 
 /// Additional methods.
