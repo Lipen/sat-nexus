@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 sat-nexus-core = { path = "../core" }
 ipasir = { path = "../ipasir" }
-cadical = { path = "../cadical" }
+cadical = { path = "../cadical", features = ["dynamic"] }
 minisat = { path = "../minisat", features = ["dynamic"] }
 kissat = { path = "../kissat" }
 simple-sat = { path = "../simple-sat" }

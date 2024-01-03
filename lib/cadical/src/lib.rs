@@ -1,10 +1,7 @@
-pub use cadical_sys::dynamic as ffi;
+mod common;
 
-pub use self::cadical::*;
-pub use self::types::*;
+#[cfg(feature = "dynamic")]
+pub mod dynamic;
 
-mod cadical;
-mod types;
-
-#[cfg(test)]
-mod tests;
+#[cfg(feature = "static")]
+pub mod statik;

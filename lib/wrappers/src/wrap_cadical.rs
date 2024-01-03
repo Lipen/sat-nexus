@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 
-use cadical::Cadical;
+use cadical::dynamic::Cadical;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
@@ -92,7 +92,7 @@ impl Solver for CadicalSolver {
     }
 
     fn solve(&mut self) -> SolveResponse {
-        use cadical::SolveResponse as CadicalSolveResponse;
+        use cadical::dynamic::SolveResponse as CadicalSolveResponse;
         match self.inner.solve() {
             Ok(CadicalSolveResponse::Sat) => SolveResponse::Sat,
             Ok(CadicalSolveResponse::Unsat) => SolveResponse::Unsat,
@@ -105,7 +105,7 @@ impl Solver for CadicalSolver {
     where
         L: Into<Lit>,
     {
-        use cadical::LitValue as CadicalLitValue;
+        use cadical::dynamic::LitValue as CadicalLitValue;
         match self.inner.val(lit.into().into()) {
             Ok(CadicalLitValue::True) => LitValue::True,
             Ok(CadicalLitValue::False) => LitValue::False,

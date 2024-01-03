@@ -4,8 +4,13 @@ version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
 
+[features]
+default = []
+dynamic = ["cadical-sys/dynamic"]
+static = ["cadical-sys/static"]
+
 [dependencies]
-cadical-sys = { path = "../cadical-sys", features = ["dynamic"] }
+cadical-sys = { path = "../cadical-sys", optional = true }
 ffi-utils = { path = "../ffi-utils" }
 snafu = "0.7"
 itertools = "0.10"

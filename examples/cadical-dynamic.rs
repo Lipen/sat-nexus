@@ -1,4 +1,4 @@
-use cadical::*;
+use cadical::dynamic::*;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
