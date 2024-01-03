@@ -17,6 +17,7 @@ ahash = "0.8.6"
 
 simple-sat = { path = "../../lib/simple-sat" }
 cadical-sys = { path = "../../lib/cadical-sys", features = ["static"] }
+cadical = { path = "../../lib/cadical", features = ["static"] }
 pyeda = { path = "../pyeda", optional = true }
 
 clap = { version = "4.4.8", features = ["derive"] }
