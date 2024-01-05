@@ -6,8 +6,12 @@ use snafu::ensure;
 
 use ffi_utils::cstr2str;
 
+use self::ffi::*;
 use crate::common::*;
-use crate::dynamic::ffi::*;
+
+pub mod ffi {
+    pub use cadical_sys::dynamic::*;
+}
 
 /// Cadical solver.
 ///
@@ -15,7 +19,8 @@ use crate::dynamic::ffi::*;
 ///
 /// ```
 /// # fn main() -> color_eyre::Result<()> {
-/// use cadical::dynamic::*;
+/// use cadical::*;
+/// use cadical::dynamic::Cadical;
 /// // Create solver
 /// let solver = Cadical::new();
 /// // Add some clauses: (a or b) and (b or c) and (not a or c) and (not c)

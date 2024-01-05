@@ -1,5 +1,5 @@
-use std::fs::File;
-use std::io::{LineWriter, Write};
+use std::collections::HashSet;
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -9,10 +9,12 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks};
+use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks_cadical};
 
+use cadical::statik::Cadical;
+use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
-use simple_sat::utils::DisplaySlice;
+use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
 // Run this example:
@@ -73,18 +75,6 @@ struct Cli {
     #[arg(long)]
     dump_records: bool,
 
-    /// Do add learnts after analyzing conflicts in `propcheck_all_tree`?
-    #[arg(long)]
-    add_learnts: bool,
-
-    /// Do dump learnts after each EA run?
-    #[arg(long)]
-    dump_intermediate_learnts: bool,
-
-    /// Do dump all learnts after all EA runs?
-    #[arg(long)]
-    dump_learnts: bool,
-
     /// Do derive clauses from backdoors?
     #[arg(long)]
     derive: bool,
@@ -96,7 +86,8 @@ struct Cli {
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,simple_sat::solver=info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,simple_sat::solver=info,backdoor::derivation=info"))
+        .init();
 
     let start_time = Instant::now();
     let args = Cli::parse();
@@ -109,10 +100,15 @@ fn main() -> color_eyre::Result<()> {
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
 
+    // Initialize Cadical:
+    let solver = Cadical::new();
+    for clause in parse_dimacs(&args.path_cnf) {
+        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+    }
+
     // Set up the evolutionary algorithm:
     let options = Options {
         seed: args.seed,
-        add_learnts_in_propcheck_all_tree: args.add_learnts,
         ban_used_variables: args.ban_used,
         ..DEFAULT_OPTIONS
     };
@@ -121,17 +117,27 @@ fn main() -> color_eyre::Result<()> {
     // Create and open the file with resulting backdoors:
     let mut file_backdoors = args.path_output.as_ref().map(create_line_writer);
 
+    // Create and open the file with derived clauses:
     let mut file_derived_clauses = if args.dump_derived {
         Some(create_line_writer("derived_clauses.txt"))
     } else {
         None
     };
 
+    // Set of ALL clauses (original + derived):
+    let mut all_clauses: HashSet<Vec<Lit>> = HashSet::new();
+    for mut clause in parse_dimacs(&args.path_cnf) {
+        clause.sort_by_key(|lit| lit.inner());
+        all_clauses.insert(clause);
+    }
+
+    // All derived clauses:
+    let mut all_derived_clauses: Vec<Vec<Lit>> = Vec::new();
+
+    let time_runs = Instant::now();
+
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
-
-        debug!("algorithm.derived_clauses.len() = {}", algorithm.derived_clauses.len());
-        debug!("algorithm.learnt_clauses.len() = {}", algorithm.learnt_clauses.len());
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(
@@ -141,19 +147,20 @@ fn main() -> color_eyre::Result<()> {
             Some(args.max_rho),
             args.min_iter,
         );
-
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         // Derive clauses from the best backdoor:
         if args.derive {
             let backdoor = result.best_instance.get_variables();
-            let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
+            let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
             debug!(
                 "Backdoor {} has {} hard and {} easy tasks",
                 DisplaySlice(&backdoor),
                 hard.len(),
                 easy.len()
             );
+
+            // TODO: handle the case when `hard.len() == 1`
 
             let time_derive = Instant::now();
             let derived_clauses = derive_clauses(&hard);
@@ -168,35 +175,21 @@ fn main() -> color_eyre::Result<()> {
             // Add the derived clauses to the solver:
             for mut lemma in derived_clauses {
                 lemma.sort_by_key(|lit| lit.var().inner());
-
-                algorithm.solver.add_learnt(&lemma);
-
-                if let Some(f) = &mut file_derived_clauses {
-                    for lit in lemma.iter() {
-                        write!(f, "{} ", lit)?;
+                if all_clauses.insert(lemma.clone()) {
+                    if let Some(f) = &mut file_derived_clauses {
+                        for lit in lemma.iter() {
+                            write!(f, "{} ", lit)?;
+                        }
+                        writeln!(f, "0")?;
                     }
-                    writeln!(f, "0")?;
+                    algorithm.solver.add_clause(lemma.iter().map(|lit| lit.to_external()));
+                    all_derived_clauses.push(lemma);
                 }
-
-                algorithm.derived_clauses.insert(lemma);
-            }
-        }
-
-        // Dump learnts:
-        if args.dump_intermediate_learnts {
-            let f = File::create(format!("learnts_{}.txt", run_number))?;
-            let mut f = LineWriter::new(f);
-            for learnt in algorithm.solver.learnts_iter() {
-                for lit in learnt.iter() {
-                    write!(f, "{} ", lit)?;
-                }
-                writeln!(f, " 0")?;
             }
         }
 
         // Write the best found backdoor to the output file:
         if let Some(f) = &mut file_backdoors {
-            // Note: variables in backdoors are reported 1-based.
             writeln!(
                 f,
                 "Backdoor {} of size {} on iter {} with fitness = {}, rho = {}, hard = {} in {:.3} ms",
@@ -226,19 +219,18 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    // Dump all learnts:
-    if args.dump_learnts {
-        let f = File::create("learnt_clauses.txt")?;
-        let mut f = LineWriter::new(f);
-        for lemma in algorithm.learnt_clauses.iter() {
-            for lit in lemma.iter() {
-                write!(f, "{} ", lit)?;
-            }
-            writeln!(f, "0")?;
-        }
+    let time_runs = time_runs.elapsed();
+    info!("Finished {} runs in {:.1}s", args.num_runs, time_runs.as_secs_f64());
+    if args.derive {
+        info!(
+            "Total derived {} new clauses ({} units, {} binary, {} other)",
+            all_derived_clauses.len(),
+            all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+            all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+            all_derived_clauses.iter().filter(|c| c.len() > 2).count()
+        );
     }
 
-    let elapsed = Instant::now() - start_time;
-    println!("\nAll done in {:.3} s", elapsed.as_secs_f64());
+    println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());
     Ok(())
 }

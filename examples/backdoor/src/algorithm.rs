@@ -7,9 +7,8 @@ use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
-use simple_sat::lbool::LBool;
-use simple_sat::lit::Lit;
-use simple_sat::solver::Solver;
+use cadical::statik::Cadical;
+use cadical::FixedResponse;
 use simple_sat::var::Var;
 
 use crate::fitness::Fitness;
@@ -17,22 +16,17 @@ use crate::instance::Instance;
 
 #[derive(Debug)]
 pub struct Algorithm {
-    pub solver: Solver,
+    pub solver: Cadical,
     pub pool: Vec<Var>,
     pub rng: StdRng,
     pub cache: AHashMap<Vec<Var>, Fitness>,
     pub cache_hits: usize,
     pub cache_misses: usize,
     pub options: Options,
-    pub derived_clauses: HashSet<Vec<Lit>>,
-    pub learnt_clauses: HashSet<Vec<Lit>>,
 }
 
 impl Algorithm {
-    pub fn new(mut solver: Solver, pool: Vec<Var>, options: Options) -> Self {
-        // Reset the limits for reduceDB:
-        solver.learning_guard.reset(solver.num_clauses());
-
+    pub fn new(solver: Cadical, pool: Vec<Var>, options: Options) -> Self {
         Self {
             solver,
             pool,
@@ -41,8 +35,6 @@ impl Algorithm {
             cache_hits: 0,
             cache_misses: 0,
             options,
-            derived_clauses: HashSet::new(),
-            learnt_clauses: HashSet::new(),
         }
     }
 }
@@ -50,13 +42,11 @@ impl Algorithm {
 #[derive(Debug)]
 pub struct Options {
     pub seed: u64,
-    pub add_learnts_in_propcheck_all_tree: bool,
     pub ban_used_variables: bool,
 }
 
 pub const DEFAULT_OPTIONS: Options = Options {
     seed: 42,
-    add_learnts_in_propcheck_all_tree: false,
     ban_used_variables: false,
 };
 
@@ -93,28 +83,30 @@ impl Algorithm {
     ) -> RunResult {
         let start_time = Instant::now();
 
-        info!(
-            "Running EA for {} iterations with pool size {} and backdoor size {}",
-            num_iter,
-            self.pool.len(),
-            backdoor_size
-        );
+        info!("Running EA for {} iterations with backdoor size {}", num_iter, backdoor_size);
 
-        debug!("solver.num_vars() = {}", self.solver.num_vars());
-        debug!("solver.num_clauses() = {}", self.solver.num_clauses());
-        debug!("solver.num_learnts() = {}", self.solver.num_learnts());
+        debug!("solver.vars() = {}", self.solver.vars());
 
         // Ban already assigned variables:
         let mut already_assigned = HashSet::new();
-        for i in 0..self.solver.num_vars() {
+        for i in 0..self.solver.vars() {
             let var = Var::new(i as u32);
-            let value = self.solver.value_var(var);
-            if value != LBool::Undef {
-                trace!("Variable {} already assigned value {:?}", var, value);
-                already_assigned.insert(var);
+            match self.solver.fixed(var.to_external() as i32).unwrap() {
+                FixedResponse::Unclear => { /* do nothing */ }
+                FixedResponse::Positive => {
+                    trace!("Variable {} already assigned True value", var);
+                    already_assigned.insert(var);
+                }
+                FixedResponse::Negative => {
+                    trace!("Variable {} already assigned False value", var);
+                    already_assigned.insert(var);
+                }
             }
         }
         self.pool.retain(|v| !already_assigned.contains(v));
+        drop(already_assigned);
+
+        debug!("pool.len() = {}", self.pool.len());
 
         // Create an initial instance:
         let mut instance = self.initial_instance(backdoor_size);
@@ -243,6 +235,12 @@ impl Algorithm {
 
     fn initial_instance(&mut self, size: usize) -> Instance {
         Instance::new_random(size, &self.pool, &mut self.rng)
+        // let vars: Vec<Var> = [15, 482, 820, 1155, 2072, 2231, 2509, 3579, 4051, 4483]
+        //     .into_iter()
+        //     .map(|v| Var::from_external(v))
+        //     .collect();
+        // assert_eq!(vars.len(), size);
+        // Instance::new(vars)
     }
 
     fn calculate_fitness(&mut self, instance: &Instance, best: Option<&Fitness>) -> Fitness {
@@ -257,12 +255,10 @@ impl Algorithm {
             assert!(vars.len() < 32);
 
             // Compute rho:
-            let add_learnts = self.options.add_learnts_in_propcheck_all_tree;
-            let mut learnts = Vec::new();
             // let limit = 0;
-            let limit = best.map_or(0, |b| b.num_hard);
-            let num_hard = self.solver.propcheck_all_tree(&vars, limit, add_learnts, &mut learnts);
-            self.learnt_clauses.extend(learnts);
+            let limit = best.map_or(0, |b| b.num_hard + 1);
+            let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
+            let num_hard = self.solver.propcheck_all_tree(&vars_external, limit);
             let num_total = 1u64 << vars.len();
             let rho = 1.0 - (num_hard as f64 / num_total as f64);
 

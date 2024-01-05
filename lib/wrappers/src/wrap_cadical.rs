@@ -92,7 +92,7 @@ impl Solver for CadicalSolver {
     }
 
     fn solve(&mut self) -> SolveResponse {
-        use cadical::dynamic::SolveResponse as CadicalSolveResponse;
+        use cadical::SolveResponse as CadicalSolveResponse;
         match self.inner.solve() {
             Ok(CadicalSolveResponse::Sat) => SolveResponse::Sat,
             Ok(CadicalSolveResponse::Unsat) => SolveResponse::Unsat,
@@ -105,7 +105,7 @@ impl Solver for CadicalSolver {
     where
         L: Into<Lit>,
     {
-        use cadical::dynamic::LitValue as CadicalLitValue;
+        use cadical::LitValue as CadicalLitValue;
         match self.inner.val(lit.into().into()) {
             Ok(CadicalLitValue::True) => LitValue::True,
             Ok(CadicalLitValue::False) => LitValue::False,

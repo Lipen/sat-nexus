@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use flate2::read::GzDecoder;
 use itertools::{join, Itertools};
-use tracing::debug;
+use tracing::trace;
 
 use crate::lit::Lit;
 
@@ -37,13 +37,13 @@ where
 {
     read_maybe_gzip(path).unwrap().lines().flatten().filter_map(|line| {
         if line.is_empty() {
-            debug!("Skipping empty line");
+            trace!("Skipping empty line");
             None
         } else if line.starts_with('c') {
-            debug!("Skipping comment '{}'", line);
+            trace!("Skipping comment '{}'", line);
             None
         } else if line.starts_with('p') {
-            debug!("Skipping header '{}'", line);
+            trace!("Skipping header '{}'", line);
             None
         } else {
             let lits = parse_dimacs_clause(&line);

@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::*;
 
 #[test]
 fn test_cadical_solver() -> color_eyre::Result<()> {

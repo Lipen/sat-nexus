@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::iter::zip;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -13,9 +14,10 @@ use rand::prelude::*;
 use backdoor::derivation::derive_clauses;
 use backdoor::utils::parse_multiple_comma_separated_intervals;
 use backdoor::utils::parse_multiple_comma_separated_intervals_from;
-use backdoor::utils::{concat_cubes, create_line_writer, partition_tasks};
+use backdoor::utils::{concat_cubes, create_line_writer, partition_tasks, partition_tasks_cadical};
 
-use cadical::statik::*;
+use cadical::statik::Cadical;
+use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
@@ -161,13 +163,10 @@ fn one_backdoor(backdoor: Vec<Var>, args: &Cli) -> color_eyre::Result<()> {
 }
 
 fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()> {
-    // Initialize the SAT solver:
-    let mut solver = Solver::default();
-    solver.init_from_file(&args.path_cnf);
-
-    let solver_full = Cadical::new();
+    // Initialize Cadical:
+    let solver = Cadical::new();
     for clause in parse_dimacs(&args.path_cnf) {
-        solver_full.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
 
     // Create and open the file with derived clauses:
@@ -203,7 +202,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         let run_number = run_number + 1; // 1-based
         info!("Run {} / {}", run_number, backdoors.len());
 
-        let (hard, easy) = partition_tasks(backdoor, &mut solver);
+        let (hard, easy) = partition_tasks_cadical(backdoor, &solver);
         debug!(
             "Backdoor {} has {} hard and {} easy tasks",
             DisplaySlice(backdoor),
@@ -222,8 +221,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
                     }
-                    solver.add_learnt(&[lit]);
-                    solver_full.add_clause([lit.to_external()]);
+                    solver.add_clause([lit.to_external()]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -250,7 +248,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         );
         // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        let mut new_derived_clauses = Vec::new();
+        let mut new_clauses = Vec::new();
         for mut clause in derived_clauses {
             clause.sort_by_key(|lit| lit.inner());
             if all_clauses.insert(clause.clone()) {
@@ -260,18 +258,17 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     }
                     writeln!(f, "0")?;
                 }
-                solver.add_learnt(&clause);
-                solver_full.add_clause(clause.iter().map(|lit| lit.to_external()));
-                new_derived_clauses.push(clause.clone());
+                solver.add_clause(clause.iter().map(|lit| lit.to_external()));
+                new_clauses.push(clause.clone());
                 all_derived_clauses.push(clause);
             }
         }
         debug!(
             "Derived {} new clauses ({} units, {} binary, {} other) for backdoor",
-            new_derived_clauses.len(),
-            new_derived_clauses.iter().filter(|c| c.len() == 1).count(),
-            new_derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            new_derived_clauses.iter().filter(|c| c.len() > 2).count()
+            new_clauses.len(),
+            new_clauses.iter().filter(|c| c.len() == 1).count(),
+            new_clauses.iter().filter(|c| c.len() == 2).count(),
+            new_clauses.iter().filter(|c| c.len() > 2).count()
         );
         // debug!("[{}]", new_derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
@@ -338,21 +335,26 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
             writeln!(f, "{},concat,{}", run_number, trie.num_leaves())?;
         }
 
-        info!("Filtering {} hard cubes via trie...", trie.num_leaves());
-        let time_filter = Instant::now();
-        let mut valid = Vec::new();
-        solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        cubes_product = trie
+            .iter()
+            .map(|cube| zip(cube, backdoor).map(|(b, &v)| Lit::new(v, b)).collect())
+            .collect();
         drop(trie);
-        cubes_product = valid;
-        let time_filter = time_filter.elapsed();
-        info!(
-            "Filtered down to {} cubes in {:.1}s",
-            cubes_product.len(),
-            time_filter.as_secs_f64()
-        );
-        if let Some(f) = &mut file_results {
-            writeln!(f, "{},propagate,{}", run_number, cubes_product.len())?;
-        }
+        // info!("Filtering {} hard cubes via trie...", trie.num_leaves());
+        // let time_filter = Instant::now();
+        // let mut valid = Vec::new();
+        // solver.propcheck_all_trie(&variables, &trie, &mut valid);
+        // drop(trie);
+        // cubes_product = valid;
+        // let time_filter = time_filter.elapsed();
+        // info!(
+        //     "Filtered down to {} cubes in {:.1}s",
+        //     cubes_product.len(),
+        //     time_filter.as_secs_f64()
+        // );
+        // if let Some(f) = &mut file_results {
+        //     writeln!(f, "{},propagate,{}", run_number, cubes_product.len())?;
+        // }
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
         let time_filter = Instant::now();
@@ -371,15 +373,14 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
 
             // debug!("cube = {}", DisplaySlice(cube));
             for &lit in cube.iter() {
-                solver_full.assume(lit.to_external()).unwrap();
+                solver.assume(lit.to_external()).unwrap();
             }
-            solver_full.limit("conflicts", args.num_conflicts as i32);
-            match solver_full.solve().unwrap() {
+            solver.limit("conflicts", args.num_conflicts as i32);
+            match solver.solve().unwrap() {
                 SolveResponse::Interrupted => true,
+                SolveResponse::Unsat => false,
                 SolveResponse::Sat => {
-                    let model = (1..=solver_full.vars())
-                        .map(|i| solver_full.val(i as i32).unwrap())
-                        .collect::<Vec<_>>();
+                    let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect::<Vec<_>>();
                     {
                         let f = File::create("model.txt").unwrap();
                         let mut f = BufWriter::new(f);
@@ -410,7 +411,6 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     panic!("unexpected SAT");
                     // false
                 }
-                SolveResponse::Unsat => false,
             }
         });
         pb.finish_and_clear();
@@ -435,8 +435,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
                     }
-                    solver.add_learnt(&[lit]);
-                    solver_full.add_clause([lit.to_external()]);
+                    solver.add_clause([lit.to_external()]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -470,8 +469,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
                     }
                     writeln!(f, "0")?;
                 }
-                solver.add_learnt(&clause);
-                solver_full.add_clause(clause.iter().map(|lit| lit.to_external()));
+                solver.add_clause(clause.iter().map(|lit| lit.to_external()));
                 new_derived_clauses.push(clause.clone());
                 all_derived_clauses.push(clause);
             }

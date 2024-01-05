@@ -8,12 +8,12 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks};
+use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks_cadical};
 
-// use cadical_sys::statik::*;
+use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
-use simple_sat::utils::DisplaySlice;
+use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
 // Run this example:
@@ -84,18 +84,14 @@ fn main() -> color_eyre::Result<()> {
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    // let solver_full = unsafe { ccadical_init() };
-    // unsafe {
-    //     for clause in solver.clauses_iter() {
-    //         for lit in clause.lits() {
-    //             ccadical_add(solver_full, lit.to_external());
-    //         }
-    //         ccadical_add(solver_full, 0)
-    //     }
-    // }
-
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
+
+    // Initialize Cadical:
+    let solver = Cadical::new();
+    for clause in parse_dimacs(&args.path_cnf) {
+        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+    }
 
     // Set up the evolutionary algorithm:
     let options = Options {
@@ -110,20 +106,22 @@ fn main() -> color_eyre::Result<()> {
 
     // Create and open the file with results:
     // let mut file_results = args.path_results.as_ref().map(create_line_writer);
-
     // if let Some(f) = &mut file_results {
     //     writeln!(f, "...")?;
     // }
 
-    let mut global_all_clauses: HashSet<Vec<Lit>> = HashSet::new();
-    for clause in algorithm.solver.clauses_iter() {
-        let mut clause = clause.lits().to_vec();
+    // All clauses (original + derived):
+    let mut all_clauses: HashSet<Vec<Lit>> = HashSet::new();
+    for mut clause in parse_dimacs(&args.path_cnf) {
         clause.sort_by_key(|lit| lit.inner());
-        global_all_clauses.insert(clause);
+        all_clauses.insert(clause);
     }
 
-    let mut global_new_clauses: HashSet<Vec<Lit>> = HashSet::new();
+    // All derived clauses:
+    let mut all_derived_clauses: Vec<Vec<Lit>> = Vec::new();
 
+    info!("Performing {} runs...", args.num_runs);
+    let time_runs = Instant::now();
     for run_number in 1..=args.num_runs {
         info!("EA run {} / {}", run_number, args.num_runs);
         let time_run = Instant::now();
@@ -135,8 +133,10 @@ fn main() -> color_eyre::Result<()> {
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             100,
         );
+        assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
+
         let backdoor = result.best_instance.get_variables();
-        let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
+        let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
         debug!(
             "Backdoor {} has {} hard and {} easy tasks",
             DisplaySlice(&backdoor),
@@ -151,19 +151,12 @@ fn main() -> color_eyre::Result<()> {
         if hard.len() == 1 {
             info!("Adding {} units to the solver", hard[0].len());
             for &lit in &hard[0] {
-                if global_all_clauses.insert(vec![lit]) {
-                    global_new_clauses.insert(vec![lit]);
-                }
-
-                if algorithm.derived_clauses.insert(vec![lit]) {
+                if all_clauses.insert(vec![lit]) {
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
                     }
-                    algorithm.solver.add_learnt(&[lit]);
-                    // unsafe {
-                    //     ccadical_add(solver_full, lit.to_external());
-                    //     ccadical_add(solver_full, 0);
-                    // }
+                    algorithm.solver.add_clause([lit.to_external()]);
+                    all_derived_clauses.push(vec![lit]);
                 }
             }
             continue;
@@ -193,28 +186,20 @@ fn main() -> color_eyre::Result<()> {
         let mut new_clauses = Vec::new();
         for mut lemma in derived_clauses {
             lemma.sort_by_key(|lit| lit.inner());
-            if global_all_clauses.insert(lemma.clone()) {
-                global_new_clauses.insert(lemma.clone());
-            }
-            if algorithm.derived_clauses.insert(lemma.clone()) {
+            if all_clauses.insert(lemma.clone()) {
                 if let Some(f) = &mut file_derived_clauses {
                     for lit in lemma.iter() {
                         write!(f, "{} ", lit)?;
                     }
                     writeln!(f, "0")?;
                 }
-                algorithm.solver.add_learnt(&lemma);
-                // unsafe {
-                //     for lit in lemma.iter() {
-                //         ccadical_add(solver_full, lit.to_external());
-                //     }
-                //     ccadical_add(solver_full, 0);
-                // }
-                new_clauses.push(lemma);
+                algorithm.solver.add_clause(lemma.iter().map(|lit| lit.to_external()));
+                new_clauses.push(lemma.clone());
+                all_derived_clauses.push(lemma);
             }
         }
         debug!(
-            "NEW {} clauses ({} units, {} binary, {} other)",
+            "Derived {} new clauses ({} units, {} binary, {} other)",
             new_clauses.len(),
             new_clauses.iter().filter(|c| c.len() == 1).count(),
             new_clauses.iter().filter(|c| c.len() == 2).count(),
@@ -225,29 +210,22 @@ fn main() -> color_eyre::Result<()> {
         let time_run = time_run.elapsed();
         info!("Done run {} / {} in {:.1}s", run_number, args.num_runs, time_run.as_secs_f64());
         info!(
-            "So far derived {} clauses ({} units, {} binary, {} other)",
-            algorithm.derived_clauses.len(),
-            algorithm.derived_clauses.iter().filter(|c| c.len() == 1).count(),
-            algorithm.derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            algorithm.derived_clauses.iter().filter(|c| c.len() > 2).count()
+            "So far derived {} new clauses ({} units, {} binary, {} other)",
+            all_derived_clauses.len(),
+            all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+            all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+            all_derived_clauses.iter().filter(|c| c.len() > 2).count()
         );
     }
 
-    info!("Finished {} runs in {:.1}s", args.num_runs, start_time.elapsed().as_secs_f64());
+    let time_runs = time_runs.elapsed();
+    info!("Finished {} runs in {:.1}s", args.num_runs, time_runs.as_secs_f64());
     info!(
-        "Total derived {} clauses ({} units, {} binary, {} other)",
-        algorithm.derived_clauses.len(),
-        algorithm.derived_clauses.iter().filter(|c| c.len() == 1).count(),
-        algorithm.derived_clauses.iter().filter(|c| c.len() == 2).count(),
-        algorithm.derived_clauses.iter().filter(|c| c.len() > 2).count()
-    );
-
-    info!(
-        "Total derived {} NEW clauses ({} units, {} binary, {} other)",
-        global_new_clauses.len(),
-        global_new_clauses.iter().filter(|c| c.len() == 1).count(),
-        global_new_clauses.iter().filter(|c| c.len() == 2).count(),
-        global_new_clauses.iter().filter(|c| c.len() > 2).count()
+        "Total derived {} new clauses ({} units, {} binary, {} other)",
+        all_derived_clauses.len(),
+        all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+        all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+        all_derived_clauses.iter().filter(|c| c.len() > 2).count()
     );
 
     println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());

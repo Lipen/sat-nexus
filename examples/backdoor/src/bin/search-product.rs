@@ -1,5 +1,5 @@
-use std::ffi::CString;
-use std::io::Write;
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -9,12 +9,13 @@ use itertools::Itertools;
 use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
-use backdoor::utils::{concat_cubes, create_line_writer, determine_vars_pool, partition_tasks};
+use backdoor::utils::{concat_cubes, create_line_writer, determine_vars_pool, partition_tasks_cadical};
 
-use cadical_sys::statik::*;
+use cadical::statik::Cadical;
+use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
-use simple_sat::utils::DisplaySlice;
+use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
 // Run this example:
@@ -80,18 +81,14 @@ fn main() -> color_eyre::Result<()> {
     let mut solver = Solver::default();
     solver.init_from_file(&args.path_cnf);
 
-    let mut solver_full = unsafe { ccadical_init() };
-    unsafe {
-        for clause in solver.clauses_iter() {
-            for lit in clause.lits() {
-                ccadical_add(solver_full, lit.to_external());
-            }
-            ccadical_add(solver_full, 0);
-        }
-    }
-
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
+
+    // Initialize Cadical:
+    let solver = Cadical::new();
+    for clause in parse_dimacs(&args.path_cnf) {
+        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+    }
 
     // Set up the evolutionary algorithm:
     let options = Options {
@@ -114,6 +111,8 @@ fn main() -> color_eyre::Result<()> {
     // Global derived units:
     let mut units: Vec<Lit> = Vec::new();
 
+    let time_runs = Instant::now();
+
     for run_number in 1..=args.num_runs {
         info!("Run {} / {}", run_number, args.num_runs);
         let time_run = Instant::now();
@@ -126,8 +125,10 @@ fn main() -> color_eyre::Result<()> {
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             100,
         );
+        assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
+
         let backdoor = result.best_instance.get_variables();
-        let (hard, easy) = partition_tasks(&backdoor, &mut algorithm.solver);
+        let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
         debug!(
             "Backdoor {} has {} hard and {} easy tasks",
             DisplaySlice(&backdoor),
@@ -139,11 +140,7 @@ fn main() -> color_eyre::Result<()> {
             info!("Adding {} units to the solver", hard[0].len());
             for &lit in &hard[0] {
                 units.push(lit);
-                algorithm.solver.add_clause(&[lit]);
-                unsafe {
-                    ccadical_add(solver_full, lit.to_external());
-                    ccadical_add(solver_full, 0);
-                }
+                algorithm.solver.add_clause([lit.to_external()]);
             }
         }
 
@@ -164,66 +161,79 @@ fn main() -> color_eyre::Result<()> {
             writeln!(f, "{},before,{}", run_number, cubes_product.len())?;
         }
 
-        let c = CString::new("conflicts").expect("CString::new failed");
         let pb = ProgressBar::new(cubes_product.len() as u64);
         pb.set_style(
             ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta})")?
                 .progress_chars("#>-"),
         );
-        let mut cnt = 0;
+        // let mut cnt = 0;
         cubes_product.retain(|cube| {
             pb.inc(1);
 
-            // let res = algorithm.solver.propcheck(cube);
-            // // if res {
-            // //     // debug!("UNKNOWN {} via UP", DisplaySlice(cube));
-            // // } else {
-            // //     // debug!("UNSAT {} via UP", DisplaySlice(cube));
-            // // }
-            // res
+            // cnt += 1;
+            // if cnt > 100 {
+            //     cnt = 0;
+            //
+            //     // Restart (recreate) the solver:
+            //     // pb.println("Recreating the solver");
+            //     // TODO
+            //     // unsafe {
+            //     //     ccadical_release(solver_full);
+            //     //     solver_full = ccadical_init();
+            //     //     for clause in algorithm.solver.clauses_iter() {
+            //     //         for lit in clause.lits() {
+            //     //             ccadical_add(solver_full, lit.to_external());
+            //     //         }
+            //     //         ccadical_add(solver_full, 0);
+            //     //     }
+            //     //     for &lit in units.iter() {
+            //     //         ccadical_add(solver_full, lit.to_external());
+            //     //         ccadical_add(solver_full, 0);
+            //     //     }
+            //     // }
+            // }
 
-            cnt += 1;
-            if cnt > 100 {
-                cnt = 0;
-
-                // Restart (recreate) the solver:
-                // pb.println("Recreating the solver");
-                unsafe {
-                    ccadical_release(solver_full);
-                    solver_full = ccadical_init();
-                    for clause in algorithm.solver.clauses_iter() {
-                        for lit in clause.lits() {
-                            ccadical_add(solver_full, lit.to_external());
-                        }
-                        ccadical_add(solver_full, 0);
-                    }
-                    for &lit in units.iter() {
-                        ccadical_add(solver_full, lit.to_external());
-                        ccadical_add(solver_full, 0);
-                    }
-                }
+            // debug!("cube = {}", DisplaySlice(cube));
+            for &lit in cube.iter() {
+                algorithm.solver.assume(lit.to_external()).unwrap();
             }
-
-            unsafe {
-                // debug!("cube = {}", DisplaySlice(cube));
-                for &lit in cube.iter() {
-                    ccadical_assume(solver_full, lit.to_external());
-                }
-                ccadical_limit(solver_full, c.as_ptr(), args.num_conflicts as i32);
-                match ccadical_solve(solver_full) {
-                    0 => {
-                        // UNKNOWN
-                        true
+            algorithm.solver.limit("conflicts", args.num_conflicts as i32);
+            match algorithm.solver.solve().unwrap() {
+                SolveResponse::Interrupted => true,
+                SolveResponse::Unsat => false,
+                SolveResponse::Sat => {
+                    let model = (1..=algorithm.solver.vars())
+                        .map(|i| algorithm.solver.val(i as i32).unwrap())
+                        .collect::<Vec<_>>();
+                    {
+                        let f = File::create("model.txt").unwrap();
+                        let mut f = BufWriter::new(f);
+                        writeln!(
+                            f,
+                            "{}",
+                            model
+                                .iter()
+                                .enumerate()
+                                .map(|(i, &value)| {
+                                    let lit = (i + 1) as i32;
+                                    match value {
+                                        LitValue::True => lit,
+                                        LitValue::False => -lit,
+                                    }
+                                })
+                                .join(" ")
+                        )
+                        .unwrap();
                     }
-                    10 => {
-                        // SAT
-                        false
+                    {
+                        let f = File::create("model.cnf").unwrap();
+                        let mut f = BufWriter::new(f);
+                        for &lit in model.iter() {
+                            writeln!(f, "{} 0", <bool>::from(lit)).unwrap();
+                        }
                     }
-                    20 => {
-                        // UNSAT
-                        false
-                    }
-                    r => panic!("Unexpected result: {}", r),
+                    panic!("unexpected SAT");
+                    // false
                 }
             }
         });
@@ -243,9 +253,9 @@ fn main() -> color_eyre::Result<()> {
         info!("Finished run {} in {:.1}s", run_number, time_run.as_secs_f64());
     }
 
-    unsafe { ccadical_release(solver_full) };
+    let time_runs = time_runs.elapsed();
+    info!("Finished {} runs in {:.1}s", args.num_runs, time_runs.as_secs_f64());
 
-    let elapsed = Instant::now() - start_time;
-    println!("\nAll done in {:.3} s", elapsed.as_secs_f64());
+    println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());
     Ok(())
 }

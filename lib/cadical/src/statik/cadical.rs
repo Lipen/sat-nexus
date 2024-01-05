@@ -250,11 +250,23 @@ impl Cadical {
         Ok(())
     }
 
-    pub fn propcheck_tree(&self, vars: &[i32], limit: u64) -> u64 {
+    pub fn propcheck(&self, lits: &[i32]) -> bool {
+        unsafe {
+            ccadical_propcheck_begin(self.ptr);
+            for &lit in lits {
+                assert_ne!(lit, 0);
+                ccadical_propcheck_add(self.ptr, lit);
+            }
+            ccadical_propcheck(self.ptr)
+        }
+    }
+
+    pub fn propcheck_all_tree(&self, vars: &[i32], limit: u64) -> u64 {
         unsafe {
             ccadical_propcheck_tree_begin(self.ptr);
             for &v in vars {
-                ccadical_propcheck_tree_add_variable(self.ptr, v);
+                assert!(v > 0);
+                ccadical_propcheck_tree_add(self.ptr, v);
             }
             ccadical_propcheck_tree(self.ptr, limit)
         }

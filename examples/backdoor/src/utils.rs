@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, LineWriter};
 use std::iter::zip;
 use std::path::Path;
 
+use cadical::statik::Cadical;
 use itertools::{Itertools, MultiProduct};
 use log::debug;
 
@@ -52,12 +53,26 @@ pub fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
 }
 
 pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
+    partition_tasks_with(variables, |cube| solver.propcheck(cube))
+}
+
+pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
+    partition_tasks_with(variables, |cube| {
+        let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
+        solver.propcheck(&cube)
+    })
+}
+
+pub fn partition_tasks_with<F>(variables: &[Var], mut propcheck: F) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>)
+where
+    F: FnMut(&[Lit]) -> bool,
+{
     let mut hard = Vec::new();
     let mut easy = Vec::new();
 
     for cube in product_repeat([true, false].into_iter(), variables.len()) {
         let assumptions = zip(variables, cube).map(|(&v, s)| Lit::new(v, s)).collect_vec();
-        let result = solver.propcheck(&assumptions);
+        let result = propcheck(&assumptions);
         if result {
             hard.push(assumptions);
         } else {
@@ -130,6 +145,7 @@ pub fn mask(base: &[Lit], data: &[Lit]) -> Vec<bool> {
 pub fn determine_vars_pool(solver: &Solver, allowed_vars: &Option<String>, banned_vars: &Option<String>) -> Vec<Var> {
     // Determine the set of variables encountered in CNF:
     let mut encountered_vars = HashSet::new();
+    // TODO: note that `clauses_iter` does not contain units!
     for clause in solver.clauses_iter() {
         for lit in clause.iter() {
             encountered_vars.insert(lit.var());
@@ -172,6 +188,14 @@ pub fn create_line_writer<P: AsRef<Path>>(path: P) -> LineWriter<File> {
 
 pub fn maybe_create<P: AsRef<Path>>(path: &Option<P>) -> Option<LineWriter<File>> {
     path.as_ref().map(create_line_writer)
+}
+
+pub fn clause_to_external<'a, I>(lits: I) -> impl Iterator<Item = i32> + 'a
+where
+    I: IntoIterator<Item = &'a Lit>,
+    <I as IntoIterator>::IntoIter: 'a,
+{
+    lits.into_iter().map(|lit| lit.to_external())
 }
 
 #[cfg(test)]
