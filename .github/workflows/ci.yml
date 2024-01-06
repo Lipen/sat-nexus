@@ -15,11 +15,6 @@ on:
         required: false
         default: false
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: 0
-  RUST_BACKTRACE: 1
-
 jobs:
   build:
     name: Build and test on Linux
