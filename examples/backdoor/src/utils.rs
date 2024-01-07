@@ -5,11 +5,13 @@ use std::iter::zip;
 use std::path::Path;
 
 use cadical::statik::Cadical;
+use cadical::SolveResponse;
 use itertools::{Itertools, MultiProduct};
 use log::debug;
 
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
+use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
 pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) -> Vec<Vec<usize>> {
@@ -60,6 +62,27 @@ pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<
     partition_tasks_with(variables, |cube| {
         let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
         solver.propcheck(&cube)
+    })
+}
+
+pub fn partition_tasks_cadical_emulated(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
+    partition_tasks_with(variables, |cube| {
+        let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
+        for &lit in cube.iter() {
+            solver.assume(lit).unwrap();
+        }
+        solver.limit("conflicts", 1);
+        match solver.solve().unwrap() {
+            SolveResponse::Sat => unreachable!(),
+            SolveResponse::Unsat => {
+                // log::info!("UNSAT on cube {}", DisplaySlice(&cube));
+                false
+            }
+            SolveResponse::Interrupted => {
+                // log::info!("UNKNOWN on cube {}", DisplaySlice(&cube));
+                true
+            }
+        }
     })
 }
 

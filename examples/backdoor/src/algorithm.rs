@@ -103,6 +103,7 @@ impl Algorithm {
                 }
             }
         }
+        debug!("Already assigned {} variables", already_assigned.len());
         self.pool.retain(|v| !already_assigned.contains(v));
         drop(already_assigned);
 

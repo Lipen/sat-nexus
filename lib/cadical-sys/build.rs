@@ -88,6 +88,9 @@ fn build_static_lib() {
             cfg.debug(false);
             cfg.opt_level(3);
             cfg.define("NDEBUG", None);
+
+            // cfg.debug(true);
+            // cfg.opt_level(3);
         }
         _ => {
             build_script::cargo_warning(format!("Unsupported profile '{}'", profile));

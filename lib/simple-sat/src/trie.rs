@@ -1,4 +1,5 @@
 use std::ops::{Index, IndexMut};
+use tracing::trace;
 
 use crate::arena::{Arena, Id};
 
@@ -181,8 +182,8 @@ impl<'a> Iterator for TrieIter<'a> {
                     node = left;
                 }
             }
-            // log::info!("First leaf: {}", node);
-            // log::info!("First word: {:?}", word);
+            trace!("First leaf: {}", node);
+            trace!("First word: {:?}", word);
             self.current = Some(word);
         } else {
             let mut current = self.current.take().unwrap();

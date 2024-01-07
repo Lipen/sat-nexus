@@ -49,6 +49,10 @@ mod _pyeda {
     }
 }
 
+// TODO: derive_units
+// TODO: derive_binary
+// TODO: derive_ternary
+
 pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
     // Note: currently, derives only units and binary clauses.
 

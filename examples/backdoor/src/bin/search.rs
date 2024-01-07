@@ -9,7 +9,8 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{create_line_writer, determine_vars_pool, partition_tasks_cadical};
+use backdoor::utils::{clause_to_external, create_line_writer, determine_vars_pool, partition_tasks_cadical};
+use cadical::FixedResponse;
 
 use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
@@ -94,16 +95,20 @@ fn main() -> color_eyre::Result<()> {
     info!("args = {:?}", args);
 
     // Initialize the SAT solver:
-    let mut solver = Solver::default();
-    solver.init_from_file(&args.path_cnf);
+    let mut mysolver = Solver::default();
+    mysolver.init_from_file(&args.path_cnf);
 
     // Create the pool of variables available for EA:
-    let pool: Vec<Var> = determine_vars_pool(&solver, &args.allowed_vars, &args.banned_vars);
+    let pool: Vec<Var> = determine_vars_pool(&mysolver, &args.allowed_vars, &args.banned_vars);
 
     // Initialize Cadical:
     let solver = Cadical::new();
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+    }
+    for i in 0..solver.vars() {
+        let lit = (i + 1) as i32;
+        solver.freeze(lit).unwrap();
     }
 
     // Set up the evolutionary algorithm:
@@ -137,7 +142,8 @@ fn main() -> color_eyre::Result<()> {
     let time_runs = Instant::now();
 
     for run_number in 1..=args.num_runs {
-        info!("EA run {} / {}", run_number, args.num_runs);
+        info!("Run {} / {}", run_number, args.num_runs);
+        let time_run = Instant::now();
 
         // Run the evolutionary algorithm:
         let result = algorithm.run(
@@ -165,16 +171,19 @@ fn main() -> color_eyre::Result<()> {
             let time_derive = Instant::now();
             let derived_clauses = derive_clauses(&hard);
             let time_derive = time_derive.elapsed();
-            debug!(
-                "Total {} derived clauses in {:.1} s",
+            info!(
+                "Derived {} clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
                 derived_clauses.len(),
+                derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                derived_clauses.iter().filter(|c| c.len() > 2).count(),
                 time_derive.as_secs_f64()
             );
-            debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-            // Add the derived clauses to the solver:
+            let mut new_clauses = Vec::new();
             for mut lemma in derived_clauses {
-                lemma.sort_by_key(|lit| lit.var().inner());
+                lemma.sort_by_key(|lit| lit.inner());
                 if all_clauses.insert(lemma.clone()) {
                     if let Some(f) = &mut file_derived_clauses {
                         for lit in lemma.iter() {
@@ -182,10 +191,32 @@ fn main() -> color_eyre::Result<()> {
                         }
                         writeln!(f, "0")?;
                     }
-                    algorithm.solver.add_clause(lemma.iter().map(|lit| lit.to_external()));
+                    algorithm.solver.add_clause(clause_to_external(&lemma));
+                    new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
             }
+            algorithm.solver.limit("conflicts", 0);
+            algorithm.solver.solve()?;
+            debug!(
+                "Derived {} new clauses ({} units, {} binary, {} other)",
+                new_clauses.len(),
+                new_clauses.iter().filter(|c| c.len() == 1).count(),
+                new_clauses.iter().filter(|c| c.len() == 2).count(),
+                new_clauses.iter().filter(|c| c.len() > 2).count()
+            );
+            // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
+            info!(
+                "So far derived {} new clauses ({} units, {} binary, {} other)",
+                all_derived_clauses.len(),
+                all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                all_derived_clauses.iter().filter(|c| c.len() > 2).count()
+            );
+
+            let time_run = time_run.elapsed();
+            info!("Done run {} / {} in {:.1}s", run_number, args.num_runs, time_run.as_secs_f64());
         }
 
         // Write the best found backdoor to the output file:

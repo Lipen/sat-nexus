@@ -76,6 +76,8 @@ fn main() -> color_eyre::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,simple_sat::solver=info,backdoor::derivation=info"))
         .init();
 
+    panic!("`search-derive` binary is deprecated, use `search` with `--derive` option instead");
+
     let start_time = Instant::now();
     let args = Cli::parse();
     info!("args = {:?}", args);
