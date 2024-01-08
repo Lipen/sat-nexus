@@ -84,6 +84,8 @@ fn main() -> color_eyre::Result<()> {
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
+    solver.limit("conflicts", 0);
+    solver.solve()?;
 
     // Create and open the file with derived clauses:
     let mut file_derived_clauses = args.path_output.as_ref().map(create_line_writer);
