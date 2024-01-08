@@ -17,7 +17,6 @@ use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, dete
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
-use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
@@ -78,12 +77,8 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
-    // Initialize the SAT solver:
-    let mut mysolver = Solver::default();
-    mysolver.init_from_file(&args.path_cnf);
-
     // Create the pool of variables available for EA:
-    let pool: Vec<Var> = determine_vars_pool(&mysolver, &args.allowed_vars, &args.banned_vars);
+    let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
 
     // Initialize Cadical:
     let solver = Cadical::new();
@@ -201,7 +196,6 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_clause(clause_to_external(&lemma));
-                mysolver.add_clause(&lemma);
                 new_clauses.push(lemma.clone());
                 all_derived_clauses.push(lemma);
             }
@@ -360,7 +354,6 @@ fn main() -> color_eyre::Result<()> {
                             writeln!(f, "0").unwrap();
                         }
                         algorithm.solver.add_clause(clause_to_external(&lemma));
-                        mysolver.add_clause(&lemma);
                         all_derived_clauses.push(lemma);
                     }
                     false
@@ -430,7 +423,6 @@ fn main() -> color_eyre::Result<()> {
         //                 writeln!(f, "{} 0", lit)?;
         //             }
         //             algorithm.solver.add_clause([lit.to_external()]);
-        //             mysolver.add_clause(&[lit]);
         //             all_derived_clauses.push(vec![lit]);
         //         }
         //     }
@@ -466,7 +458,6 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_clause(clause_to_external(&lemma));
-                mysolver.add_clause(&lemma);
                 new_clauses.push(lemma.clone());
                 all_derived_clauses.push(lemma);
             }

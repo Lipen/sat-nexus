@@ -13,7 +13,6 @@ use backdoor::utils::{clause_to_external, create_line_writer, determine_vars_poo
 
 use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
-use simple_sat::solver::Solver;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
@@ -93,12 +92,8 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
-    // Initialize the SAT solver:
-    let mut mysolver = Solver::default();
-    mysolver.init_from_file(&args.path_cnf);
-
     // Create the pool of variables available for EA:
-    let pool: Vec<Var> = determine_vars_pool(&mysolver, &args.allowed_vars, &args.banned_vars);
+    let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
 
     // Initialize Cadical:
     let solver = Cadical::new();

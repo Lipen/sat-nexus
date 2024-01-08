@@ -11,7 +11,7 @@ use log::debug;
 
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
-use simple_sat::utils::DisplaySlice;
+use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
 pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) -> Vec<Vec<usize>> {
@@ -174,12 +174,11 @@ pub fn mask(base: &[Lit], data: &[Lit]) -> Vec<bool> {
     data.iter().map(|lit| !base.contains(&lit.var())).collect()
 }
 
-pub fn determine_vars_pool(solver: &Solver, allowed_vars: &Option<String>, banned_vars: &Option<String>) -> Vec<Var> {
+pub fn determine_vars_pool<P: AsRef<Path>>(path: P, allowed_vars: &Option<String>, banned_vars: &Option<String>) -> Vec<Var> {
     // Determine the set of variables encountered in CNF:
     let mut encountered_vars = HashSet::new();
-    // TODO: note that `clauses_iter` does not contain units!
-    for clause in solver.clauses_iter() {
-        for lit in clause.iter() {
+    for clause in parse_dimacs(path) {
+        for lit in clause {
             encountered_vars.insert(lit.var());
         }
     }
