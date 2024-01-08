@@ -140,8 +140,6 @@ fn main() -> color_eyre::Result<()> {
     // All derived clauses:
     let mut all_derived_clauses: Vec<Vec<Lit>> = Vec::new();
 
-    let time_runs = Instant::now();
-
     for run_number in 1..=args.num_runs {
         info!("Run {} / {}", run_number, args.num_runs);
         let time_run = Instant::now();
@@ -211,6 +209,8 @@ fn main() -> color_eyre::Result<()> {
             );
             // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
+            let time_run = time_run.elapsed();
+            info!("Done run {} / {} in {:.1}s", run_number, args.num_runs, time_run.as_secs_f64());
             info!(
                 "So far derived {} new clauses ({} units, {} binary, {} other)",
                 all_derived_clauses.len(),
@@ -218,9 +218,6 @@ fn main() -> color_eyre::Result<()> {
                 all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
                 all_derived_clauses.iter().filter(|c| c.len() > 2).count()
             );
-
-            let time_run = time_run.elapsed();
-            info!("Done run {} / {} in {:.1}s", run_number, args.num_runs, time_run.as_secs_f64());
         }
 
         // Write the best found backdoor to the output file:
@@ -254,8 +251,6 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    let time_runs = time_runs.elapsed();
-    info!("Finished {} runs in {:.1}s", args.num_runs, time_runs.as_secs_f64());
     if args.derive {
         info!(
             "Total derived {} new clauses ({} units, {} binary, {} other)",
