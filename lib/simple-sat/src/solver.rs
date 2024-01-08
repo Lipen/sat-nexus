@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use std::io::BufRead;
 use std::mem;
 use std::path::Path;
 use std::time::{Duration, Instant};
