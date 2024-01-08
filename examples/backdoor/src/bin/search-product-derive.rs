@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::iter::zip;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
@@ -13,12 +12,10 @@ use rand::prelude::*;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{
-    clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, partition_tasks_cadical, partition_tasks_cadical_emulated,
-};
+use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks};
 
 use cadical::statik::Cadical;
-use cadical::{FixedResponse, LitValue, SolveResponse};
+use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
@@ -155,12 +152,7 @@ fn main() -> color_eyre::Result<()> {
         //     hard.len(),
         //     easy.len()
         // );
-        let backdoor_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
-        let hard = algorithm.solver.propcheck_all_tree_valid(&backdoor_external);
-        let hard: Vec<Vec<Lit>> = hard
-            .into_iter()
-            .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
-            .collect();
+        let hard = get_hard_tasks(&backdoor, &algorithm.solver);
         debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len(),);
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 

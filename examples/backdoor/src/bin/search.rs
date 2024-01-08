@@ -9,8 +9,7 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{clause_to_external, create_line_writer, determine_vars_pool, partition_tasks_cadical};
-use cadical::FixedResponse;
+use backdoor::utils::{clause_to_external, create_line_writer, determine_vars_pool, get_hard_tasks};
 
 use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
@@ -165,13 +164,8 @@ fn main() -> color_eyre::Result<()> {
             //     hard.len(),
             //     easy.len()
             // );
-            let backdoor_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
-            let hard = algorithm.solver.propcheck_all_tree_valid(&backdoor_external);
-            let hard: Vec<Vec<Lit>> = hard
-                .into_iter()
-                .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
-                .collect();
-            debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len(),);
+            let hard = get_hard_tasks(&backdoor, &algorithm.solver);
+            debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
             assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
             // TODO: handle the case when `hard.len() == 1`

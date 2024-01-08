@@ -54,6 +54,15 @@ pub fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
     result
 }
 
+pub fn get_hard_tasks(variables: &[Var], solver: &Cadical) -> Vec<Vec<Lit>> {
+    let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
+    let valid = solver.propcheck_all_tree_valid(&vars_external);
+    valid
+        .into_iter()
+        .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
+        .collect()
+}
+
 pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
     partition_tasks_with(variables, |cube| solver.propcheck(cube))
 }
