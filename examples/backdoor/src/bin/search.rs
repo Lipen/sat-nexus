@@ -109,6 +109,8 @@ fn main() -> color_eyre::Result<()> {
         let lit = (i + 1) as i32;
         solver.freeze(lit).unwrap();
     }
+    solver.limit("conflicts", 0);
+    solver.solve()?;
 
     // Set up the evolutionary algorithm:
     let options = Options {
