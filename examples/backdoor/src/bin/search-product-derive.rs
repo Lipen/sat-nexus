@@ -105,6 +105,7 @@ fn main() -> color_eyre::Result<()> {
     } else {
         let mut solver = Solver::default();
         solver.init_from_file(&args.path_cnf);
+        solver.propagate();
         solver.simplify();
         SatSolver::new_simple(solver)
     };
