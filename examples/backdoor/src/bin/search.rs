@@ -9,10 +9,12 @@ use log::{debug, info};
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::{clause_to_external, create_line_writer, determine_vars_pool, get_hard_tasks};
+use backdoor::solvers::SatSolver;
+use backdoor::utils::{create_line_writer, determine_vars_pool, get_hard_tasks};
 
 use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
+use simple_sat::solver::Solver;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
@@ -82,6 +84,10 @@ struct Cli {
     #[arg(long)]
     dump_derived: bool,
 
+    /// Use Cadical.
+    #[arg(long)]
+    use_cadical: bool,
+
     /// Freeze variables.
     #[arg(long)]
     freeze: bool,
@@ -96,22 +102,29 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
+    // Initialize SAT solver:
+    let solver = if args.use_cadical {
+        let solver = Cadical::new();
+        for clause in parse_dimacs(&args.path_cnf) {
+            solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+        }
+        if args.freeze {
+            for i in 0..solver.vars() {
+                let lit = (i + 1) as i32;
+                solver.freeze(lit).unwrap();
+            }
+        }
+        solver.limit("conflicts", 0);
+        solver.solve()?;
+        SatSolver::new_cadical(solver)
+    } else {
+        let mut solver = Solver::default();
+        solver.init_from_file(&args.path_cnf);
+        SatSolver::new_simple(solver)
+    };
+
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
-
-    // Initialize Cadical:
-    let solver = Cadical::new();
-    for clause in parse_dimacs(&args.path_cnf) {
-        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
-    }
-    if args.freeze {
-        for i in 0..solver.vars() {
-            let lit = (i + 1) as i32;
-            solver.freeze(lit).unwrap();
-        }
-    }
-    solver.limit("conflicts", 0);
-    solver.solve()?;
 
     // Set up the evolutionary algorithm:
     let options = Options {
@@ -165,7 +178,7 @@ fn main() -> color_eyre::Result<()> {
             //     hard.len(),
             //     easy.len()
             // );
-            let hard = get_hard_tasks(&backdoor, &algorithm.solver);
+            let hard = get_hard_tasks(&backdoor, &mut algorithm.solver);
             debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
             assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
@@ -194,13 +207,20 @@ fn main() -> color_eyre::Result<()> {
                         }
                         writeln!(f, "0")?;
                     }
-                    algorithm.solver.add_clause(clause_to_external(&lemma));
+                    algorithm.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
             }
-            algorithm.solver.limit("conflicts", 0);
-            algorithm.solver.solve()?;
+            match &mut algorithm.solver {
+                SatSolver::SimpleSat(solver) => {
+                    solver.simplify();
+                }
+                SatSolver::Cadical(solver) => {
+                    solver.limit("conflicts", 0);
+                    solver.solve()?;
+                }
+            }
             debug!(
                 "Derived {} new clauses ({} units, {} binary, {} other)",
                 new_clauses.len(),

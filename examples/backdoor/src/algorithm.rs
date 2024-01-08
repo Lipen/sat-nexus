@@ -7,16 +7,15 @@ use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
-use cadical::statik::Cadical;
-use cadical::FixedResponse;
 use simple_sat::var::Var;
 
 use crate::fitness::Fitness;
 use crate::instance::Instance;
+use crate::solvers::SatSolver;
 
 #[derive(Debug)]
 pub struct Algorithm {
-    pub solver: Cadical,
+    pub solver: SatSolver,
     pub pool: Vec<Var>,
     pub rng: StdRng,
     pub cache: AHashMap<Vec<Var>, Fitness>,
@@ -26,7 +25,7 @@ pub struct Algorithm {
 }
 
 impl Algorithm {
-    pub fn new(solver: Cadical, pool: Vec<Var>, options: Options) -> Self {
+    pub fn new(solver: SatSolver, pool: Vec<Var>, options: Options) -> Self {
         Self {
             solver,
             pool,
@@ -85,22 +84,14 @@ impl Algorithm {
 
         info!("Running EA for {} iterations with backdoor size {}", num_iter, backdoor_size);
 
-        debug!("solver.vars() = {}", self.solver.vars());
+        debug!("solver.vars() = {}", self.solver.num_vars());
 
         // Ban already assigned variables:
         let mut already_assigned = HashSet::new();
-        for i in 0..self.solver.vars() {
+        for i in 0..self.solver.num_vars() {
             let var = Var::new(i as u32);
-            match self.solver.fixed(var.to_external() as i32).unwrap() {
-                FixedResponse::Unclear => { /* do nothing */ }
-                FixedResponse::Positive => {
-                    trace!("Variable {} already assigned True value", var);
-                    already_assigned.insert(var);
-                }
-                FixedResponse::Negative => {
-                    trace!("Variable {} already assigned False value", var);
-                    already_assigned.insert(var);
-                }
+            if self.solver.is_already_assigned(var) {
+                already_assigned.insert(var);
             }
         }
         debug!("Already assigned {} variables", already_assigned.len());
@@ -258,8 +249,7 @@ impl Algorithm {
             // Compute rho:
             // let limit = 0;
             let limit = best.map_or(0, |b| b.num_hard + 1);
-            let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
-            let num_hard = self.solver.propcheck_all_tree(&vars_external, limit);
+            let num_hard = self.solver.propcheck_all_tree(&vars, limit);
             let num_total = 1u64 << vars.len();
             let rho = 1.0 - (num_hard as f64 / num_total as f64);
 

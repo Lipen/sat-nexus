@@ -12,11 +12,13 @@ use rand::prelude::*;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
+use backdoor::solvers::SatSolver;
 use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks};
 
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
+use simple_sat::solver::{SolveResult, Solver};
 use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
@@ -67,6 +69,10 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     stagnation_limit: Option<usize>,
 
+    /// Use Cadical.
+    #[arg(long)]
+    use_cadical: bool,
+
     /// Freeze variables.
     #[arg(long)]
     freeze: bool,
@@ -81,22 +87,30 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
+    // Initialize SAT solver:
+    let solver = if args.use_cadical {
+        let solver = Cadical::new();
+        for clause in parse_dimacs(&args.path_cnf) {
+            solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+        }
+        if args.freeze {
+            for i in 0..solver.vars() {
+                let lit = (i + 1) as i32;
+                solver.freeze(lit).unwrap();
+            }
+        }
+        solver.limit("conflicts", 0);
+        solver.solve()?;
+        SatSolver::new_cadical(solver)
+    } else {
+        let mut solver = Solver::default();
+        solver.init_from_file(&args.path_cnf);
+        solver.simplify();
+        SatSolver::new_simple(solver)
+    };
+
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
-
-    // Initialize Cadical:
-    let solver = Cadical::new();
-    for clause in parse_dimacs(&args.path_cnf) {
-        solver.add_clause(clause_to_external(&clause));
-    }
-    if args.freeze {
-        for i in 0..solver.vars() {
-            let lit = (i + 1) as i32;
-            solver.freeze(lit).unwrap();
-        }
-    }
-    solver.limit("conflicts", 0);
-    solver.solve()?;
 
     // Set up the evolutionary algorithm:
     let options = Options {
@@ -153,7 +167,7 @@ fn main() -> color_eyre::Result<()> {
         //     hard.len(),
         //     easy.len()
         // );
-        let hard = get_hard_tasks(&backdoor, &algorithm.solver);
+        let hard = get_hard_tasks(&backdoor, &mut algorithm.solver);
         debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len(),);
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
@@ -201,13 +215,20 @@ fn main() -> color_eyre::Result<()> {
                     }
                     writeln!(f, "0")?;
                 }
-                algorithm.solver.add_clause(clause_to_external(&lemma));
+                algorithm.solver.add_clause(&lemma);
                 new_clauses.push(lemma.clone());
                 all_derived_clauses.push(lemma);
             }
         }
-        algorithm.solver.limit("conflicts", 0);
-        algorithm.solver.solve()?;
+        match &mut algorithm.solver {
+            SatSolver::SimpleSat(solver) => {
+                solver.simplify();
+            }
+            SatSolver::Cadical(solver) => {
+                solver.limit("conflicts", 0);
+                solver.solve()?;
+            }
+        }
         info!(
             "Derived {} new clauses ({} units, {} binary, {} other)",
             new_clauses.len(),
@@ -336,72 +357,81 @@ fn main() -> color_eyre::Result<()> {
         cubes_product.retain(|cube| {
             pb.inc(1);
 
-            for &lit in cube.iter() {
-                algorithm.solver.assume(lit.to_external()).unwrap();
-            }
-            algorithm.solver.limit("conflicts", args.num_conflicts as i32);
-            match algorithm.solver.solve().unwrap() {
-                SolveResponse::Interrupted => true,
-                SolveResponse::Unsat => {
-                    let mut lemma = Vec::new();
-                    for &lit in cube {
-                        if algorithm.solver.failed(lit.to_external()).unwrap() {
-                            lemma.push(-lit);
-                        }
+            match &mut algorithm.solver {
+                SatSolver::SimpleSat(solver) => match solver.solve_under_assumptions(cube) {
+                    SolveResult::Sat => {
+                        panic!("Unexpected SAT")
                     }
-                    // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
-                    lemma.sort_by_key(|lit| lit.inner());
-                    if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
-                        pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
-                        if let Some(f) = &mut file_derived_clauses {
-                            for lit in lemma.iter() {
-                                write!(f, "{} ", lit).unwrap();
+                    SolveResult::Unsat => false,
+                    SolveResult::Unknown => true,
+                },
+                SatSolver::Cadical(solver) => {
+                    for &lit in cube.iter() {
+                        solver.assume(lit.to_external()).unwrap();
+                    }
+                    solver.limit("conflicts", args.num_conflicts as i32);
+                    match solver.solve().unwrap() {
+                        SolveResponse::Interrupted => true,
+                        SolveResponse::Unsat => {
+                            let mut lemma = Vec::new();
+                            for &lit in cube {
+                                if solver.failed(lit.to_external()).unwrap() {
+                                    lemma.push(-lit);
+                                }
                             }
-                            writeln!(f, "0").unwrap();
+                            // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
+                            lemma.sort_by_key(|lit| lit.inner());
+                            if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
+                                pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
+                                if let Some(f) = &mut file_derived_clauses {
+                                    for lit in lemma.iter() {
+                                        write!(f, "{} ", lit).unwrap();
+                                    }
+                                    writeln!(f, "0").unwrap();
+                                }
+                                solver.add_clause(clause_to_external(&lemma));
+                                all_derived_clauses.push(lemma);
+                            }
+                            false
                         }
-                        algorithm.solver.add_clause(clause_to_external(&lemma));
-                        all_derived_clauses.push(lemma);
-                    }
-                    false
-                }
-                SolveResponse::Sat => {
-                    let model = (1..=algorithm.solver.vars())
-                        .map(|i| algorithm.solver.val(i as i32).unwrap())
-                        .collect::<Vec<_>>();
-                    {
-                        let f = File::create("model.txt").unwrap();
-                        let mut f = BufWriter::new(f);
-                        writeln!(
-                            f,
-                            "{}",
-                            model
-                                .iter()
-                                .enumerate()
-                                .map(|(i, &value)| {
+                        SolveResponse::Sat => {
+                            let model: Vec<_> = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect();
+                            {
+                                let f = File::create("model.txt").unwrap();
+                                let mut f = BufWriter::new(f);
+                                writeln!(
+                                    f,
+                                    "{}",
+                                    model
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(i, &value)| {
+                                            let lit = (i + 1) as i32;
+                                            match value {
+                                                LitValue::True => lit,
+                                                LitValue::False => -lit,
+                                            }
+                                        })
+                                        .join(" ")
+                                )
+                                .unwrap();
+                            }
+                            {
+                                let f = File::create("model.cnf").unwrap();
+                                let mut f = BufWriter::new(f);
+                                for (i, &value) in model.iter().enumerate() {
                                     let lit = (i + 1) as i32;
-                                    match value {
+                                    let lit = match value {
                                         LitValue::True => lit,
                                         LitValue::False => -lit,
-                                    }
-                                })
-                                .join(" ")
-                        )
-                        .unwrap();
-                    }
-                    {
-                        let f = File::create("model.cnf").unwrap();
-                        let mut f = BufWriter::new(f);
-                        for (i, &value) in model.iter().enumerate() {
-                            let lit = (i + 1) as i32;
-                            let lit = match value {
-                                LitValue::True => lit,
-                                LitValue::False => -lit,
-                            };
-                            writeln!(f, "{} 0", lit).unwrap();
+                                    };
+                                    writeln!(f, "{} 0", lit).unwrap();
+                                }
+                            }
+                            panic!("unexpected SAT");
+                            // false
                         }
                     }
-                    panic!("unexpected SAT");
-                    // false
                 }
             }
         });
@@ -463,13 +493,20 @@ fn main() -> color_eyre::Result<()> {
                     }
                     writeln!(f, "0")?;
                 }
-                algorithm.solver.add_clause(clause_to_external(&lemma));
+                algorithm.solver.add_clause(&lemma);
                 new_clauses.push(lemma.clone());
                 all_derived_clauses.push(lemma);
             }
         }
-        algorithm.solver.limit("conflicts", 0);
-        algorithm.solver.solve()?;
+        match &mut algorithm.solver {
+            SatSolver::SimpleSat(solver) => {
+                solver.simplify();
+            }
+            SatSolver::Cadical(solver) => {
+                solver.limit("conflicts", 0);
+                solver.solve()?;
+            }
+        }
         info!(
             "Derived {} new clauses ({} units, {} binary, {} other)",
             new_clauses.len(),

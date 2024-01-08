@@ -9,6 +9,7 @@ use cadical::SolveResponse;
 use itertools::{Itertools, MultiProduct};
 use log::debug;
 
+use crate::solvers::SatSolver;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
@@ -54,13 +55,21 @@ pub fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
     result
 }
 
-pub fn get_hard_tasks(variables: &[Var], solver: &Cadical) -> Vec<Vec<Lit>> {
-    let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
-    let valid = solver.propcheck_all_tree_valid(&vars_external);
-    valid
-        .into_iter()
-        .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
-        .collect()
+pub fn get_hard_tasks(variables: &[Var], solver: &mut SatSolver) -> Vec<Vec<Lit>> {
+    match solver {
+        SatSolver::SimpleSat(solver) => {
+            let (hard, _easy) = partition_tasks(variables, solver);
+            hard
+        }
+        SatSolver::Cadical(solver) => {
+            let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
+            let valid = solver.propcheck_all_tree_valid(&vars_external);
+            valid
+                .into_iter()
+                .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
+                .collect()
+        }
+    }
 }
 
 pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
