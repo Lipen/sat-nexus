@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{c_int, CString};
 use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
@@ -272,12 +272,34 @@ impl Cadical {
 
     pub fn propcheck_all_tree(&self, vars: &[i32], limit: u64) -> u64 {
         unsafe {
-            ccadical_propcheck_tree_begin(self.ptr);
+            ccadical_propcheck_all_tree_begin(self.ptr);
             for &v in vars {
                 assert!(v > 0);
-                ccadical_propcheck_tree_add(self.ptr, v);
+                ccadical_propcheck_all_tree_add(self.ptr, v);
             }
-            ccadical_propcheck_tree(self.ptr, limit)
+            ccadical_propcheck_all_tree(self.ptr, limit)
+        }
+    }
+
+    pub fn propcheck_all_tree_valid(&self, vars: &[i32]) -> Vec<Vec<i32>> {
+        unsafe {
+            ccadical_propcheck_all_tree_begin(self.ptr);
+            for &v in vars {
+                assert!(v > 0);
+                ccadical_propcheck_all_tree_add(self.ptr, v);
+            }
+            let res = ccadical_propcheck_all_tree_save_valid(self.ptr);
+            let valid_length = ccadical_propcheck_all_tree_get_valid_length(self.ptr);
+            assert_eq!(valid_length as u64, res);
+            let mut valid = Vec::with_capacity(valid_length);
+            for i in 0..valid_length {
+                let cube_length = ccadical_propcheck_all_tree_get_cube_length(self.ptr, i);
+                let mut cube: Vec<c_int> = Vec::with_capacity(cube_length);
+                ccadical_propcheck_all_tree_get_cube(self.ptr, i, cube.as_mut_ptr());
+                cube.set_len(cube_length);
+                valid.push(cube);
+            }
+            valid
         }
     }
 }

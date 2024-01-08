@@ -158,13 +158,21 @@ fn main() -> color_eyre::Result<()> {
         // Derive clauses from the best backdoor:
         if args.derive {
             let backdoor = result.best_instance.get_variables();
-            let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
-            debug!(
-                "Backdoor {} has {} hard and {} easy tasks",
-                DisplaySlice(&backdoor),
-                hard.len(),
-                easy.len()
-            );
+            // let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
+            // debug!(
+            //     "Backdoor {} has {} hard and {} easy tasks",
+            //     DisplaySlice(&backdoor),
+            //     hard.len(),
+            //     easy.len()
+            // );
+            let backdoor_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
+            let hard = algorithm.solver.propcheck_all_tree_valid(&backdoor_external);
+            let hard: Vec<Vec<Lit>> = hard
+                .into_iter()
+                .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
+                .collect();
+            debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len(),);
+            assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
             // TODO: handle the case when `hard.len() == 1`
 

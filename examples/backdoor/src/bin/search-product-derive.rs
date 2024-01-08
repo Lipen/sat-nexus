@@ -43,10 +43,6 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     num_iters: usize,
 
-    /// Number of runs.
-    #[arg(long, value_name = "INT")]
-    num_runs: usize,
-
     /// Number of conflicts.
     #[arg(long, value_name = "INT", default_value_t = 1000)]
     num_conflicts: usize,
@@ -136,7 +132,9 @@ fn main() -> color_eyre::Result<()> {
 
     let time_runs = Instant::now();
 
-    for run_number in 1.. {
+    let mut run_number = 0;
+    loop {
+        run_number += 1;
         info!("Run {}", run_number);
         let time_run = Instant::now();
 
@@ -150,26 +148,21 @@ fn main() -> color_eyre::Result<()> {
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
-        // ---------------
-        // {
-        //     let vars_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
-        //     let num_hard_repeat = algorithm.solver.propcheck_all_tree(&vars_external, 0);
-        //     assert_eq!(result.best_fitness.num_hard, num_hard_repeat);
-        // }
-        // ---------------
-        let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
-        debug!(
-            "Backdoor {} has {} hard and {} easy tasks",
-            DisplaySlice(&backdoor),
-            hard.len(),
-            easy.len()
-        );
-        // ---------------------------------------------
-        // let mut out_learnts = Vec::new();
-        // let num_hard_my = mysolver.propcheck_all_tree(&backdoor, 0, false, &mut out_learnts);
-        // assert_eq!(result.best_fitness.num_hard, num_hard_my);
-        // ---------------------------------------------
-        assert_eq!(result.best_fitness.num_hard, hard.len() as u64);
+        // let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
+        // debug!(
+        //     "Backdoor {} has {} hard and {} easy tasks",
+        //     DisplaySlice(&backdoor),
+        //     hard.len(),
+        //     easy.len()
+        // );
+        let backdoor_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
+        let hard = algorithm.solver.propcheck_all_tree_valid(&backdoor_external);
+        let hard: Vec<Vec<Lit>> = hard
+            .into_iter()
+            .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
+            .collect();
+        debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len(),);
+        assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
         if hard.is_empty() {
             info!("No more cubes to solve after {} runs", run_number);
@@ -497,6 +490,8 @@ fn main() -> color_eyre::Result<()> {
         );
         // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
+        let time_run = time_run.elapsed();
+        info!("Done run {} in {:.1}s", run_number, time_run.as_secs_f64());
         info!(
             "So far derived {} new clauses ({} units, {} binary, {} other)",
             all_derived_clauses.len(),
@@ -504,13 +499,10 @@ fn main() -> color_eyre::Result<()> {
             all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
             all_derived_clauses.iter().filter(|c| c.len() > 2).count()
         );
-
-        let time_run = time_run.elapsed();
-        info!("Done run {} in {:.1}s", run_number, time_run.as_secs_f64());
     }
 
     let time_runs = time_runs.elapsed();
-    info!("Finished {} runs in {:.1}s", args.num_runs, time_runs.as_secs_f64());
+    info!("Finished {} runs in {:.1}s", run_number, time_runs.as_secs_f64());
     info!(
         "Total derived {} new clauses ({} units, {} binary, {} other)",
         all_derived_clauses.len(),
