@@ -24,8 +24,7 @@ use crate::options::Options;
 use crate::options::DEFAULT_OPTIONS;
 use crate::restart::RestartStrategy;
 use crate::trie::Trie;
-use crate::utils::parse_dimacs_clause;
-use crate::utils::read_maybe_gzip;
+use crate::utils::parse_dimacs;
 use crate::utils::DisplaySlice;
 use crate::var::Var;
 use crate::var_order::VarOrder;
@@ -178,20 +177,10 @@ impl Solver {
     where
         P: AsRef<Path>,
     {
-        debug!("Initializing solver from '{}'", path.as_ref().display());
-        for line in read_maybe_gzip(path).unwrap().lines().flatten() {
-            if line.is_empty() {
-                debug!("Skipping empty line");
-                continue;
-            } else if line.starts_with('c') {
-                debug!("Skipping comment '{}'", line);
-                continue;
-            } else if line.starts_with('p') {
-                debug!("Skipping header '{}'", line);
-                continue;
-            }
-            let lits = parse_dimacs_clause(&line);
-            self.add_clause(&lits);
+        let path = path.as_ref();
+        debug!("Initializing solver from '{}'", path.display());
+        for clause in parse_dimacs(path) {
+            self.add_clause(&clause);
         }
     }
 
