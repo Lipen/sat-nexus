@@ -46,8 +46,8 @@ where
             trace!("Skipping header '{}'", line);
             None
         } else {
-            let lits = parse_dimacs_clause(&line);
-            Some(lits)
+            let clause = parse_dimacs_clause(&line);
+            Some(clause)
         }
     })
 }
