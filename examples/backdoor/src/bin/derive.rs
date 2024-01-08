@@ -1,25 +1,23 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::iter::zip;
 use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
-use itertools::{iproduct, Itertools};
+use itertools::{iproduct, zip_eq, Itertools};
 use log::{debug, info};
 use rand::prelude::*;
 
 use backdoor::derivation::derive_clauses;
 use backdoor::utils::parse_multiple_comma_separated_intervals;
 use backdoor::utils::parse_multiple_comma_separated_intervals_from;
-use backdoor::utils::{concat_cubes, create_line_writer, partition_tasks, partition_tasks_cadical};
+use backdoor::utils::{concat_cubes, create_line_writer, partition_tasks_cadical};
 
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
-use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
@@ -73,7 +71,7 @@ fn main() -> color_eyre::Result<()> {
     } else {
         parse_multiple_comma_separated_intervals(&args.backdoors)
     };
-    let mut backdoors: Vec<Vec<Var>> = backdoors
+    let backdoors: Vec<Vec<Var>> = backdoors
         .into_iter()
         .map(|bd| bd.into_iter().map(|i| Var::from_external(i as u32)).collect())
         .collect();
@@ -82,88 +80,6 @@ fn main() -> color_eyre::Result<()> {
         debug!("backdoor = {}", DisplaySlice(backdoor));
     }
 
-    if backdoors.len() == 1 {
-        one_backdoor(backdoors.remove(0), &args)?;
-    } else {
-        many_backdoors(backdoors, &args)?;
-    }
-
-    let total_time = start_time.elapsed();
-    println!("\nAll done in {:.3} s", total_time.as_secs_f64());
-    Ok(())
-}
-
-fn one_backdoor(backdoor: Vec<Var>, args: &Cli) -> color_eyre::Result<()> {
-    // Initialize the SAT solver:
-    let mut solver = Solver::default();
-    solver.init_from_file(&args.path_cnf);
-
-    // Create and open the file with derived clauses:
-    let mut file_derived_clauses = args.path_output.as_ref().map(create_line_writer);
-
-    // Create and open the file with results:
-    let mut file_results = args.path_results.as_ref().map(create_line_writer);
-
-    let (hard, easy) = partition_tasks(&backdoor, &mut solver);
-    info!(
-        "Backdoor {} has {} hard and {} easy tasks",
-        DisplaySlice(&backdoor),
-        hard.len(),
-        easy.len()
-    );
-
-    // debug!("{} easy tasks:", easy.len());
-    // for cube in easy.iter() {
-    //     debug!("  {}", DisplaySlice(cube));
-    // }
-    // debug!("{} hard tasks:", hard.len());
-    // for cube in hard.iter() {
-    //     debug!("  {}", DisplaySlice(cube));
-    // }
-
-    info!("Deriving clauses for {} cubes...", hard.len());
-    let time_derive = Instant::now();
-    let derived_clauses = derive_clauses(&hard);
-    let time_derive = time_derive.elapsed();
-    info!(
-        "Total {} derived clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
-        derived_clauses.len(),
-        derived_clauses.iter().filter(|c| c.len() == 1).count(),
-        derived_clauses.iter().filter(|c| c.len() == 2).count(),
-        derived_clauses.iter().filter(|c| c.len() > 2).count(),
-        time_derive.as_secs_f64()
-    );
-
-    // Dump derived clauses:
-    if let Some(f) = &mut file_derived_clauses {
-        for lemma in derived_clauses.iter() {
-            for lit in lemma.iter() {
-                write!(f, "{} ", lit)?;
-            }
-            writeln!(f, "0")?;
-        }
-    }
-
-    if let Some(f) = &mut file_results {
-        writeln!(f, "hard,easy,derived,units,binary,other,time")?;
-        writeln!(
-            f,
-            "{},{},{},{},{},{},{}",
-            hard.len(),
-            easy.len(),
-            derived_clauses.len(),
-            derived_clauses.iter().filter(|c| c.len() == 1).count(),
-            derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            derived_clauses.iter().filter(|c| c.len() > 2).count(),
-            time_derive.as_secs_f64()
-        )?;
-    }
-
-    Ok(())
-}
-
-fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()> {
-    // Initialize Cadical:
     let solver = Cadical::new();
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
@@ -196,11 +112,10 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
     // Random number generator:
     let mut rng = StdRng::seed_from_u64(42);
 
-    let time_runs = Instant::now();
-
     for (run_number, backdoor) in backdoors.iter().enumerate() {
         let run_number = run_number + 1; // 1-based
         info!("Run {} / {}", run_number, backdoors.len());
+        let time_run = Instant::now();
 
         let (hard, easy) = partition_tasks_cadical(backdoor, &solver);
         debug!(
@@ -337,7 +252,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
 
         cubes_product = trie
             .iter()
-            .map(|cube| zip(cube, backdoor).map(|(b, &v)| Lit::new(v, b)).collect())
+            .map(|cube| zip_eq(cube, &variables).map(|(b, &v)| Lit::new(v, b)).collect())
             .collect();
         drop(trie);
         // info!("Filtering {} hard cubes via trie...", trie.num_leaves());
@@ -483,6 +398,8 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         );
         // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
+        let time_run = time_run.elapsed();
+        info!("Done run {} / {} in {:.1}s", run_number, backdoors.len(), time_run.as_secs_f64());
         info!(
             "So far derived {} new clauses ({} units, {} binary, {} other)",
             all_derived_clauses.len(),
@@ -492,8 +409,6 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         )
     }
 
-    let time_runs = time_runs.elapsed();
-    info!("Finished {} runs in {:.1}s", backdoors.len(), time_runs.as_secs_f64());
     info!(
         "Total derived {} new clauses ({} units, {} binary, {} other)",
         all_derived_clauses.len(),
@@ -502,5 +417,7 @@ fn many_backdoors(backdoors: Vec<Vec<Var>>, args: &Cli) -> color_eyre::Result<()
         all_derived_clauses.iter().filter(|c| c.len() > 2).count()
     );
 
+    let total_time = start_time.elapsed();
+    println!("\nAll done in {:.3} s", total_time.as_secs_f64());
     Ok(())
 }

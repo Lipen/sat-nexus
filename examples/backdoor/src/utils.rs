@@ -12,7 +12,7 @@ use log::debug;
 use crate::solvers::SatSolver;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
-use simple_sat::utils::{parse_dimacs, DisplaySlice};
+use simple_sat::utils::parse_dimacs;
 use simple_sat::var::Var;
 
 pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) -> Vec<Vec<usize>> {
