@@ -81,6 +81,10 @@ struct Cli {
     /// Do dump derived clauses after each EA run?
     #[arg(long)]
     dump_derived: bool,
+
+    /// Freeze variables.
+    #[arg(long)]
+    freeze: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -100,9 +104,11 @@ fn main() -> color_eyre::Result<()> {
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
-    for i in 0..solver.vars() {
-        let lit = (i + 1) as i32;
-        solver.freeze(lit).unwrap();
+    if args.freeze {
+        for i in 0..solver.vars() {
+            let lit = (i + 1) as i32;
+            solver.freeze(lit).unwrap();
+        }
     }
     solver.limit("conflicts", 0);
     solver.solve()?;
