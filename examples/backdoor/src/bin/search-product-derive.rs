@@ -223,6 +223,7 @@ fn main() -> color_eyre::Result<()> {
         }
         match &mut algorithm.solver {
             SatSolver::SimpleSat(solver) => {
+                solver.propagate();
                 solver.simplify();
             }
             SatSolver::Cadical(solver) => {
@@ -501,6 +502,7 @@ fn main() -> color_eyre::Result<()> {
         }
         match &mut algorithm.solver {
             SatSolver::SimpleSat(solver) => {
+                solver.propagate();
                 solver.simplify();
             }
             SatSolver::Cadical(solver) => {
