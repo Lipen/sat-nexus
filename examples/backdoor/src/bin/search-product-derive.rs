@@ -24,7 +24,7 @@ use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
 // Run this example:
-// cargo run -p backdoor --bin search-product-derive -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 10000 --num-runs 1000
+// cargo run -p backdoor --bin search-product-derive -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 10000
 
 #[derive(Parser, Debug)]
 #[command(author, version)]
