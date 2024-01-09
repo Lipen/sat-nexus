@@ -55,6 +55,10 @@ struct Cli {
     /// Maximum product size.
     #[arg(long = "max-size", value_name = "INT", default_value_t = 10_000_000)]
     max_product_size: usize,
+
+    /// Do not freeze variables.
+    #[arg(long)]
+    no_freeze: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -66,6 +70,7 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     debug!("args = {:?}", args);
 
+    // Read backdoors:
     let backdoors = if args.backdoors.starts_with('@') {
         parse_multiple_comma_separated_intervals_from(&args.backdoors[1..])
     } else {
@@ -80,9 +85,16 @@ fn main() -> color_eyre::Result<()> {
         debug!("backdoor = {}", DisplaySlice(backdoor));
     }
 
+    // Initialize Cadical:
     let solver = Cadical::new();
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+    }
+    if !args.no_freeze {
+        for i in 0..solver.vars() {
+            let lit = (i + 1) as i32;
+            solver.freeze(lit).unwrap();
+        }
     }
     solver.limit("conflicts", 0);
     solver.solve()?;
