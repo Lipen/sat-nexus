@@ -343,12 +343,77 @@ fn main() -> color_eyre::Result<()> {
         drop(trie);
         cubes_product = valid;
         info!(
-            "Filtered down to {} cubes in {:.1}s",
+            "Filtered down to {} cubes via trie in {:.1}s",
             cubes_product.len(),
             time_filter.elapsed().as_secs_f64()
         );
         if let Some(f) = &mut file_results {
             writeln!(f, "{},propagate,{}", run_number, cubes_product.len())?;
+        }
+
+        // Derivation after trie-filtering:
+        {
+            info!("Deriving clauses for {} cubes...", cubes_product.len());
+            let time_derive = Instant::now();
+            let derived_clauses = derive_clauses(&cubes_product);
+            let time_derive = time_derive.elapsed();
+            info!(
+                "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",
+                derived_clauses.len(),
+                derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                derived_clauses.iter().filter(|c| c.len() > 2).count(),
+                cubes_product.len(),
+                time_derive.as_secs_f64()
+            );
+            // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
+            let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
+            for mut lemma in derived_clauses {
+                lemma.sort_by_key(|lit| lit.inner());
+                if all_clauses.insert(lemma.clone()) {
+                    if let Some(f) = &mut file_derived_clauses {
+                        for lit in lemma.iter() {
+                            write!(f, "{} ", lit)?;
+                        }
+                        writeln!(f, "0")?;
+                    }
+                    algorithm.solver.add_clause(&lemma);
+                    mysolver.add_clause(&lemma);
+                    new_clauses.push(lemma.clone());
+                    all_derived_clauses.push(lemma);
+                }
+            }
+            match &mut algorithm.solver {
+                SatSolver::SimpleSat(_) => unreachable!(),
+                SatSolver::Cadical(solver) => {
+                    solver.limit("conflicts", 0);
+                    solver.solve()?;
+                }
+            }
+            mysolver.propagate();
+            mysolver.simplify();
+            info!(
+                "Derived {} new clauses ({} units, {} binary, {} other)",
+                new_clauses.len(),
+                new_clauses.iter().filter(|c| c.len() == 1).count(),
+                new_clauses.iter().filter(|c| c.len() == 2).count(),
+                new_clauses.iter().filter(|c| c.len() > 2).count()
+            );
+            // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            info!(
+                "So far derived {} new clauses ({} units, {} binary, {} other)",
+                all_derived_clauses.len(),
+                all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                all_derived_clauses.iter().filter(|c| c.len() > 2).count()
+            );
+        }
+
+        if cubes_product.len() > 10_000 {
+            info!("Too many cubes in the product, restarting");
+            cubes_product = vec![vec![]];
+            continue;
         }
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
@@ -357,7 +422,7 @@ fn main() -> color_eyre::Result<()> {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => solver.conflicts(),
         };
-        let num_conflicts_budget = 10_000;
+        let num_conflicts_budget = 100_000;
         let num_conflicts_limit = num_conflicts_before + num_conflicts_budget;
         info!("conflicts budget: {}", num_conflicts_budget);
         info!("conflicts before: {}", num_conflicts_before);
@@ -465,7 +530,7 @@ fn main() -> color_eyre::Result<()> {
         pb.finish_and_clear();
         let time_filter = time_filter.elapsed();
         info!(
-            "Filtered down to {} cubes in {:.1}s",
+            "Filtered down to {} cubes via solver in {:.1}s",
             cubes_product.len(),
             time_filter.as_secs_f64()
         );
@@ -503,66 +568,66 @@ fn main() -> color_eyre::Result<()> {
             continue;
         }
 
-        // ------------------------------------------------------------------------
+        // Derivation after solver-filtering:
+        {
+            info!("Deriving clauses for {} cubes...", cubes_product.len());
+            let time_derive = Instant::now();
+            let derived_clauses = derive_clauses(&cubes_product);
+            let time_derive = time_derive.elapsed();
+            info!(
+                "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",
+                derived_clauses.len(),
+                derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                derived_clauses.iter().filter(|c| c.len() > 2).count(),
+                cubes_product.len(),
+                time_derive.as_secs_f64()
+            );
+            // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        info!("Deriving clauses for {} cubes...", cubes_product.len());
-        let time_derive = Instant::now();
-        let derived_clauses = derive_clauses(&cubes_product);
-        let time_derive = time_derive.elapsed();
-        info!(
-            "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",
-            derived_clauses.len(),
-            derived_clauses.iter().filter(|c| c.len() == 1).count(),
-            derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            derived_clauses.iter().filter(|c| c.len() > 2).count(),
-            cubes_product.len(),
-            time_derive.as_secs_f64()
-        );
-        // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-
-        let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
-        for mut lemma in derived_clauses {
-            lemma.sort_by_key(|lit| lit.inner());
-            if all_clauses.insert(lemma.clone()) {
-                if let Some(f) = &mut file_derived_clauses {
-                    for lit in lemma.iter() {
-                        write!(f, "{} ", lit)?;
+            let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
+            for mut lemma in derived_clauses {
+                lemma.sort_by_key(|lit| lit.inner());
+                if all_clauses.insert(lemma.clone()) {
+                    if let Some(f) = &mut file_derived_clauses {
+                        for lit in lemma.iter() {
+                            write!(f, "{} ", lit)?;
+                        }
+                        writeln!(f, "0")?;
                     }
-                    writeln!(f, "0")?;
+                    algorithm.solver.add_clause(&lemma);
+                    mysolver.add_clause(&lemma);
+                    new_clauses.push(lemma.clone());
+                    all_derived_clauses.push(lemma);
                 }
-                algorithm.solver.add_clause(&lemma);
-                mysolver.add_clause(&lemma);
-                new_clauses.push(lemma.clone());
-                all_derived_clauses.push(lemma);
             }
-        }
-        match &mut algorithm.solver {
-            SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => {
-                solver.limit("conflicts", 0);
-                solver.solve()?;
+            match &mut algorithm.solver {
+                SatSolver::SimpleSat(_) => unreachable!(),
+                SatSolver::Cadical(solver) => {
+                    solver.limit("conflicts", 0);
+                    solver.solve()?;
+                }
             }
+            mysolver.propagate();
+            mysolver.simplify();
+            info!(
+                "Derived {} new clauses ({} units, {} binary, {} other)",
+                new_clauses.len(),
+                new_clauses.iter().filter(|c| c.len() == 1).count(),
+                new_clauses.iter().filter(|c| c.len() == 2).count(),
+                new_clauses.iter().filter(|c| c.len() > 2).count()
+            );
+            // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            info!(
+                "So far derived {} new clauses ({} units, {} binary, {} other)",
+                all_derived_clauses.len(),
+                all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                all_derived_clauses.iter().filter(|c| c.len() > 2).count()
+            );
         }
-        mysolver.propagate();
-        mysolver.simplify();
-        info!(
-            "Derived {} new clauses ({} units, {} binary, {} other)",
-            new_clauses.len(),
-            new_clauses.iter().filter(|c| c.len() == 1).count(),
-            new_clauses.iter().filter(|c| c.len() == 2).count(),
-            new_clauses.iter().filter(|c| c.len() > 2).count()
-        );
-        // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
-        info!(
-            "So far derived {} new clauses ({} units, {} binary, {} other)",
-            all_derived_clauses.len(),
-            all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
-            all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
-            all_derived_clauses.iter().filter(|c| c.len() > 2).count()
-        );
-
-        let num_conflicts_budget = 10_000;
+        let num_conflicts_budget = 100_000;
         info!("Just solving with {} conflicts budget...", num_conflicts_budget);
         match &mut algorithm.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
