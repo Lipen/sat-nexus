@@ -72,6 +72,22 @@ struct Cli {
     /// Do not freeze variables.
     #[arg(long)]
     no_freeze: bool,
+
+    /// Initial budget (in conflicts) for filtering.
+    #[arg(long, value_name = "INT", default_value_t = 100_000)]
+    budget_filter: u64,
+
+    /// Multiplicative factor for filtering budget.
+    #[arg(long, value_name = "FLOAT", default_value_t = 1.0)]
+    factor_budget_filter: f64,
+
+    /// Initial budget (in conflicts) for solving.
+    #[arg(long, value_name = "INT", default_value_t = 10_000)]
+    budget_solve: u64,
+
+    /// Multiplicative factor for solving budget.
+    #[arg(long, value_name = "FLOAT", default_value_t = 1.1)]
+    factor_budget_solve: f64,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -137,6 +153,9 @@ fn main() -> color_eyre::Result<()> {
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
     let time_runs = Instant::now();
+
+    let mut budget_filter = args.budget_filter;
+    let mut budget_solve = args.budget_solve;
 
     let mut run_number = 0;
     loop {
@@ -418,15 +437,12 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
         let time_filter = Instant::now();
-        let num_conflicts_before = match &mut algorithm.solver {
+        let num_conflicts = match &mut algorithm.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => solver.conflicts(),
+            SatSolver::Cadical(solver) => solver.conflicts() as u64,
         };
-        let num_conflicts_budget = 100_000;
-        let num_conflicts_limit = num_conflicts_before + num_conflicts_budget;
-        info!("conflicts budget: {}", num_conflicts_budget);
-        info!("conflicts before: {}", num_conflicts_before);
-        info!("conflicts limit: {}", num_conflicts_limit);
+        info!("conflicts budget: {}", budget_filter);
+        let num_conflicts_limit = num_conflicts + budget_filter;
         let mut in_budget = true;
         let pb = ProgressBar::new(cubes_product.len() as u64);
         pb.set_style(
@@ -443,7 +459,7 @@ fn main() -> color_eyre::Result<()> {
 
             let num_conflicts = match &mut algorithm.solver {
                 SatSolver::SimpleSat(_) => unreachable!(),
-                SatSolver::Cadical(solver) => solver.conflicts(),
+                SatSolver::Cadical(solver) => solver.conflicts() as u64,
             };
             if num_conflicts > num_conflicts_limit {
                 info!("Budget exhausted");
@@ -538,6 +554,15 @@ fn main() -> color_eyre::Result<()> {
             writeln!(f, "{},limited,{}", run_number, cubes_product.len())?;
         }
 
+        let num_conflicts = match &mut algorithm.solver {
+            SatSolver::SimpleSat(_) => unreachable!(),
+            SatSolver::Cadical(solver) => solver.conflicts() as u64,
+        };
+        // Update the budget for filtering:
+        if num_conflicts > num_conflicts_limit {
+            budget_filter = (budget_filter as f64 * args.factor_budget_filter) as u64;
+        }
+
         if cubes_product.is_empty() {
             info!("No more cubes to solve after {} runs", run_number);
             break;
@@ -627,12 +652,11 @@ fn main() -> color_eyre::Result<()> {
             );
         }
 
-        let num_conflicts_budget = 100_000;
-        info!("Just solving with {} conflicts budget...", num_conflicts_budget);
+        info!("Just solving with {} conflicts budget...", budget_solve);
         match &mut algorithm.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
-                solver.limit("conflicts", num_conflicts_budget);
+                solver.limit("conflicts", budget_solve as i32);
                 match solver.solve().unwrap() {
                     SolveResponse::Interrupted => {
                         info!("UNKNOWN");
@@ -649,6 +673,8 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
         }
+        // Update the budget for solving:
+        budget_solve = (budget_solve as f64 * args.factor_budget_solve) as u64;
 
         let time_run = time_run.elapsed();
         info!("Done run {} in {:.1}s", run_number, time_run.as_secs_f64());
