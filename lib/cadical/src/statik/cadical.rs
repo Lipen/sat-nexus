@@ -238,6 +238,10 @@ impl Cadical {
         }
     }
 
+    pub fn is_active(&self, lit: i32) -> bool {
+        unsafe { ccadical_active_lit(self.ptr, lit) }
+    }
+
     pub fn frozen(&self, lit: i32) -> Result<bool> {
         ensure!(lit != 0, ZeroLiteralSnafu);
         match unsafe { ccadical_frozen(self.ptr, lit) } {

@@ -87,16 +87,16 @@ impl Algorithm {
         debug!("solver.vars() = {}", self.solver.num_vars());
 
         // Ban already assigned variables:
-        let mut already_assigned = HashSet::new();
+        let mut active_vars = HashSet::new();
         for i in 0..self.solver.num_vars() {
             let var = Var::new(i as u32);
-            if self.solver.is_already_assigned(var) {
-                already_assigned.insert(var);
+            if self.solver.is_active(var) {
+                active_vars.insert(var);
             }
         }
-        debug!("Already assigned {} variables", already_assigned.len());
-        self.pool.retain(|v| !already_assigned.contains(v));
-        drop(already_assigned);
+        debug!("Active variables: {} / {}", active_vars.len(), self.solver.num_vars());
+        self.pool.retain(|v| active_vars.contains(v));
+        drop(active_vars);
 
         debug!("pool.len() = {}", self.pool.len());
 
