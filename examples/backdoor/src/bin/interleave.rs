@@ -657,17 +657,20 @@ fn main() -> color_eyre::Result<()> {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
                 solver.limit("conflicts", budget_solve as i32);
-                match solver.solve().unwrap() {
+                let time_solve = Instant::now();
+                let res = solver.solve().unwrap();
+                let time_solve = time_solve.elapsed();
+                match res {
                     SolveResponse::Interrupted => {
-                        info!("UNKNOWN");
+                        info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
                         // do nothing
                     }
                     SolveResponse::Unsat => {
-                        info!("UNSAT");
+                        info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
                         break;
                     }
                     SolveResponse::Sat => {
-                        info!("SAT");
+                        info!("SAT in {:.1} s", time_solve.as_secs_f64());
                         // TODO: dump model
                     }
                 }
