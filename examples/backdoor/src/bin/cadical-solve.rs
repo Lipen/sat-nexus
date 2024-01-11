@@ -1,6 +1,8 @@
 use std::time::Instant;
 
-use cadical::statik::*;
+use backdoor::utils::clause_to_external;
+
+use cadical::statik::Cadical;
 use simple_sat::utils::parse_dimacs;
 
 // Run:
@@ -18,7 +20,7 @@ fn main() {
     let mut num_clauses = 0;
     for clause in parse_dimacs(path) {
         num_clauses += 1;
-        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+        solver.add_clause(clause_to_external(&clause));
     }
     println!("num_clauses = {}", num_clauses);
     println!("solver.vars() = {}", solver.vars());
