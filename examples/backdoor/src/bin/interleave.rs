@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -8,6 +8,7 @@ use clap::Parser;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, zip_eq, Itertools};
 use log::{debug, info};
+use ordered_float::OrderedFloat;
 use rand::prelude::*;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
@@ -73,6 +74,10 @@ struct Cli {
     #[arg(long)]
     no_freeze: bool,
 
+    /// Maximum product size.
+    #[arg(long, value_name = "INT", default_value_t = 10_000)]
+    max_product: usize,
+
     /// Initial budget (in conflicts) for filtering.
     #[arg(long, value_name = "INT", default_value_t = 100_000)]
     budget_filter: u64,
@@ -88,6 +93,10 @@ struct Cli {
     /// Multiplicative factor for solving budget.
     #[arg(long, value_name = "FLOAT", default_value_t = 1.1)]
     factor_budget_solve: f64,
+
+    /// Use novel sorted filtering method.
+    #[arg(long)]
+    use_sorted_filtering: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -305,7 +314,7 @@ fn main() -> color_eyre::Result<()> {
                 .progress_chars("#>-"),
         );
         pb.set_message("trie construction");
-        let mut num_normal_cubes = 0u64;
+        let mut num_normal_cubes: u64 = 0;
         // let mut normal_cubes = Vec::new();
         'out: for (old, new) in iproduct!(cubes_product, hard).progress_with(pb) {
             let cube = concat_cubes(old, new);
@@ -429,8 +438,12 @@ fn main() -> color_eyre::Result<()> {
             );
         }
 
-        if cubes_product.len() > 10_000 {
-            info!("Too many cubes in the product, restarting");
+        if cubes_product.len() > args.max_product {
+            info!(
+                "Too many cubes in the product ({} > {}), restarting",
+                cubes_product.len(),
+                args.max_product
+            );
             cubes_product = vec![vec![]];
             continue;
         }
@@ -444,106 +457,178 @@ fn main() -> color_eyre::Result<()> {
         info!("conflicts budget: {}", budget_filter);
         let num_conflicts_limit = num_conflicts + budget_filter;
         let mut in_budget = true;
-        let pb = ProgressBar::new(cubes_product.len() as u64);
-        pb.set_style(
-            ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
-                .progress_chars("#>-"),
-        );
-        pb.set_message("filtering");
-        cubes_product.retain(|cube| {
-            pb.inc(1);
 
-            if !in_budget {
-                return true;
-            }
+        if args.use_sorted_filtering {
+            let n = variables.len();
+            let mut indet_cubes = Vec::new();
 
-            let num_conflicts = match &mut algorithm.solver {
-                SatSolver::SimpleSat(_) => unreachable!(),
-                SatSolver::Cadical(solver) => solver.conflicts() as u64,
-            };
-            if num_conflicts > num_conflicts_limit {
-                info!("Budget exhausted");
-                in_budget = false;
-            }
+            while !cubes_product.is_empty() {
+                let num_conflicts = match &mut algorithm.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => solver.conflicts() as u64,
+                };
+                if num_conflicts > num_conflicts_limit {
+                    info!("Budget exhausted");
+                    in_budget = false;
+                    break;
+                }
 
-            if !in_budget {
-                return true;
-            }
-
-            match &mut algorithm.solver {
-                SatSolver::SimpleSat(_) => unreachable!(),
-                SatSolver::Cadical(solver) => {
-                    for &lit in cube.iter() {
-                        solver.assume(lit.to_external()).unwrap();
+                let mut degree: HashMap<(Lit, Lit), u64> = HashMap::new();
+                for (i, j) in (0..n).tuple_combinations() {
+                    for cube in cubes_product.iter() {
+                        assert_eq!(cube.len(), n);
+                        assert_eq!(cube[i].var(), variables[i]);
+                        assert_eq!(cube[j].var(), variables[j]);
+                        let a = cube[i];
+                        let b = cube[j];
+                        *degree.entry((a, b)).or_insert(0) += 1;
                     }
-                    solver.limit("conflicts", args.num_conflicts as i32);
-                    match solver.solve().unwrap() {
-                        SolveResponse::Interrupted => true,
-                        SolveResponse::Unsat => {
-                            let mut lemma = Vec::new();
-                            for &lit in cube {
-                                if solver.failed(lit.to_external()).unwrap() {
-                                    lemma.push(-lit);
-                                }
-                            }
-                            // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
-                            lemma.sort_by_key(|lit| lit.inner());
-                            if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
-                                pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
-                                if let Some(f) = &mut file_derived_clauses {
-                                    for lit in lemma.iter() {
-                                        write!(f, "{} ", lit).unwrap();
-                                    }
-                                    writeln!(f, "0").unwrap();
-                                }
-                                solver.add_clause(clause_to_external(&lemma));
-                                mysolver.add_clause(&lemma);
-                                all_derived_clauses.push(lemma);
-                            }
-                            false
+                }
+                // for (&a, &b) in variables.iter().tuple_combinations() {
+                //     let pp = degree.get(&(Lit::new(a, false), Lit::new(b, false))).copied().unwrap_or(0);
+                //     let pn = degree.get(&(Lit::new(a, false), Lit::new(b,  true))).copied().unwrap_or(0);
+                //     let np = degree.get(&(Lit::new(a, true), Lit::new(b, false))).copied().unwrap_or(0);
+                //     let nn = degree.get(&(Lit::new(a, true), Lit::new(b, true))).copied().unwrap_or(0);
+                //     debug!("degrees for {}-{}: {} / {} / {} / {}", a, b, pp, pn, np, nn);
+                // }
+
+                let compute_cube_score = |cube: &Vec<Lit>| {
+                    let mut score: f64 = 0.0;
+                    for (&a, &b) in cube.iter().tuple_combinations() {
+                        score += 1.0 / degree.get(&(a, b)).copied().unwrap_or(0) as f64;
+                    }
+                    score
+                };
+
+                cubes_product.sort_by_key(|cube| OrderedFloat(compute_cube_score(cube)));
+                let best_cube = cubes_product.pop().unwrap();
+                debug!("Max score ({}) cube: {}", compute_cube_score(&best_cube), DisplaySlice(&best_cube));
+
+                match &mut algorithm.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => {
+                        for &lit in best_cube.iter() {
+                            solver.assume(lit.to_external()).unwrap();
                         }
-                        SolveResponse::Sat => {
-                            let model: Vec<_> = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect();
-                            {
-                                let f = File::create("model.txt").unwrap();
-                                let mut f = BufWriter::new(f);
-                                writeln!(
-                                    f,
-                                    "{}",
-                                    model
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, &value)| {
-                                            let lit = (i + 1) as i32;
-                                            match value {
-                                                LitValue::True => lit,
-                                                LitValue::False => -lit,
-                                            }
-                                        })
-                                        .join(" ")
-                                )
-                                .unwrap();
+                        solver.limit("conflicts", args.num_conflicts as i32);
+                        // info!("Solving {}...", DisplaySlice(&best_cube));
+                        match solver.solve().unwrap() {
+                            SolveResponse::Unsat => {
+                                debug!("UNSAT for {}", DisplaySlice(&best_cube));
                             }
-                            {
-                                let f = File::create("model.cnf").unwrap();
-                                let mut f = BufWriter::new(f);
-                                for (i, &value) in model.iter().enumerate() {
-                                    let lit = (i + 1) as i32;
-                                    let lit = match value {
-                                        LitValue::True => lit,
-                                        LitValue::False => -lit,
-                                    };
-                                    writeln!(f, "{} 0", lit).unwrap();
-                                }
+                            SolveResponse::Interrupted => {
+                                debug!("INDET for {}", DisplaySlice(&best_cube));
+                                indet_cubes.push(best_cube);
                             }
-                            panic!("unexpected SAT");
-                            // false
+                            SolveResponse::Sat => panic!("Unexpected SAT"),
                         }
                     }
                 }
             }
-        });
-        pb.finish_and_clear();
+
+            cubes_product.extend(indet_cubes);
+        } else {
+            let pb = ProgressBar::new(cubes_product.len() as u64);
+            pb.set_style(
+                ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
+                    .progress_chars("#>-"),
+            );
+            pb.set_message("filtering");
+            cubes_product.retain(|cube| {
+                pb.inc(1);
+
+                if !in_budget {
+                    return true;
+                }
+
+                let num_conflicts = match &mut algorithm.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => solver.conflicts() as u64,
+                };
+                if num_conflicts > num_conflicts_limit {
+                    info!("Budget exhausted");
+                    in_budget = false;
+                }
+
+                if !in_budget {
+                    return true;
+                }
+
+                match &mut algorithm.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => {
+                        for &lit in cube.iter() {
+                            solver.assume(lit.to_external()).unwrap();
+                        }
+                        solver.limit("conflicts", args.num_conflicts as i32);
+                        match solver.solve().unwrap() {
+                            SolveResponse::Interrupted => true,
+                            SolveResponse::Unsat => {
+                                let mut lemma = Vec::new();
+                                for &lit in cube {
+                                    if solver.failed(lit.to_external()).unwrap() {
+                                        lemma.push(-lit);
+                                    }
+                                }
+                                // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
+                                lemma.sort_by_key(|lit| lit.inner());
+                                if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
+                                    pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
+                                    if let Some(f) = &mut file_derived_clauses {
+                                        for lit in lemma.iter() {
+                                            write!(f, "{} ", lit).unwrap();
+                                        }
+                                        writeln!(f, "0").unwrap();
+                                    }
+                                    solver.add_clause(clause_to_external(&lemma));
+                                    mysolver.add_clause(&lemma);
+                                    all_derived_clauses.push(lemma);
+                                }
+                                false
+                            }
+                            SolveResponse::Sat => {
+                                let model: Vec<_> = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect();
+                                {
+                                    let f = File::create("model.txt").unwrap();
+                                    let mut f = BufWriter::new(f);
+                                    writeln!(
+                                        f,
+                                        "{}",
+                                        model
+                                            .iter()
+                                            .enumerate()
+                                            .map(|(i, &value)| {
+                                                let lit = (i + 1) as i32;
+                                                match value {
+                                                    LitValue::True => lit,
+                                                    LitValue::False => -lit,
+                                                }
+                                            })
+                                            .join(" ")
+                                    )
+                                    .unwrap();
+                                }
+                                {
+                                    let f = File::create("model.cnf").unwrap();
+                                    let mut f = BufWriter::new(f);
+                                    for (i, &value) in model.iter().enumerate() {
+                                        let lit = (i + 1) as i32;
+                                        let lit = match value {
+                                            LitValue::True => lit,
+                                            LitValue::False => -lit,
+                                        };
+                                        writeln!(f, "{} 0", lit).unwrap();
+                                    }
+                                }
+                                panic!("unexpected SAT");
+                                // false
+                            }
+                        }
+                    }
+                }
+            });
+            pb.finish_and_clear();
+        }
         let time_filter = time_filter.elapsed();
         info!(
             "Filtered down to {} cubes via solver in {:.1}s",

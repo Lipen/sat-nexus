@@ -26,3 +26,4 @@ env_logger = "0.10.0"
 csv = "1.2.2"
 indicatif = { version = "0.17.7", features = ["rayon"] }
 ffi-utils = { path = "../../lib/ffi-utils" }
+ordered-float = "4.2.0"
