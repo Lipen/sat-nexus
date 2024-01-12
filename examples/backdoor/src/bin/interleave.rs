@@ -450,6 +450,7 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
         let time_filter = Instant::now();
+        let num_cubes_before_filtering = cubes_product.len();
         let num_conflicts = match &mut algorithm.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => solver.conflicts() as u64,
@@ -462,7 +463,27 @@ fn main() -> color_eyre::Result<()> {
             let n = variables.len();
             let mut indet_cubes: Vec<Vec<Lit>> = Vec::new();
 
+            let mut degree: HashMap<(Lit, Lit), u64> = HashMap::new();
+            for (i, j) in (0..n).tuple_combinations() {
+                for cube in cubes_product.iter() {
+                    assert_eq!(cube.len(), n);
+                    assert_eq!(cube[i].var(), variables[i]);
+                    assert_eq!(cube[j].var(), variables[j]);
+                    let a = cube[i];
+                    let b = cube[j];
+                    *degree.entry((a, b)).or_insert(0) += 1;
+                }
+            }
+            // for (&a, &b) in variables.iter().tuple_combinations() {
+            //     let pp = degree.get(&(Lit::new(a, false), Lit::new(b, false))).copied().unwrap_or(0);
+            //     let pn = degree.get(&(Lit::new(a, false), Lit::new(b,  true))).copied().unwrap_or(0);
+            //     let np = degree.get(&(Lit::new(a, true), Lit::new(b, false))).copied().unwrap_or(0);
+            //     let nn = degree.get(&(Lit::new(a, true), Lit::new(b, true))).copied().unwrap_or(0);
+            //     debug!("degrees for {}-{}: {} / {} / {} / {}", a, b, pp, pn, np, nn);
+            // }
+
             while !cubes_product.is_empty() {
+                let time_prepare = Instant::now();
                 let num_conflicts = match &mut algorithm.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => solver.conflicts() as u64,
@@ -471,31 +492,6 @@ fn main() -> color_eyre::Result<()> {
                     info!("Budget exhausted");
                     in_budget = false;
                     break;
-                }
-
-                let mut degree: HashMap<(Lit, Lit), u64> = HashMap::new();
-                for (i, j) in (0..n).tuple_combinations() {
-                    for cube in cubes_product.iter() {
-                        assert_eq!(cube.len(), n);
-                        assert_eq!(cube[i].var(), variables[i]);
-                        assert_eq!(cube[j].var(), variables[j]);
-                        let a = cube[i];
-                        let b = cube[j];
-                        *degree.entry((a, b)).or_insert(0) += 1;
-                    }
-                }
-                // for (&a, &b) in variables.iter().tuple_combinations() {
-                //     let pp = degree.get(&(Lit::new(a, false), Lit::new(b, false))).copied().unwrap_or(0);
-                //     let pn = degree.get(&(Lit::new(a, false), Lit::new(b,  true))).copied().unwrap_or(0);
-                //     let np = degree.get(&(Lit::new(a, true), Lit::new(b, false))).copied().unwrap_or(0);
-                //     let nn = degree.get(&(Lit::new(a, true), Lit::new(b, true))).copied().unwrap_or(0);
-                //     debug!("degrees for {}-{}: {} / {} / {} / {}", a, b, pp, pn, np, nn);
-                // }
-
-                for cube in indet_cubes.iter() {
-                    for (&a, &b) in cube.iter().tuple_combinations() {
-                        degree.insert((a, b), 0);
-                    }
                 }
 
                 let compute_cube_score = |cube: &Vec<Lit>| {
@@ -514,8 +510,15 @@ fn main() -> color_eyre::Result<()> {
                 let best_cube = cubes_product.pop().unwrap();
                 let best_cube_score = compute_cube_score(&best_cube);
 
+                let time_prepare = time_prepare.elapsed();
+
                 if best_cube_score > 0.0 {
-                    debug!("Max score ({}) cube: {}", best_cube_score, DisplaySlice(&best_cube));
+                    debug!(
+                        "Max score ({}) cube in {:.1}s: {}",
+                        best_cube_score,
+                        time_prepare.as_secs_f64(),
+                        DisplaySlice(&best_cube)
+                    );
                     match &mut algorithm.solver {
                         SatSolver::SimpleSat(_) => unreachable!(),
                         SatSolver::Cadical(solver) => {
@@ -524,12 +527,31 @@ fn main() -> color_eyre::Result<()> {
                             }
                             solver.limit("conflicts", args.num_conflicts as i32);
                             // info!("Solving {}...", DisplaySlice(&best_cube));
+                            let time_solve = Instant::now();
                             match solver.solve().unwrap() {
                                 SolveResponse::Unsat => {
-                                    debug!("UNSAT for {}", DisplaySlice(&best_cube));
+                                    debug!(
+                                        "UNSAT in {:.1}s for {}",
+                                        time_solve.elapsed().as_secs_f64(),
+                                        DisplaySlice(&best_cube)
+                                    );
+                                    for (&a, &b) in best_cube.iter().tuple_combinations() {
+                                        // *degree.entry((a, b)).or_insert(0) -= 1;
+                                        *degree.get_mut(&(a, b)).unwrap() -= 1;
+                                        if degree[&(a, b)] == 0 {
+                                            debug!("should derive {}", DisplaySlice(&[-a, -b]));
+                                        }
+                                    }
                                 }
                                 SolveResponse::Interrupted => {
-                                    debug!("INDET for {}", DisplaySlice(&best_cube));
+                                    debug!(
+                                        "INDET in {:.1}s for {}",
+                                        time_solve.elapsed().as_secs_f64(),
+                                        DisplaySlice(&best_cube)
+                                    );
+                                    for (&a, &b) in best_cube.iter().tuple_combinations() {
+                                        degree.insert((a, b), 0);
+                                    }
                                     indet_cubes.push(best_cube);
                                 }
                                 SolveResponse::Sat => panic!("Unexpected SAT"),
@@ -543,6 +565,7 @@ fn main() -> color_eyre::Result<()> {
 
             cubes_product.extend(indet_cubes);
         } else {
+            cubes_product.shuffle(&mut algorithm.rng);
             let pb = ProgressBar::new(cubes_product.len() as u64);
             pb.set_style(
                 ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
@@ -646,7 +669,8 @@ fn main() -> color_eyre::Result<()> {
         }
         let time_filter = time_filter.elapsed();
         info!(
-            "Filtered down to {} cubes via solver in {:.1}s",
+            "Filtered {} down to {} cubes via solver in {:.1}s",
+            num_cubes_before_filtering,
             cubes_product.len(),
             time_filter.as_secs_f64()
         );
