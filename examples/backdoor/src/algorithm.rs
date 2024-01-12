@@ -214,7 +214,7 @@ impl Algorithm {
         self.cache.clear();
 
         let elapsed_time = start_time.elapsed();
-        info!("Run done in {:.3} s", elapsed_time.as_secs_f64());
+        info!("EA done in {:.3} s", elapsed_time.as_secs_f64());
 
         RunResult {
             best_iteration,
