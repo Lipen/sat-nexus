@@ -88,9 +88,9 @@ struct Cli {
     #[arg(long)]
     use_cadical: bool,
 
-    /// Freeze variables.
+    /// Do not freeze variables.
     #[arg(long)]
-    freeze: bool,
+    no_freeze: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -108,7 +108,7 @@ fn main() -> color_eyre::Result<()> {
         for clause in parse_dimacs(&args.path_cnf) {
             solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
         }
-        if args.freeze {
+        if !args.no_freeze {
             for i in 0..solver.vars() {
                 let lit = (i + 1) as i32;
                 solver.freeze(lit).unwrap();
