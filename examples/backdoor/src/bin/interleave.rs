@@ -506,8 +506,8 @@ fn main() -> color_eyre::Result<()> {
                     score
                 };
 
-                cubes_product.sort_by_key(|cube| OrderedFloat(compute_cube_score(cube)));
-                let best_cube = cubes_product.pop().unwrap();
+                let pos = cubes_product.iter().position_max_by_key(|cube| compute_cube_score(cube)).unwrap();
+                let best_cube = cubes_product.swap_remove(pos);
                 let best_cube_score = compute_cube_score(&best_cube);
 
                 let time_prepare = time_prepare.elapsed();
