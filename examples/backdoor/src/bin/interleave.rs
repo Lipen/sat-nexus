@@ -500,8 +500,9 @@ fn main() -> color_eyre::Result<()> {
                         if let Some(&d) = degree.get(&(a, b)) {
                             if d != 0 {
                                 score += 1.0 / d as f64;
-                            } else if d == 1 {
-                                score += 50.0;
+                                if d == 1 {
+                                    score += 50.0;
+                                }
                             }
                         }
                     }
