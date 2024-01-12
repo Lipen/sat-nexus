@@ -460,7 +460,7 @@ fn main() -> color_eyre::Result<()> {
 
         if args.use_sorted_filtering {
             let n = variables.len();
-            let mut indet_cubes = Vec::new();
+            let mut indet_cubes: Vec<Vec<Lit>> = Vec::new();
 
             while !cubes_product.is_empty() {
                 let num_conflicts = match &mut algorithm.solver {
@@ -492,37 +492,52 @@ fn main() -> color_eyre::Result<()> {
                 //     debug!("degrees for {}-{}: {} / {} / {} / {}", a, b, pp, pn, np, nn);
                 // }
 
+                for cube in indet_cubes.iter() {
+                    for (&a, &b) in cube.iter().tuple_combinations() {
+                        degree.insert((a, b), 0);
+                    }
+                }
+
                 let compute_cube_score = |cube: &Vec<Lit>| {
                     let mut score: f64 = 0.0;
                     for (&a, &b) in cube.iter().tuple_combinations() {
-                        score += 1.0 / degree.get(&(a, b)).copied().unwrap_or(0) as f64;
+                        if let Some(&d) = degree.get(&(a, b)) {
+                            if d != 0 {
+                                score += 1.0 / d as f64;
+                            }
+                        }
                     }
                     score
                 };
 
                 cubes_product.sort_by_key(|cube| OrderedFloat(compute_cube_score(cube)));
                 let best_cube = cubes_product.pop().unwrap();
-                debug!("Max score ({}) cube: {}", compute_cube_score(&best_cube), DisplaySlice(&best_cube));
+                let best_cube_score = compute_cube_score(&best_cube);
 
-                match &mut algorithm.solver {
-                    SatSolver::SimpleSat(_) => unreachable!(),
-                    SatSolver::Cadical(solver) => {
-                        for &lit in best_cube.iter() {
-                            solver.assume(lit.to_external()).unwrap();
-                        }
-                        solver.limit("conflicts", args.num_conflicts as i32);
-                        // info!("Solving {}...", DisplaySlice(&best_cube));
-                        match solver.solve().unwrap() {
-                            SolveResponse::Unsat => {
-                                debug!("UNSAT for {}", DisplaySlice(&best_cube));
+                if best_cube_score > 0.0 {
+                    debug!("Max score ({}) cube: {}", best_cube_score, DisplaySlice(&best_cube));
+                    match &mut algorithm.solver {
+                        SatSolver::SimpleSat(_) => unreachable!(),
+                        SatSolver::Cadical(solver) => {
+                            for &lit in best_cube.iter() {
+                                solver.assume(lit.to_external()).unwrap();
                             }
-                            SolveResponse::Interrupted => {
-                                debug!("INDET for {}", DisplaySlice(&best_cube));
-                                indet_cubes.push(best_cube);
+                            solver.limit("conflicts", args.num_conflicts as i32);
+                            // info!("Solving {}...", DisplaySlice(&best_cube));
+                            match solver.solve().unwrap() {
+                                SolveResponse::Unsat => {
+                                    debug!("UNSAT for {}", DisplaySlice(&best_cube));
+                                }
+                                SolveResponse::Interrupted => {
+                                    debug!("INDET for {}", DisplaySlice(&best_cube));
+                                    indet_cubes.push(best_cube);
+                                }
+                                SolveResponse::Sat => panic!("Unexpected SAT"),
                             }
-                            SolveResponse::Sat => panic!("Unexpected SAT"),
                         }
                     }
+                } else {
+                    indet_cubes.push(best_cube);
                 }
             }
 
