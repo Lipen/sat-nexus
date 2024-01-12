@@ -41,7 +41,7 @@ impl SatSolver {
 
     pub fn is_active(&self, var: Var) -> bool {
         match self {
-            SatSolver::SimpleSat(solver) => solver.value_var(var) != LBool::Undef,
+            SatSolver::SimpleSat(solver) => solver.value_var(var) == LBool::Undef,
             SatSolver::Cadical(solver) => {
                 let lit = var.to_external() as i32;
                 solver.is_active(lit)
