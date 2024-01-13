@@ -592,6 +592,7 @@ fn main() -> color_eyre::Result<()> {
                     }
                 } else {
                     indet_cubes.push(best_cube);
+                    break;
                 }
             }
 
