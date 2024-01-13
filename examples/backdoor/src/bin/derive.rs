@@ -59,6 +59,10 @@ struct Cli {
     /// Do not freeze variables.
     #[arg(long)]
     no_freeze: bool,
+
+    /// Derive ternary clauses.
+    #[arg(long)]
+    derive_ternary: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -166,7 +170,7 @@ fn main() -> color_eyre::Result<()> {
         //         debug!("cube = {}", DisplaySlice(&cube));
         //     }
         // }
-        let derived_clauses = derive_clauses(&hard);
+        let derived_clauses = derive_clauses(&hard, args.derive_ternary);
         info!(
             "Derived {} clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
             derived_clauses.len(),
@@ -376,7 +380,7 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Deriving clauses for {} cubes...", cubes_product.len());
         let time_derive = Instant::now();
-        let derived_clauses = derive_clauses(&cubes_product);
+        let derived_clauses = derive_clauses(&cubes_product, args.derive_ternary);
         let time_derive = time_derive.elapsed();
         info!(
             "Derived {} clauses ({} units, {} binary, {} other) in {:.1}s",

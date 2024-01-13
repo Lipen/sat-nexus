@@ -74,6 +74,10 @@ struct Cli {
     #[arg(long)]
     no_freeze: bool,
 
+    /// Derive ternary clauses.
+    #[arg(long)]
+    derive_ternary: bool,
+
     /// Maximum product size.
     #[arg(long, value_name = "INT", default_value_t = 10_000)]
     max_product: usize,
@@ -247,7 +251,7 @@ fn main() -> color_eyre::Result<()> {
 
         info!("Deriving clauses for {} cubes...", hard.len());
         let time_derive = Instant::now();
-        let derived_clauses = derive_clauses(&hard);
+        let derived_clauses = derive_clauses(&hard, args.derive_ternary);
         let time_derive = time_derive.elapsed();
         info!(
             "Derived {} clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
@@ -405,7 +409,7 @@ fn main() -> color_eyre::Result<()> {
         {
             info!("Deriving clauses for {} cubes...", cubes_product.len());
             let time_derive = Instant::now();
-            let derived_clauses = derive_clauses(&cubes_product);
+            let derived_clauses = derive_clauses(&cubes_product, args.derive_ternary);
             let time_derive = time_derive.elapsed();
             info!(
                 "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",
@@ -749,7 +753,7 @@ fn main() -> color_eyre::Result<()> {
         {
             info!("Deriving clauses for {} cubes...", cubes_product.len());
             let time_derive = Instant::now();
-            let derived_clauses = derive_clauses(&cubes_product);
+            let derived_clauses = derive_clauses(&cubes_product, args.derive_ternary);
             let time_derive = time_derive.elapsed();
             info!(
                 "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",

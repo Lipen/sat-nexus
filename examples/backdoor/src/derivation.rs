@@ -53,7 +53,7 @@ mod _pyeda {
 // TODO: derive_binary
 // TODO: derive_ternary
 
-pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
+pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> {
     // Note: currently, derives only units and binary clauses.
 
     trace!("derive_clauses(hard = [{}])", hard.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -181,7 +181,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>]) -> Vec<Vec<Lit>> {
         }
     }
 
-    if false {
+    if derive_ternary {
         let pb = ProgressBar::new((n * (n - 1) * (n - 2) / 6) as u64);
         pb.set_style(
             ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")

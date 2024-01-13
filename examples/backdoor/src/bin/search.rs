@@ -91,6 +91,10 @@ struct Cli {
     /// Do not freeze variables.
     #[arg(long)]
     no_freeze: bool,
+
+    /// Derive ternary clauses.
+    #[arg(long)]
+    derive_ternary: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -187,7 +191,7 @@ fn main() -> color_eyre::Result<()> {
             // TODO: handle the case when `hard.len() == 1`
 
             let time_derive = Instant::now();
-            let derived_clauses = derive_clauses(&hard);
+            let derived_clauses = derive_clauses(&hard, args.derive_ternary);
             let time_derive = time_derive.elapsed();
             info!(
                 "Derived {} clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
