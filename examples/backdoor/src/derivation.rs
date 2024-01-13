@@ -80,7 +80,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
     pb.set_message("units");
     // count_unit :: {i: (pos,neg)}
     let count_unit: HashMap<usize, (u64, u64)> = (0..n)
-        .into_par_iter()
+        // .into_par_iter()
         .progress_with(pb)
         .map(|i| {
             let mut pos = 0;
@@ -124,7 +124,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
     // count_binary :: {(i,j): (++, +-, -+, --)}
     let count_binary: HashMap<(usize, usize), (u64, u64, u64, u64)> = (0..n)
         .tuple_combinations()
-        .par_bridge()
+        // .par_bridge()
         .progress_with(pb)
         .filter_map(|(i, j)| {
             // Skip units:
@@ -192,7 +192,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
         // count_ternary :: {(i,j,k): (+++, ++-, +-+, +--, -++, -+-, --+, ---)}
         let count_ternary: HashMap<(usize, usize, usize), (u64, u64, u64, u64, u64, u64, u64, u64)> = (0..n)
             .tuple_combinations()
-            .par_bridge()
+            // .par_bridge()
             .progress_with(pb)
             .filter_map(|(i, j, k)| {
                 // Skip units:
