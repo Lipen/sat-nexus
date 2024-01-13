@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
+// use indicatif::ParallelProgressIterator;
+use indicatif::ProgressIterator;
 use itertools::Itertools;
 use log::{debug, trace};
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
