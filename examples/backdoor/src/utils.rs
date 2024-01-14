@@ -208,13 +208,18 @@ pub fn filter_cubes(
             break;
         }
 
-        // debug!("Asserting...");
-        // let time_asserting = Instant::now();
-        // for cube in cubes_product.iter() {
-        //     assert!((compute_cube_score(cube, &degree) - cube_score[cube]).abs() <= 1e-6, "compute = {}, score = {}", compute_cube_score(cube, &degree), cube_score[cube]);
-        // }
-        // let time_asserting = time_asserting . elapsed();
-        // debug!("Asserted in {:.1}s", time_asserting.as_secs_f64());
+        debug!("Asserting...");
+        let time_asserting = Instant::now();
+        for cube in cubes_product.iter() {
+            assert!(
+                (compute_cube_score(cube, &degree) - cube_score[cube]).abs() <= 1e-6,
+                "compute = {}, score = {}",
+                compute_cube_score(cube, &degree),
+                cube_score[cube]
+            );
+        }
+        let time_asserting = time_asserting.elapsed();
+        debug!("Asserted in {:.1}s", time_asserting.as_secs_f64());
 
         let pos = cubes_product
             .iter()
@@ -250,7 +255,6 @@ pub fn filter_cubes(
                             );
                             let time_rescore = Instant::now();
                             for (&a, &b) in best_cube.iter().tuple_combinations() {
-                                let time_rescore_sub = Instant::now();
                                 let d = degree[&(a, b)];
                                 if d == 0 {
                                     continue;
@@ -277,10 +281,8 @@ pub fn filter_cubes(
                                         }
                                     }
                                 }
-                                // neighbors.get_mut(&(a, b)).unwrap().remove(&best_cube);
                                 neighbors.get_mut(&(a, b)).unwrap().retain(|c| Rc::ptr_eq(c, &best_cube));
-                                let time_rescore_sub = time_rescore_sub.elapsed();
-                                // debug!("Rescored for {}-{} in {:.1}s", a, b, time_rescore_sub.as_secs_f64());
+                                // neighbors.get_mut(&(a, b)).unwrap().retain(|c| c == &best_cube);
                             }
                             let time_rescore = time_rescore.elapsed();
                             debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
