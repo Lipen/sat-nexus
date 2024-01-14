@@ -281,8 +281,8 @@ pub fn filter_cubes(
                                         }
                                     }
                                 }
-                                neighbors.get_mut(&(a, b)).unwrap().retain(|c| Rc::ptr_eq(c, &best_cube));
-                                // neighbors.get_mut(&(a, b)).unwrap().retain(|c| c == &best_cube);
+                                neighbors.get_mut(&(a, b)).unwrap().retain(|c| !Rc::ptr_eq(c, &best_cube));
+                                // neighbors.get_mut(&(a, b)).unwrap().retain(|c| c != &best_cube);
                             }
                             let time_rescore = time_rescore.elapsed();
                             debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
