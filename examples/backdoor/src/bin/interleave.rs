@@ -79,11 +79,11 @@ struct Cli {
     derive_ternary: bool,
 
     /// Maximum product size.
-    #[arg(long, value_name = "INT", default_value_t = 10_000)]
+    #[arg(long, value_name = "INT")]
     max_product: usize,
 
     /// Initial budget (in conflicts) for filtering.
-    #[arg(long, value_name = "INT", default_value_t = 100_000)]
+    #[arg(long, value_name = "INT")]
     budget_filter: u64,
 
     /// Multiplicative factor for filtering budget.
@@ -91,7 +91,7 @@ struct Cli {
     factor_budget_filter: f64,
 
     /// Initial budget (in conflicts) for solving.
-    #[arg(long, value_name = "INT", default_value_t = 10_000)]
+    #[arg(long, value_name = "INT")]
     budget_solve: u64,
 
     /// Multiplicative factor for solving budget.
