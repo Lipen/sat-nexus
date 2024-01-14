@@ -466,7 +466,16 @@ fn main() -> color_eyre::Result<()> {
         let mut in_budget = true;
 
         if args.use_sorted_filtering {
-            cubes_product = filter_cubes(cubes_product, args.num_conflicts as u64, num_conflicts_limit, &mut algorithm.solver);
+            cubes_product = filter_cubes(
+                cubes_product,
+                args.num_conflicts as u64,
+                num_conflicts_limit,
+                &mut algorithm.solver,
+                &mut mysolver,
+                &mut all_clauses,
+                &mut all_derived_clauses,
+                &mut file_derived_clauses,
+            );
         } else {
             cubes_product.shuffle(&mut algorithm.rng);
             let pb = ProgressBar::new(cubes_product.len() as u64);
