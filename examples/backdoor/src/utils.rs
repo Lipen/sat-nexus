@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, LineWriter};
 use std::iter::zip;
 use std::path::Path;
+use std::rc::Rc;
 use std::time::Instant;
 
 use cadical::statik::Cadical;
@@ -127,14 +128,13 @@ where
 }
 
 pub fn filter_cubes(
-    mut cubes_product: Vec<Vec<Lit>>,
-    num_conflicts: u64,
+    cubes_product: Vec<Vec<Lit>>,
+    num_conflicts_budget: u64,
     num_conflicts_limit: u64,
     solver: &mut SatSolver,
 ) -> Vec<Vec<Lit>> {
     let variables = cubes_product[0].iter().map(|lit| lit.var()).sorted().collect_vec();
     let n = variables.len();
-    let mut indet_cubes: Vec<Vec<Lit>> = Vec::new();
 
     debug!("Computing degree...");
     let time_compute_degree = Instant::now();
@@ -159,12 +159,15 @@ pub fn filter_cubes(
     let time_compute_degree = time_compute_degree.elapsed();
     debug!("Computed degree in {:.1}s", time_compute_degree.as_secs_f64());
 
+    let mut cubes_product: Vec<Rc<Vec<Lit>>> = cubes_product.into_iter().map(|cube| Rc::new(cube)).collect();
+    let mut indet_cubes: Vec<Vec<Lit>> = Vec::new();
+
     debug!("Computing neighbors...");
     let time_compute_neighbors = Instant::now();
-    let mut neighbors: HashMap<(Lit, Lit), HashSet<Vec<Lit>>> = HashMap::new();
+    let mut neighbors: HashMap<(Lit, Lit), Vec<Rc<Vec<Lit>>>> = HashMap::new();
     for cube in cubes_product.iter() {
         for (&a, &b) in cube.iter().tuple_combinations() {
-            neighbors.entry((a, b)).or_default().insert(cube.clone());
+            neighbors.entry((a, b)).or_default().push(Rc::clone(cube));
         }
     }
     let time_compute_neighbors = time_compute_neighbors.elapsed();
@@ -187,9 +190,9 @@ pub fn filter_cubes(
 
     debug!("Computing cube score...");
     let time_cube_scores = Instant::now();
-    let mut cube_score: HashMap<Vec<Lit>, f64> = HashMap::new();
+    let mut cube_score: HashMap<Rc<Vec<Lit>>, f64> = HashMap::new();
     for cube in cubes_product.iter() {
-        cube_score.insert(cube.clone(), compute_cube_score(cube, &degree));
+        cube_score.insert(Rc::clone(cube), compute_cube_score(cube, &degree));
     }
     let time_cube_scores = time_cube_scores.elapsed();
     debug!("Computed cube scores in {:.1}s", time_cube_scores.as_secs_f64());
@@ -215,11 +218,9 @@ pub fn filter_cubes(
 
         let pos = cubes_product
             .iter()
-            // .position_max_by_key(|cube| OrderedFloat(compute_cube_score(cube)))
             .position_max_by_key(|cube| OrderedFloat(cube_score[*cube]))
             .unwrap();
         let best_cube = cubes_product.swap_remove(pos);
-        // let best_cube_score = compute_cube_score(&best_cube, &degree);
         let best_cube_score = cube_score[&best_cube];
 
         let time_prepare = time_prepare.elapsed();
@@ -237,7 +238,7 @@ pub fn filter_cubes(
                     for &lit in best_cube.iter() {
                         solver.assume(lit.to_external()).unwrap();
                     }
-                    solver.limit("conflicts", num_conflicts as i32);
+                    solver.limit("conflicts", num_conflicts_budget as i32);
                     // debug!("Solving {}...", DisplaySlice(&best_cube));
                     let time_solve = Instant::now();
                     match solver.solve().unwrap() {
@@ -247,14 +248,9 @@ pub fn filter_cubes(
                                 time_solve.elapsed().as_secs_f64(),
                                 DisplaySlice(&best_cube)
                             );
-                            // COMPUTE_SCORE where `d = deg[a,b]` :
-                            // if d != 0 {
-                            //     score += 1.0 / d as f64;
-                            //     if d == 1 {
-                            //         score += 50.0;
-                            //     }
-                            // }
+                            let time_rescore = Instant::now();
                             for (&a, &b) in best_cube.iter().tuple_combinations() {
+                                let time_rescore_sub = Instant::now();
                                 let d = degree[&(a, b)];
                                 if d == 0 {
                                     continue;
@@ -266,23 +262,28 @@ pub fn filter_cubes(
                                     assert_eq!(neighbors[&(a, b)].len(), 1);
                                     for cube in neighbors[&(a, b)].iter() {
                                         // score[cube] -= 50
-                                        *cube_score.get_mut(cube).unwrap() -= 50.0;
+                                        *cube_score.get_mut(cube.as_ref()).unwrap() -= 50.0;
                                     }
                                 }
                                 for cube in neighbors[&(a, b)].iter() {
                                     // score[cube] -= 1 / (d+1)
-                                    *cube_score.get_mut(cube).unwrap() -= 1.0 / (d + 1) as f64;
+                                    *cube_score.get_mut(cube.as_ref()).unwrap() -= 1.0 / (d + 1) as f64;
                                     if d != 0 {
                                         // score[cube] += 1 / d
-                                        *cube_score.get_mut(cube).unwrap() += 1.0 / d as f64;
+                                        *cube_score.get_mut(cube.as_ref()).unwrap() += 1.0 / d as f64;
                                         if d == 1 {
                                             // score[cube] += 50
-                                            *cube_score.get_mut(cube).unwrap() += 50.0;
+                                            *cube_score.get_mut(cube.as_ref()).unwrap() += 50.0;
                                         }
                                     }
                                 }
-                                neighbors.get_mut(&(a, b)).unwrap().remove(&best_cube);
+                                // neighbors.get_mut(&(a, b)).unwrap().remove(&best_cube);
+                                neighbors.get_mut(&(a, b)).unwrap().retain(|c| Rc::ptr_eq(c, &best_cube));
+                                let time_rescore_sub = time_rescore_sub.elapsed();
+                                // debug!("Rescored for {}-{} in {:.1}s", a, b, time_rescore_sub.as_secs_f64());
                             }
+                            let time_rescore = time_rescore.elapsed();
+                            debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
                         }
                         SolveResponse::Interrupted => {
                             debug!(
@@ -290,29 +291,34 @@ pub fn filter_cubes(
                                 time_solve.elapsed().as_secs_f64(),
                                 DisplaySlice(&best_cube)
                             );
+                            let time_rescore = Instant::now();
                             for (&a, &b) in best_cube.iter().tuple_combinations() {
                                 let d = degree[&(a, b)];
                                 for cube in neighbors[&(a, b)].iter() {
                                     // score[cube] -= 1 / d
-                                    *cube_score.get_mut(cube).unwrap() -= 1.0 / d as f64;
+                                    *cube_score.get_mut(cube.as_ref()).unwrap() -= 1.0 / d as f64;
                                 }
                                 degree.insert((a, b), 0);
                                 neighbors.get_mut(&(a, b)).unwrap().clear();
                             }
-                            indet_cubes.push(best_cube);
+                            let time_rescore = time_rescore.elapsed();
+                            debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
+                            indet_cubes.push((*best_cube).clone());
                         }
                         SolveResponse::Sat => panic!("Unexpected SAT"),
                     }
                 }
             }
         } else {
-            indet_cubes.push(best_cube);
+            indet_cubes.push((*best_cube).clone());
             break;
         }
     }
 
+    drop(neighbors);
+    drop(cube_score);
+    let mut cubes_product: Vec<Vec<Lit>> = cubes_product.into_iter().map(|cube| Rc::try_unwrap(cube).unwrap()).collect();
     cubes_product.extend(indet_cubes);
-
     cubes_product
 }
 
