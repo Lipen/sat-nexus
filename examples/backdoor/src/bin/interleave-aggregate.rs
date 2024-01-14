@@ -616,7 +616,7 @@ fn main() -> color_eyre::Result<()> {
             }
             mysolver.propagate();
             mysolver.simplify();
-            cubes_product = vec![vec![]];
+            // cubes_product = vec![vec![]];
             continue;
         }
 
