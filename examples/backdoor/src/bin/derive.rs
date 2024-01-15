@@ -252,7 +252,7 @@ fn main() -> color_eyre::Result<()> {
                     continue 'out;
                 }
             }
-            // assert!(std::iter::zip(&cube, &variables).all(|(lit, var)| lit.var() == *var));
+            // assert!(zip_eq(&cube, &variables).all(|(lit, var)| lit.var() == *var));
             trie.insert(cube.iter().map(|lit| lit.negated()));
             num_normal_cubes += 1;
         }

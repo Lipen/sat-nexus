@@ -4,7 +4,7 @@ use std::mem;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use itertools::Itertools;
+use itertools::{zip_eq, Itertools};
 use serde_with::SerializeDisplay;
 use tracing::{debug, info, trace, warn};
 
@@ -1061,7 +1061,7 @@ impl Solver {
 
         loop {
             trace!("cube = {}", DisplaySlice(&cube));
-            let assumptions = variables.iter().zip(cube.iter()).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
+            let assumptions = zip_eq(variables, &cube).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
             let res = self.propcheck(&assumptions);
             total_checked += 1;
 
@@ -1140,9 +1140,7 @@ impl Solver {
                 state,
                 DisplaySlice(&cube),
                 self.decision_level(),
-                variables
-                    .iter()
-                    .zip(cube.iter())
+                zip_eq(variables, &cube)
                     .take(self.decision_level())
                     .map(|(&v, &s)| Lit::new(v, s))
                     .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1175,9 +1173,7 @@ impl Solver {
                                 trace!(
                                     "Propagated different value for p = {} with trail = [{}]",
                                     p,
-                                    variables
-                                        .iter()
-                                        .zip(cube.iter())
+                                    zip_eq(variables, &cube)
                                         .take(self.decision_level())
                                         .map(|(&v, &s)| Lit::new(v, s))
                                         .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1226,9 +1222,7 @@ impl Solver {
                         trace!(
                             "Conflict {} for trail = [{}]",
                             self.clause(conflict),
-                            variables
-                                .iter()
-                                .zip(cube.iter())
+                            zip_eq(variables, &cube)
                                 .take(self.decision_level())
                                 .map(|(&v, &s)| Lit::new(v, s))
                                 .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1242,9 +1236,7 @@ impl Solver {
                                 "lemma {} for conflict {} with trail = [{}]",
                                 DisplaySlice(&lemma),
                                 self.clause(conflict),
-                                variables
-                                    .iter()
-                                    .zip(cube.iter())
+                                zip_eq(variables, &cube)
                                     .take(self.decision_level())
                                     .map(|(&v, &s)| Lit::new(v, s))
                                     .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1273,9 +1265,7 @@ impl Solver {
                     } else {
                         trace!(
                             "No conflict for trail = [{}]",
-                            variables
-                                .iter()
-                                .zip(cube.iter())
+                            zip_eq(variables, &cube)
                                 .take(self.decision_level())
                                 .map(|(&v, &s)| Lit::new(v, s))
                                 .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1374,9 +1364,7 @@ impl Solver {
                 state,
                 DisplaySlice(&cube),
                 self.decision_level(),
-                variables
-                    .iter()
-                    .zip(cube.iter())
+                zip_eq(variables, &cube)
                     .take(self.decision_level())
                     .map(|(&v, &s)| Lit::new(v, s))
                     .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1389,9 +1377,7 @@ impl Solver {
                     if self.decision_level() == variables.len() {
                         trace!("Found valid cube: {}", DisplaySlice(&cube));
                         valid.push(
-                            variables
-                                .iter()
-                                .zip(cube.iter())
+                            zip_eq(variables, &cube)
                                 .take(self.decision_level())
                                 .map(|(&v, &s)| Lit::new(v, s))
                                 .collect_vec(),
@@ -1423,9 +1409,7 @@ impl Solver {
                                     trace!(
                                         "Propagated different value for p = {} with trail = [{}]",
                                         p,
-                                        variables
-                                            .iter()
-                                            .zip(cube.iter())
+                                        zip_eq(variables, &cube)
                                             .take(self.decision_level())
                                             .map(|(&v, &s)| Lit::new(v, s))
                                             .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1475,9 +1459,7 @@ impl Solver {
                         trace!(
                             "Conflict {} for trail = [{}]",
                             self.clause(conflict),
-                            variables
-                                .iter()
-                                .zip(cube.iter())
+                            zip_eq(variables, &cube)
                                 .take(self.decision_level())
                                 .map(|(&v, &s)| Lit::new(v, s))
                                 .map(|lit| format!("{}@{}", lit, self.level(lit.var())))
@@ -1487,9 +1469,7 @@ impl Solver {
                     } else {
                         trace!(
                             "No conflict for trail = [{}]",
-                            variables
-                                .iter()
-                                .zip(cube.iter())
+                            zip_eq(variables, &cube)
                                 .take(self.decision_level())
                                 .map(|(&v, &s)| Lit::new(v, s))
                                 .map(|lit| format!("{}@{}", lit, self.level(lit.var())))

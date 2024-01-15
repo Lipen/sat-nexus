@@ -1,13 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader, LineWriter, Write};
-use std::iter::zip;
 use std::path::Path;
 use std::time::Instant;
 
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
-use itertools::{Itertools, MultiProduct};
+use itertools::{zip_eq, Itertools, MultiProduct};
 use log::{debug, info};
 use ordered_float::OrderedFloat;
 
@@ -115,7 +114,7 @@ where
     let mut easy = Vec::new();
 
     for cube in product_repeat([true, false].into_iter(), variables.len()) {
-        let assumptions = zip(variables, cube).map(|(&v, s)| Lit::new(v, s)).collect_vec();
+        let assumptions = zip_eq(variables, cube).map(|(&v, s)| Lit::new(v, s)).collect_vec();
         let result = propcheck(&assumptions);
         if result {
             hard.push(assumptions);

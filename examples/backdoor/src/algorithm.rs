@@ -1,8 +1,8 @@
 use std::collections::HashSet;
-use std::iter::zip;
 use std::time::{Duration, Instant};
 
 use ahash::{AHashMap, AHashSet};
+use itertools::zip_eq;
 use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
@@ -284,7 +284,7 @@ impl Algorithm {
 
         let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
         let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());
-        for (i, &v) in zip(to_replace, substituted) {
+        for (i, &v) in zip_eq(to_replace, substituted) {
             instance.variables[i] = v;
         }
 

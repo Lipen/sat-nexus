@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use indicatif::{ProgressBar, ProgressStyle};
 // use indicatif::ParallelProgressIterator;
 use indicatif::ProgressIterator;
-use itertools::Itertools;
+use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 
@@ -56,8 +56,6 @@ mod _pyeda {
 // TODO: derive_ternary
 
 pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> {
-    // Note: currently, derives only units and binary clauses.
-
     trace!("derive_clauses(hard = [{}])", hard.iter().map(|c| DisplaySlice(c)).join(", "));
 
     // Trivial case:
@@ -65,10 +63,10 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
         return vec![];
     }
 
-    // for cube in hard.iter() {
-    //     assert_eq!(cube.len(), hard[0].len());
-    //     assert!(std::iter::zip(cube, &hard[0]).all(|(a, b)| a.var() == b.var()));
-    // }
+    for cube in hard.iter() {
+        assert_eq!(cube.len(), hard[0].len());
+        assert!(zip_eq(cube, &hard[0]).all(|(a, b)| a.var() == b.var()));
+    }
 
     let n = hard[0].len();
     let mut derived_clauses = Vec::new();
