@@ -273,6 +273,7 @@ fn main() -> color_eyre::Result<()> {
             .map(|cube| zip_eq(cube, &variables).map(|(b, &v)| Lit::new(v, b)).collect())
             .collect();
         drop(trie);
+
         // info!("Filtering {} hard cubes via trie...", trie.num_leaves());
         // let time_filter = Instant::now();
         // let mut valid = Vec::new();
