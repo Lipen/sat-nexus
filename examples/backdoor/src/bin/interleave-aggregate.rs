@@ -196,7 +196,7 @@ fn main() -> color_eyre::Result<()> {
 
             // Reset banned used variables:
             if args.reset_used_vars && cubes_product == vec![vec![]] {
-                algorithm.used_vars.clear();
+                algorithm.pool.extend(algorithm.used_vars.drain());
             }
 
             let result = algorithm.run(
