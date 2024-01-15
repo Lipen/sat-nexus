@@ -104,6 +104,10 @@ struct Cli {
     /// Time limit (in seconds).
     #[arg(long, value_name = "INT")]
     time_limit: Option<u64>,
+
+    /// Run Cadical in inner loop.
+    #[arg(long, value_name = "INT")]
+    inner_loop_solve_budget: Option<u64>,
     // /// Act as preprocessor only before delegating to Cadical.
     // #[arg(long)]
     // only_preprocess: bool,
@@ -451,6 +455,34 @@ fn main() -> color_eyre::Result<()> {
             if cubes_product.len() > args.max_product {
                 info!("Reached product size limit ({} > {})", cubes_product.len(), args.max_product);
                 break;
+            }
+
+            if let Some(budget) = args.inner_loop_solve_budget {
+                info!("Inner loop solving with {} conflicts budget...", budget);
+                match &mut algorithm.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => {
+                        solver.limit("conflicts", budget as i32);
+                        let time_solve = Instant::now();
+                        let res = solver.solve().unwrap();
+                        let time_solve = time_solve.elapsed();
+                        match res {
+                            SolveResponse::Interrupted => {
+                                info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                                // do nothing
+                            }
+                            SolveResponse::Unsat => {
+                                info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                                break 'out;
+                            }
+                            SolveResponse::Sat => {
+                                info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                                // TODO: dump model
+                                break 'out;
+                            }
+                        }
+                    }
+                }
             }
         }
 
