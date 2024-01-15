@@ -198,7 +198,7 @@ pub fn filter_cubes(
     let mut remaining_cubes: Vec<usize> = (0..cubes.len()).collect();
     let mut indet_cubes: Vec<usize> = Vec::new();
 
-    while !cubes.is_empty() {
+    while !remaining_cubes.is_empty() {
         let time_prepare = Instant::now();
         let num_conflicts = match solver {
             SatSolver::SimpleSat(_) => unreachable!(),
