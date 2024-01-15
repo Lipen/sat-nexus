@@ -65,6 +65,10 @@ struct Cli {
     #[arg(long)]
     ban_used: bool,
 
+    /// Reset banned used variables before each product.
+    #[arg(long)]
+    reset_used_vars: bool,
+
     /// Number of stagnated iterations before re-initialization.
     #[arg(long, value_name = "INT")]
     stagnation_limit: Option<usize>,
@@ -108,10 +112,6 @@ struct Cli {
     /// Run Cadical in inner loop.
     #[arg(long, value_name = "INT")]
     inner_loop_solve_budget: Option<u64>,
-
-    /// Reset banned used variables before each product.
-    #[arg(long)]
-    reset_used_vars: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
