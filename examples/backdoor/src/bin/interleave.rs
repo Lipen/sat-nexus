@@ -108,6 +108,10 @@ struct Cli {
     /// Act as preprocessor only before delegating to Cadical.
     #[arg(long)]
     only_preprocess: bool,
+
+    /// Reset banned used variables on empty product.
+    #[arg(long)]
+    reset_used_vars: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -197,6 +201,11 @@ fn main() -> color_eyre::Result<()> {
             }
         }
 
+        // Reset banned used variables:
+        if args.reset_used_vars && cubes_product == vec![vec![]] {
+            algorithm.used_vars.clear();
+        }
+
         let result = algorithm.run(
             args.backdoor_size,
             args.num_iters,
@@ -207,13 +216,6 @@ fn main() -> color_eyre::Result<()> {
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
-        // let (hard, easy) = partition_tasks_cadical(&backdoor, &algorithm.solver);
-        // debug!(
-        //     "Backdoor {} has {} hard and {} easy tasks",
-        //     DisplaySlice(&backdoor),
-        //     hard.len(),
-        //     easy.len()
-        // );
         let hard = get_hard_tasks(&backdoor, &mut algorithm.solver);
         debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len(),);
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
@@ -243,6 +245,7 @@ fn main() -> color_eyre::Result<()> {
             }
             mysolver.propagate();
             mysolver.simplify();
+            cubes_product = vec![vec![]];
             continue;
         }
 
@@ -383,12 +386,6 @@ fn main() -> color_eyre::Result<()> {
         }
         assert_eq!(trie.num_leaves() as u64, num_normal_cubes);
 
-        // cubes_product = trie
-        //     .iter()
-        //     .map(|cube| zip_eq(cube, &variables).map(|(b, &v)| Lit::new(v, b)).collect())
-        //     .collect();
-        // drop(trie);
-
         info!("Filtering {} hard cubes via trie...", trie.num_leaves());
         let time_filter = Instant::now();
         let mut valid = Vec::new();
@@ -402,6 +399,36 @@ fn main() -> color_eyre::Result<()> {
         );
         if let Some(f) = &mut file_results {
             writeln!(f, "{},propagate,{}", run_number, cubes_product.len())?;
+        }
+
+        if cubes_product.is_empty() {
+            info!("No more cubes to solve after {} runs", run_number);
+            break;
+        }
+        if cubes_product.len() == 1 {
+            info!("Adding {} units to the solver", cubes_product[0].len());
+            for &lit in &cubes_product[0] {
+                algorithm.pool.retain(|&v| v != lit.var());
+                if all_clauses.insert(vec![lit]) {
+                    if let Some(f) = &mut file_derived_clauses {
+                        writeln!(f, "{} 0", lit)?;
+                    }
+                    algorithm.solver.add_clause(&[lit]);
+                    mysolver.add_clause(&[lit]);
+                    all_derived_clauses.push(vec![lit]);
+                }
+            }
+            match &mut algorithm.solver {
+                SatSolver::SimpleSat(_) => unreachable!(),
+                SatSolver::Cadical(solver) => {
+                    solver.limit("conflicts", 0);
+                    solver.solve()?;
+                }
+            }
+            mysolver.propagate();
+            mysolver.simplify();
+            cubes_product = vec![vec![]];
+            continue;
         }
 
         // Derivation after trie-filtering:

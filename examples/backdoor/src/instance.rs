@@ -17,6 +17,12 @@ impl Instance {
     }
 
     pub fn new_random<R: Rng + ?Sized>(size: usize, pool: &[Var], rng: &mut R) -> Self {
+        assert!(
+            pool.len() >= size,
+            "Pool must be at least of size {}, but has only {} elements",
+            size,
+            pool.len()
+        );
         let variables = pool.choose_multiple(rng, size).copied().collect();
         Self::new(variables)
     }

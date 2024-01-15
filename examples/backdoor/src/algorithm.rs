@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::iter::zip;
 use std::time::{Duration, Instant};
 
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
@@ -22,6 +22,7 @@ pub struct Algorithm {
     pub cache_hits: usize,
     pub cache_misses: usize,
     pub options: Options,
+    pub used_vars: AHashSet<Var>,
 }
 
 impl Algorithm {
@@ -34,6 +35,7 @@ impl Algorithm {
             cache_hits: 0,
             cache_misses: 0,
             options,
+            used_vars: AHashSet::new(),
         }
     }
 }
@@ -99,6 +101,12 @@ impl Algorithm {
         drop(active_vars);
 
         debug!("pool.len() = {}", self.pool.len());
+        assert!(
+            self.pool.len() >= backdoor_size,
+            "Pool size must be at least {}, but the pool contains only {} elements",
+            backdoor_size,
+            self.pool.len()
+        );
 
         // Create an initial instance:
         let mut instance = self.initial_instance(backdoor_size);
@@ -205,9 +213,8 @@ impl Algorithm {
 
         // Ban used variables:
         if self.options.ban_used_variables {
-            // Note: even if `best_instance.variables` is Vec (if not yet switched to HashSet),
-            // it is OK to perform O(n) lookup since the instance size is generally very small.
-            self.pool.retain(|v| !best_instance.variables.contains(v));
+            self.used_vars.extend(best_instance.variables.iter().cloned());
+            self.pool.retain(|v| !self.used_vars.contains(v));
         }
 
         // Clear the cache:
