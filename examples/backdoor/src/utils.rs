@@ -137,32 +137,6 @@ pub fn filter_cubes(
     all_derived_clauses: &mut Vec<Vec<Lit>>,
     file_derived_clauses: &mut Option<LineWriter<File>>,
 ) -> Vec<Vec<Lit>> {
-    let variables = cubes[0].iter().map(|lit| lit.var()).sorted().collect_vec();
-    let n = variables.len();
-
-    debug!("Computing degree...");
-    let time_compute_degree = Instant::now();
-    let mut degree: HashMap<(Lit, Lit), u64> = HashMap::new();
-    for (i, j) in (0..n).tuple_combinations() {
-        for cube in cubes.iter() {
-            assert_eq!(cube.len(), n);
-            assert_eq!(cube[i].var(), variables[i]);
-            assert_eq!(cube[j].var(), variables[j]);
-            let a = cube[i];
-            let b = cube[j];
-            *degree.entry((a, b)).or_insert(0) += 1;
-        }
-    }
-    // for (&a, &b) in variables.iter().tuple_combinations() {
-    //     let pp = degree.get(&(Lit::new(a, false), Lit::new(b, false))).copied().unwrap_or(0);
-    //     let pn = degree.get(&(Lit::new(a, false), Lit::new(b,  true))).copied().unwrap_or(0);
-    //     let np = degree.get(&(Lit::new(a, true), Lit::new(b, false))).copied().unwrap_or(0);
-    //     let nn = degree.get(&(Lit::new(a, true), Lit::new(b, true))).copied().unwrap_or(0);
-    //     debug!("degrees for {}-{}: {} / {} / {} / {}", a, b, pp, pn, np, nn);
-    // }
-    let time_compute_degree = time_compute_degree.elapsed();
-    debug!("Computed degree in {:.1}s", time_compute_degree.as_secs_f64());
-
     debug!("Computing neighbors...");
     let time_compute_neighbors = Instant::now();
     let mut neighbors: HashMap<(Lit, Lit), Vec<usize>> = HashMap::new();
@@ -172,12 +146,18 @@ pub fn filter_cubes(
         }
     }
     let time_compute_neighbors = time_compute_neighbors.elapsed();
-    debug!("Computed neighbors in {:.1}s", time_compute_neighbors.as_secs_f64());
+    debug!(
+        "Computed neighbors (size={}, cubes={}) in {:.1}s",
+        neighbors.len(),
+        neighbors.values().map(|vs| vs.len()).sum::<usize>(),
+        time_compute_neighbors.as_secs_f64()
+    );
 
-    let compute_cube_score = |cube: &[Lit], degree: &HashMap<(Lit, Lit), u64>| {
+    let compute_cube_score = |cube: &[Lit], neighbors: &HashMap<(Lit, Lit), Vec<usize>>| {
         let mut score: f64 = 0.0;
         for (&a, &b) in cube.iter().tuple_combinations() {
-            if let Some(&d) = degree.get(&(a, b)) {
+            if let Some(neighbors) = neighbors.get(&(a, b)) {
+                let d = neighbors.len();
                 if d != 0 {
                     score += 1.0 / d as f64;
                     if d == 1 {
@@ -191,15 +171,20 @@ pub fn filter_cubes(
 
     debug!("Computing cube score...");
     let time_cube_scores = Instant::now();
-    let mut cube_score: Vec<f64> = cubes.iter().map(|cube| compute_cube_score(cube, &degree)).collect();
+    let mut cube_score: Vec<f64> = cubes.iter().map(|cube| compute_cube_score(cube, &neighbors)).collect();
     let time_cube_scores = time_cube_scores.elapsed();
-    debug!("Computed cube scores in {:.1}s", time_cube_scores.as_secs_f64());
+    debug!(
+        "Computed cube scores (size={}) in {:.1}s",
+        cube_score.len(),
+        time_cube_scores.as_secs_f64()
+    );
 
     let mut remaining_cubes: Vec<usize> = (0..cubes.len()).collect();
     let mut indet_cubes: Vec<usize> = Vec::new();
 
+    let verb = false;
+
     while !remaining_cubes.is_empty() {
-        let time_prepare = Instant::now();
         let num_conflicts = match solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => solver.conflicts() as u64,
@@ -209,23 +194,20 @@ pub fn filter_cubes(
             break;
         }
 
-        // debug!("Asserting...");
-        // let time_asserting = Instant::now();
-        // for &i in remaining_cubes.iter() {
-        //     for (&a, &b) in cubes[i].iter().tuple_combinations() {
-        //         assert_eq!(degree[&(a, b)], neighbors[&(a, b)].len() as u64);
-        //     }
-        // }
-        // for &i in remaining_cubes.iter() {
-        //     assert!(
-        //         (compute_cube_score(&cubes[i], &degree) - cube_score[i]).abs() <= 1e-6,
-        //         "compute = {}, score = {}",
-        //         compute_cube_score(&cubes[i], &degree),
-        //         cube_score[i]
-        //     );
-        // }
-        // let time_asserting = time_asserting.elapsed();
-        // debug!("Asserted in {:.1}s", time_asserting.as_secs_f64());
+        if false {
+            // debug!("Asserting...");
+            let time_asserting = Instant::now();
+            for &i in remaining_cubes.iter() {
+                assert!(
+                    (compute_cube_score(&cubes[i], &neighbors) - cube_score[i]).abs() <= 1e-6,
+                    "compute = {}, score = {}",
+                    compute_cube_score(&cubes[i], &neighbors),
+                    cube_score[i]
+                );
+            }
+            let time_asserting = time_asserting.elapsed();
+            debug!("Asserted in {:.1}s", time_asserting.as_secs_f64());
+        }
 
         let best_cube_position = remaining_cubes
             .iter()
@@ -234,13 +216,10 @@ pub fn filter_cubes(
         let best_cube = remaining_cubes.swap_remove(best_cube_position);
         let best_cube_score = cube_score[best_cube];
 
-        let time_prepare = time_prepare.elapsed();
-
         if best_cube_score > 0.0 {
             // debug!(
-            //     "Max score ({}) cube in {:.1}s: {}",
+            //     "Max score ({}) cube: {}",
             //     best_cube_score,
-            //     time_prepare.as_secs_f64(),
             //     DisplaySlice(&cubes[best_cube])
             // );
             match solver {
@@ -254,84 +233,85 @@ pub fn filter_cubes(
                     let time_solve = Instant::now();
                     match solver.solve().unwrap() {
                         SolveResponse::Unsat => {
-                            // debug!(
-                            //     "UNSAT in {:.1}s for {}",
-                            //     time_solve.elapsed().as_secs_f64(),
-                            //     DisplaySlice(&cubes[best_cube])
-                            // );
-                            // let time_rescore = Instant::now();
+                            if verb {
+                                debug!(
+                                    "UNSAT in {:.1}s for cube with score {}: {}",
+                                    time_solve.elapsed().as_secs_f64(),
+                                    best_cube_score,
+                                    DisplaySlice(&cubes[best_cube])
+                                );
+                            }
+                            let time_rescore = Instant::now();
                             for (&a, &b) in cubes[best_cube].iter().tuple_combinations() {
-                                let d = degree[&(a, b)];
-                                assert_eq!(neighbors[&(a, b)].len(), d as usize);
+                                let d = neighbors[&(a, b)].len();
                                 if d == 0 {
                                     continue;
-                                }
-                                *degree.get_mut(&(a, b)).unwrap() -= 1;
-                                let d = degree[&(a, b)];
-                                if d == 0 {
+                                } else if d == 1 {
                                     // debug!("should derive {}", DisplaySlice(&[-a, -b]));
-                                    assert_eq!(neighbors[&(a, b)].len(), 1);
+                                    assert_eq!(neighbors[&(a, b)][0], best_cube);
+                                    cube_score[best_cube] = 0.0;
+                                } else {
                                     for &i in neighbors[&(a, b)].iter() {
-                                        // score[cube] -= 50
-                                        cube_score[i] -= 50.0;
-                                    }
-                                }
-                                for &i in neighbors[&(a, b)].iter() {
-                                    // score[cube] -= 1 / (d + 1)
-                                    cube_score[i] -= 1.0 / (d + 1) as f64;
-                                    if d != 0 {
-                                        // score[cube] += 1 / d
-                                        cube_score[i] += 1.0 / d as f64;
-                                        if d == 1 {
-                                            // score[cube] += 50
+                                        cube_score[i] -= 1.0 / d as f64;
+                                        cube_score[i] += 1.0 / (d - 1) as f64;
+                                        if d - 1 == 1 {
                                             cube_score[i] += 50.0;
                                         }
                                     }
                                 }
                                 neighbors.get_mut(&(a, b)).unwrap().retain(|&i| i != best_cube);
                             }
-                            // let time_rescore = time_rescore.elapsed();
-                            // debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
-
-                            let mut lemma = Vec::new();
-                            for &lit in cubes[best_cube].iter() {
-                                if solver.failed(lit.to_external()).unwrap() {
-                                    lemma.push(-lit);
-                                }
+                            let time_rescore = time_rescore.elapsed();
+                            if verb || time_rescore.as_secs_f64() > 0.1 {
+                                debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
                             }
-                            // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
-                            lemma.sort_by_key(|lit| lit.inner());
-                            if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
-                                debug!("new lemma from unsat core: {}", DisplaySlice(&lemma));
-                                if let Some(f) = file_derived_clauses {
-                                    for lit in lemma.iter() {
-                                        write!(f, "{} ", lit).unwrap();
+
+                            if true {
+                                let mut lemma = Vec::new();
+                                for &lit in cubes[best_cube].iter() {
+                                    if solver.failed(lit.to_external()).unwrap() {
+                                        lemma.push(-lit);
                                     }
-                                    writeln!(f, "0").unwrap();
                                 }
-                                solver.add_clause(clause_to_external(&lemma));
-                                mysolver.add_clause(&lemma);
-                                all_derived_clauses.push(lemma);
+                                // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
+                                lemma.sort_by_key(|lit| lit.inner());
+                                if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
+                                    debug!("new lemma from unsat core: {}", DisplaySlice(&lemma));
+                                    if let Some(f) = file_derived_clauses {
+                                        for lit in lemma.iter() {
+                                            write!(f, "{} ", lit).unwrap();
+                                        }
+                                        writeln!(f, "0").unwrap();
+                                    }
+                                    solver.add_clause(clause_to_external(&lemma));
+                                    mysolver.add_clause(&lemma);
+                                    all_derived_clauses.push(lemma);
+                                }
                             }
                         }
                         SolveResponse::Interrupted => {
-                            // debug!(
-                            //     "INDET in {:.1}s for {}",
-                            //     time_solve.elapsed().as_secs_f64(),
-                            //     DisplaySlice(&cubes[best_cube])
-                            // );
-                            // let time_rescore = Instant::now();
+                            if verb {
+                                debug!(
+                                    "INDET in {:.1}s for cube with score {}: {}",
+                                    time_solve.elapsed().as_secs_f64(),
+                                    best_cube_score,
+                                    DisplaySlice(&cubes[best_cube])
+                                );
+                            }
+                            let time_rescore = Instant::now();
                             for (&a, &b) in cubes[best_cube].iter().tuple_combinations() {
-                                let d = degree[&(a, b)];
-                                for &i in neighbors[&(a, b)].iter() {
+                                let ns = neighbors.get_mut(&(a, b)).unwrap();
+                                let d = ns.len();
+                                for i in ns.drain(..) {
                                     // score[cube] -= 1 / d
                                     cube_score[i] -= 1.0 / d as f64;
                                 }
-                                degree.insert((a, b), 0);
-                                neighbors.get_mut(&(a, b)).unwrap().clear();
+                                assert_eq!(neighbors[&(a, b)].len(), 0);
                             }
-                            // let time_rescore = time_rescore.elapsed();
-                            // debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
+                            let time_rescore = time_rescore.elapsed();
+                            if verb {
+                                debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
+                            }
                             indet_cubes.push(best_cube);
                         }
                         SolveResponse::Sat => panic!("Unexpected SAT"),
