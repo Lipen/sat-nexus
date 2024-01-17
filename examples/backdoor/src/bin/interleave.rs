@@ -755,6 +755,7 @@ fn main() -> color_eyre::Result<()> {
                         SolveResponse::Sat => {
                             info!("SAT in {:.1} s", time_solve.as_secs_f64());
                             // TODO: dump model
+                            break;
                         }
                     }
                 }
