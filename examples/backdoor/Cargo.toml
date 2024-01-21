@@ -14,6 +14,7 @@ rand = "0.8.5"
 itertools = "0.12.0"
 rayon = "1.8.0"
 ahash = "0.8.6"
+crossbeam-channel = "0.5.11"
 
 simple-sat = { path = "../../lib/simple-sat" }
 cadical-sys = { path = "../../lib/cadical-sys", features = ["static"] }
