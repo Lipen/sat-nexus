@@ -9,9 +9,9 @@ sat-nexus-core = { path = "../core" }
 sat-nexus-wrappers = { path = "../wrappers" }
 clap = { version = "4.4", features = ["derive"] }
 color-eyre = "0.6"
-itertools = "0.10"
+itertools = "0.12"
 dimacs = "0.2.0"
 elapsed = "0.1.2"
 log = "0.4"
 simplelog = "0.12"
-tynm = "0.1.6"
+tynm = "0.1.9"

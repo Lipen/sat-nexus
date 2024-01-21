@@ -13,7 +13,7 @@ static = ["cadical-sys/static"]
 cadical-sys = { path = "../cadical-sys", optional = true }
 ffi-utils = { path = "../ffi-utils" }
 snafu = "0.7"
-itertools = "0.10"
+itertools = "0.12"
 
 [dev-dependencies]
 color-eyre = "0.6"
