@@ -112,6 +112,10 @@ struct Cli {
     /// Act as preprocessor only before delegating to Cadical.
     #[arg(long)]
     only_preprocess: bool,
+
+    /// Danya's propcheck-based heuristic.
+    #[arg(long, value_name = "INT")]
+    pool_limit: Option<usize>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -138,6 +142,7 @@ fn main() -> color_eyre::Result<()> {
 
     // Initialize Cadical:
     let solver = Cadical::new();
+    // solver.set_option("reimply", 0);
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
@@ -212,6 +217,7 @@ fn main() -> color_eyre::Result<()> {
             args.stagnation_limit,
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             0,
+            args.pool_limit,
         );
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 

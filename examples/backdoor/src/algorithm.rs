@@ -7,6 +7,8 @@ use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
+use simple_sat::lit::Lit;
+use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
 use crate::fitness::Fitness;
@@ -81,6 +83,7 @@ impl Algorithm {
         stagnation_limit: Option<usize>,
         max_rho: Option<f64>,
         min_iter: usize,
+        pool_limit: Option<usize>,
     ) -> RunResult {
         let start_time = Instant::now();
 
@@ -107,6 +110,38 @@ impl Algorithm {
             backdoor_size,
             self.pool.len()
         );
+
+        if let Some(pool_limit) = pool_limit {
+            if self.pool.len() > pool_limit {
+                debug!("Limiting the pool to {}...", pool_limit);
+                let mut heuristic = AHashMap::new();
+                for &var in self.pool.iter() {
+                    let pos_lit = Lit::new(var, false);
+                    let neg_lit = Lit::new(var, true);
+
+                    let (_pos_res, pos_prop) = match &self.solver {
+                        SatSolver::SimpleSat(_) => panic!("Sad"),
+                        SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[pos_lit.to_external()]),
+                    };
+                    let (_neg_res, neg_prop) = match &self.solver {
+                        SatSolver::SimpleSat(_) => panic!("Sad"),
+                        SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[neg_lit.to_external()]),
+                    };
+                    let h = pos_prop.len() * neg_prop.len();
+                    // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop.len(), neg_prop.len(), h);
+                    // debug!("{} => {} => {}", pos_lit, _pos_res, DisplaySlice(&pos_prop));
+                    // debug!("{} => {} => {}", neg_lit, _neg_res, DisplaySlice(&neg_prop));
+                    heuristic.insert(var, h);
+                }
+                let mut hs: Vec<_> = heuristic.values().copied().collect();
+                hs.sort();
+                hs.reverse();
+                assert!(hs.len() > pool_limit);
+                let limit = hs[pool_limit - 1];
+                self.pool.retain(|v| heuristic[v] >= limit);
+                debug!("pool.len() = {}", self.pool.len());
+            }
+        }
 
         // Create an initial instance:
         let mut instance = self.initial_instance(backdoor_size);
@@ -281,6 +316,7 @@ impl Algorithm {
                 to_replace.push(i);
             }
         }
+        // to_replace.len() ~ Bin(1/n)
 
         let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
         let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());

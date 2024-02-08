@@ -95,6 +95,10 @@ struct Cli {
     /// Derive ternary clauses.
     #[arg(long)]
     derive_ternary: bool,
+
+    /// Danya's propcheck-based heuristic.
+    #[arg(long, value_name = "INT")]
+    pool_limit: Option<usize>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -113,6 +117,7 @@ fn main() -> color_eyre::Result<()> {
             solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
         }
         if !args.no_freeze {
+            info!("Freezing variables...");
             for i in 0..solver.vars() {
                 let lit = (i + 1) as i32;
                 solver.freeze(lit).unwrap();
@@ -171,6 +176,7 @@ fn main() -> color_eyre::Result<()> {
             args.stagnation_limit,
             Some(args.max_rho),
             args.min_iter,
+            args.pool_limit,
         );
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 

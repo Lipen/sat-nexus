@@ -80,6 +80,10 @@ struct Cli {
     /// Derive ternary clauses.
     #[arg(long)]
     derive_ternary: bool,
+
+    /// Danya's propcheck-based heuristic.
+    #[arg(long, value_name = "INT")]
+    pool_limit: Option<usize>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -161,6 +165,7 @@ fn main() -> color_eyre::Result<()> {
             args.stagnation_limit,
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             0,
+            args.pool_limit,
         );
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
