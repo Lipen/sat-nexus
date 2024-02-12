@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 use ahash::{AHashMap, AHashSet};
+use indicatif::ProgressIterator;
 use itertools::zip_eq;
 use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
@@ -90,6 +91,7 @@ impl Algorithm {
         info!("Running EA for {} iterations with backdoor size {}", num_iter, backdoor_size);
 
         debug!("solver.vars() = {}", self.solver.num_vars());
+        debug!("pool.len() = {}", self.pool.len());
 
         // Ban already assigned variables:
         let mut active_vars = HashSet::new();
@@ -115,7 +117,7 @@ impl Algorithm {
             if self.pool.len() > pool_limit {
                 debug!("Limiting the pool to {}...", pool_limit);
                 let mut heuristic = AHashMap::new();
-                for &var in self.pool.iter() {
+                for &var in self.pool.iter().progress() {
                     let pos_lit = Lit::new(var, false);
                     let neg_lit = Lit::new(var, true);
 
