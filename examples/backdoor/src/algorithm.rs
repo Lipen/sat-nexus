@@ -9,6 +9,7 @@ use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
 use simple_sat::lit::Lit;
+use simple_sat::solver::Solver as SimpleSatSolver;
 use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
@@ -85,6 +86,7 @@ impl Algorithm {
         max_rho: Option<f64>,
         min_iter: usize,
         pool_limit: Option<usize>,
+        mut solver_for_pool_limit: Option<&mut SimpleSatSolver>,
     ) -> RunResult {
         let start_time = Instant::now();
 
@@ -121,23 +123,37 @@ impl Algorithm {
                     let pos_lit = Lit::new(var, false);
                     let neg_lit = Lit::new(var, true);
 
-                    let (_pos_res, pos_prop) = match &mut self.solver {
-                        SatSolver::SimpleSat(solver) => {
-                            let mut propagated = Vec::new();
-                            let res = solver.propcheck(&[pos_lit], Some(&mut propagated));
-                            let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                            (res, propagated)
+                    let (_pos_res, pos_prop) = if let Some(solver) = &mut solver_for_pool_limit {
+                        let mut propagated = Vec::new();
+                        let res = solver.propcheck(&[pos_lit], Some(&mut propagated));
+                        let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                        (res, propagated)
+                    } else {
+                        match &mut self.solver {
+                            SatSolver::SimpleSat(solver) => {
+                                let mut propagated = Vec::new();
+                                let res = solver.propcheck(&[pos_lit], Some(&mut propagated));
+                                let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                                (res, propagated)
+                            }
+                            SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[pos_lit.to_external()]),
                         }
-                        SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[pos_lit.to_external()]),
                     };
-                    let (_neg_res, neg_prop) = match &mut self.solver {
-                        SatSolver::SimpleSat(solver) => {
-                            let mut propagated = Vec::new();
-                            let res = solver.propcheck(&[neg_lit], Some(&mut propagated));
-                            let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                            (res, propagated)
+                    let (_neg_res, neg_prop) = if let Some(solver) = &mut solver_for_pool_limit {
+                        let mut propagated = Vec::new();
+                        let res = solver.propcheck(&[neg_lit], Some(&mut propagated));
+                        let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                        (res, propagated)
+                    } else {
+                        match &mut self.solver {
+                            SatSolver::SimpleSat(solver) => {
+                                let mut propagated = Vec::new();
+                                let res = solver.propcheck(&[neg_lit], Some(&mut propagated));
+                                let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                                (res, propagated)
+                            }
+                            SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[neg_lit.to_external()]),
                         }
-                        SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[neg_lit.to_external()]),
                     };
                     let h = pos_prop.len() * neg_prop.len();
                     // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop.len(), neg_prop.len(), h);

@@ -177,6 +177,7 @@ fn main() -> color_eyre::Result<()> {
             Some(args.max_rho),
             args.min_iter,
             args.pool_limit,
+            None,
         );
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
