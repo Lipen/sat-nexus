@@ -121,12 +121,22 @@ impl Algorithm {
                     let pos_lit = Lit::new(var, false);
                     let neg_lit = Lit::new(var, true);
 
-                    let (_pos_res, pos_prop) = match &self.solver {
-                        SatSolver::SimpleSat(_) => panic!("Sad"),
+                    let (_pos_res, pos_prop) = match &mut self.solver {
+                        SatSolver::SimpleSat(solver) => {
+                            let mut propagated = Vec::new();
+                            let res = solver.propcheck(&[pos_lit], Some(&mut propagated));
+                            let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                            (res, propagated)
+                        }
                         SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[pos_lit.to_external()]),
                     };
-                    let (_neg_res, neg_prop) = match &self.solver {
-                        SatSolver::SimpleSat(_) => panic!("Sad"),
+                    let (_neg_res, neg_prop) = match &mut self.solver {
+                        SatSolver::SimpleSat(solver) => {
+                            let mut propagated = Vec::new();
+                            let res = solver.propcheck(&[neg_lit], Some(&mut propagated));
+                            let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                            (res, propagated)
+                        }
                         SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[neg_lit.to_external()]),
                     };
                     let h = pos_prop.len() * neg_prop.len();

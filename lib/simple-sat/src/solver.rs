@@ -994,7 +994,7 @@ impl Solver {
 }
 
 impl Solver {
-    pub fn propcheck(&mut self, assumptions: &[Lit]) -> bool {
+    pub fn propcheck(&mut self, assumptions: &[Lit], out_propagated: Option<&mut Vec<Lit>>) -> bool {
         debug!("propcheck(assumptions = {})", DisplaySlice(assumptions));
 
         // First, propagate everything that needs to be propagated:
@@ -1041,10 +1041,23 @@ impl Solver {
             }
         }
 
-        // Backtrack to the original decision level:
-        self.backtrack(level);
+        if self.decision_level() > level {
+            if let Some(out_propagated) = out_propagated {
+                out_propagated.clear();
+                for &lit in &self.assignment.trail[self.assignment.trail_lim[level]..] {
+                    out_propagated.push(lit);
+                }
+                if let Some(conflict) = conflict {
+                    let conflict = self.clause(conflict);
+                    out_propagated.push(conflict[0]);
+                }
+            }
 
-        !conflicting_assignment && conflict.is_none()
+            // Backtrack to the original decision level:
+            self.backtrack(level);
+        }
+
+        conflict.is_none() && !conflicting_assignment
     }
 
     pub fn propcheck_all(&mut self, variables: &[Var]) -> u64 {
@@ -1062,7 +1075,7 @@ impl Solver {
         loop {
             trace!("cube = {}", DisplaySlice(&cube));
             let assumptions = zip_eq(variables, &cube).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
-            let res = self.propcheck(&assumptions);
+            let res = self.propcheck(&assumptions, None);
             total_checked += 1;
 
             if res {

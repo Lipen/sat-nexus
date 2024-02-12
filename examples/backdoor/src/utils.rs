@@ -75,7 +75,7 @@ pub fn get_hard_tasks(variables: &[Var], solver: &mut SatSolver) -> Vec<Vec<Lit>
 }
 
 pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
-    partition_tasks_with(variables, |cube| solver.propcheck(cube))
+    partition_tasks_with(variables, |cube| solver.propcheck(cube, None))
 }
 
 pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
