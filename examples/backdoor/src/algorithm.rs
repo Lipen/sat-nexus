@@ -166,6 +166,7 @@ impl Algorithm {
                 hs.reverse();
                 assert!(hs.len() > pool_limit);
                 let limit = hs[pool_limit - 1];
+                debug!("limit = {}", limit);
                 self.pool.retain(|v| heuristic[v] >= limit);
                 debug!("pool.len() = {}", self.pool.len());
             }
