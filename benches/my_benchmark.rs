@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use cadical::Cadical;
+use cadical::statik::Cadical;
 use cadical_sys::statik;
 use minisat::statik::MiniSat;
 
