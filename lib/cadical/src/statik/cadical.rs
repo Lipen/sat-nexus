@@ -263,25 +263,50 @@ impl Cadical {
         Ok(())
     }
 
-    pub fn propcheck(&self, lits: &[i32]) -> bool {
+    pub fn propcheck(&self, lits: &[i32], restore: bool) -> bool {
         unsafe {
             ccadical_propcheck_begin(self.ptr);
             for &lit in lits {
                 assert_ne!(lit, 0);
                 ccadical_propcheck_add(self.ptr, lit);
             }
-            ccadical_propcheck(self.ptr)
+            if restore {
+                ccadical_propcheck(self.ptr)
+            } else {
+                ccadical_propcheck_no_restore(self.ptr)
+            }
         }
     }
 
-    pub fn propcheck_save_propagated(&self, lits: &[i32]) -> (bool, Vec<i32>) {
+    pub fn propcheck_num_propagated(&self, lits: &[i32], restore: bool) -> (bool, u64) {
         unsafe {
             ccadical_propcheck_begin(self.ptr);
             for &lit in lits {
                 assert_ne!(lit, 0);
                 ccadical_propcheck_add(self.ptr, lit);
             }
-            let res = ccadical_propcheck_save_propagated(self.ptr);
+            let mut num_propagated = 0;
+            let res = if restore {
+                ccadical_propcheck_num_propagated(self.ptr, &mut num_propagated)
+            } else {
+                ccadical_propcheck_num_propagated_no_restore(self.ptr, &mut num_propagated)
+            };
+            (res, num_propagated)
+        }
+    }
+
+    pub fn propcheck_save_propagated(&self, lits: &[i32], restore: bool) -> (bool, Vec<i32>) {
+        unsafe {
+            ccadical_propcheck_begin(self.ptr);
+            for &lit in lits {
+                assert_ne!(lit, 0);
+                ccadical_propcheck_add(self.ptr, lit);
+            }
+            let res = if restore {
+                ccadical_propcheck_save_propagated(self.ptr)
+            } else {
+                ccadical_propcheck_save_propagated_no_restore(self.ptr)
+            };
             let propagated_length = ccadical_propcheck_get_propagated_length(self.ptr);
             let mut propagated = Vec::with_capacity(propagated_length);
             ccadical_propcheck_get_propagated(self.ptr, propagated.as_mut_ptr());

@@ -219,6 +219,7 @@ fn main() -> color_eyre::Result<()> {
             0,
             args.pool_limit,
             if args.pool_limit.is_some() { Some(&mut mysolver) } else { None },
+            // None,
         );
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 

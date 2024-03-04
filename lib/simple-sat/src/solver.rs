@@ -994,7 +994,19 @@ impl Solver {
 }
 
 impl Solver {
-    pub fn propcheck(&mut self, assumptions: &[Lit], out_propagated: Option<&mut Vec<Lit>>) -> bool {
+    pub fn propcheck_num_propagated(&mut self, assumptions: &[Lit]) -> (bool, u64) {
+        let mut num_propagated = 0;
+        let res = self.propcheck(assumptions, None, Some(&mut num_propagated));
+        (res, num_propagated)
+    }
+
+    pub fn propcheck_save_propagated(&mut self, assumptions: &[Lit]) -> (bool, Vec<Lit>) {
+        let mut propagated = Vec::new();
+        let res = self.propcheck(assumptions, Some(&mut propagated), None);
+        (res, propagated)
+    }
+
+    pub fn propcheck(&mut self, assumptions: &[Lit], out_propagated: Option<&mut Vec<Lit>>, out_num_propagated: Option<&mut u64>) -> bool {
         debug!("propcheck(assumptions = {})", DisplaySlice(assumptions));
 
         // First, propagate everything that needs to be propagated:
@@ -1053,6 +1065,16 @@ impl Solver {
                 }
             }
 
+            if let Some(mut out_num_propagated) = out_num_propagated {
+                *out_num_propagated = 0;
+                for &lit in &self.assignment.trail[self.assignment.trail_lim[level]..] {
+                    *out_num_propagated += 1;
+                }
+                if let Some(_conflict) = conflict {
+                    *out_num_propagated += 1;
+                }
+            }
+
             // Backtrack to the original decision level:
             self.backtrack(level);
         }
@@ -1075,7 +1097,7 @@ impl Solver {
         loop {
             trace!("cube = {}", DisplaySlice(&cube));
             let assumptions = zip_eq(variables, &cube).map(|(&v, &s)| Lit::new(v, s)).collect_vec();
-            let res = self.propcheck(&assumptions, None);
+            let res = self.propcheck(&assumptions, None, None);
             total_checked += 1;
 
             if res {

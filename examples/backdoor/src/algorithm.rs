@@ -124,38 +124,38 @@ impl Algorithm {
                     let neg_lit = Lit::new(var, true);
 
                     let (_pos_res, pos_prop) = if let Some(solver) = &mut solver_for_pool_limit {
-                        let mut propagated = Vec::new();
-                        let res = solver.propcheck(&[pos_lit], Some(&mut propagated));
-                        let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                        (res, propagated)
+                        // let (res, propagated) = solver.propcheck_save_propagated(&[pos_lit]);
+                        // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                        // (res, propagated)
+                        solver.propcheck_num_propagated(&[pos_lit])
                     } else {
                         match &mut self.solver {
                             SatSolver::SimpleSat(solver) => {
-                                let mut propagated = Vec::new();
-                                let res = solver.propcheck(&[pos_lit], Some(&mut propagated));
-                                let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                                (res, propagated)
+                                // let (res, propagated) = solver.propcheck_save_propagated(&[pos_lit]);
+                                // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                                // (res, propagated)
+                                solver.propcheck_num_propagated(&[pos_lit])
                             }
-                            SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[pos_lit.to_external()]),
+                            SatSolver::Cadical(solver) => solver.propcheck_num_propagated(&[pos_lit.to_external()], false),
                         }
                     };
                     let (_neg_res, neg_prop) = if let Some(solver) = &mut solver_for_pool_limit {
-                        let mut propagated = Vec::new();
-                        let res = solver.propcheck(&[neg_lit], Some(&mut propagated));
-                        let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                        (res, propagated)
+                        // let (res, propagated) = solver.propcheck_save_propagated(&[neg_lit]);
+                        // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                        // (res, propagated)
+                        solver.propcheck_num_propagated(&[neg_lit])
                     } else {
                         match &mut self.solver {
                             SatSolver::SimpleSat(solver) => {
-                                let mut propagated = Vec::new();
-                                let res = solver.propcheck(&[neg_lit], Some(&mut propagated));
-                                let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                                (res, propagated)
+                                // let (res, propagated) = solver.propcheck_save_propagated(&[neg_lit]);
+                                // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                                // (res, propagated)
+                                solver.propcheck_num_propagated(&[neg_lit])
                             }
-                            SatSolver::Cadical(solver) => solver.propcheck_save_propagated(&[neg_lit.to_external()]),
+                            SatSolver::Cadical(solver) => solver.propcheck_num_propagated(&[neg_lit.to_external()], false),
                         }
                     };
-                    let h = pos_prop.len() * neg_prop.len();
+                    let h = pos_prop * neg_prop;
                     // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop.len(), neg_prop.len(), h);
                     // debug!("{} => {} => {}", pos_lit, _pos_res, DisplaySlice(&pos_prop));
                     // debug!("{} => {} => {}", neg_lit, _neg_res, DisplaySlice(&neg_prop));

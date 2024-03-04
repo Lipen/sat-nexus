@@ -75,13 +75,13 @@ pub fn get_hard_tasks(variables: &[Var], solver: &mut SatSolver) -> Vec<Vec<Lit>
 }
 
 pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
-    partition_tasks_with(variables, |cube| solver.propcheck(cube, None))
+    partition_tasks_with(variables, |cube| solver.propcheck(cube, None, None))
 }
 
 pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
     partition_tasks_with(variables, |cube| {
         let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
-        solver.propcheck(&cube)
+        solver.propcheck(&cube, true)
     })
 }
 
