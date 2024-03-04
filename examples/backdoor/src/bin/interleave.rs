@@ -116,6 +116,10 @@ struct Cli {
     /// Danya's propcheck-based heuristic.
     #[arg(long, value_name = "INT")]
     pool_limit: Option<usize>,
+
+    /// Always update the budget for filtering.
+    #[arg(long)]
+    always_update_filter_budget: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -649,7 +653,7 @@ fn main() -> color_eyre::Result<()> {
             SatSolver::Cadical(solver) => solver.conflicts() as u64,
         };
         // Update the budget for filtering:
-        if num_conflicts > num_conflicts_limit {
+        if args.always_update_filter_budget || num_conflicts > num_conflicts_limit {
             budget_filter = (budget_filter as f64 * args.factor_budget_filter) as u64;
         }
 
