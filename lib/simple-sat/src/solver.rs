@@ -1065,12 +1065,9 @@ impl Solver {
                 }
             }
 
-            if let Some(mut out_num_propagated) = out_num_propagated {
-                *out_num_propagated = 0;
-                for &lit in &self.assignment.trail[self.assignment.trail_lim[level]..] {
-                    *out_num_propagated += 1;
-                }
-                if let Some(_conflict) = conflict {
+            if let Some(out_num_propagated) = out_num_propagated {
+                *out_num_propagated = (self.assignment.trail.len() - self.assignment.trail_lim[level]) as u64;
+                if conflict.is_some() {
                     *out_num_propagated += 1;
                 }
             }
