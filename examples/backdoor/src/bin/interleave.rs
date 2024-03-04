@@ -746,6 +746,23 @@ fn main() -> color_eyre::Result<()> {
             );
         }
 
+        match &mut algorithm.solver {
+            SatSolver::SimpleSat(_) => unreachable!(),
+            SatSolver::Cadical(solver) => {
+                debug!("Retrieving clauses from the solver...");
+                let time_all_clauses = Instant::now();
+                let mut all_cadical_clauses = HashSet::new();
+                for clause in solver.all_clauses_iter() {
+                    let mut clause = clause.into_iter().map(|i| Lit::from_external(i)).collect_vec();
+                    clause.sort_by_key(|lit| lit.inner());
+                    all_cadical_clauses.insert(clause);
+                }
+                let time_all_clauses = time_all_clauses.elapsed();
+                debug!("Retrieved {} clauses from the solver in {:.1}s", all_cadical_clauses.len(), time_all_clauses.as_secs_f64());
+                info!("Solver currently has {} clauses", all_cadical_clauses.len());
+            }
+        };
+
         if !args.only_preprocess {
             info!("Just solving with {} conflicts budget...", budget_solve);
             match &mut algorithm.solver {

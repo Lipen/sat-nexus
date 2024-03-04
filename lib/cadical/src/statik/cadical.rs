@@ -348,6 +348,62 @@ impl Cadical {
             valid
         }
     }
+
+    pub fn get_all_clauses(&self) -> Vec<Vec<i32>> {
+        unsafe {
+            let all_clauses_length = ccadical_build_all_clauses(self.ptr);
+            let mut all_clauses = Vec::with_capacity(all_clauses_length);
+            for i in 0..all_clauses_length {
+                let clause_length = ccadical_get_clause_length(self.ptr, i);
+                let mut clause = Vec::with_capacity(clause_length);
+                ccadical_get_clause(self.ptr, i, clause.as_mut_ptr());
+                clause.set_len(clause_length);
+                all_clauses.push(clause);
+            }
+            all_clauses
+        }
+    }
+
+    pub fn all_clauses_iter(&self) -> AllClausesIter {
+        unsafe {
+            let length = ccadical_build_all_clauses(self.ptr);
+            AllClausesIter {
+                ptr: self.ptr,
+                index: 0,
+                length,
+            }
+        }
+    }
+}
+
+pub struct AllClausesIter {
+    ptr: CCadicalPtr,
+    index: usize,
+    length: usize,
+}
+
+impl Iterator for AllClausesIter {
+    type Item = Vec<i32>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.length {
+            unsafe {
+                let clause_length = ccadical_get_clause_length(self.ptr, self.index);
+                let mut clause = Vec::with_capacity(clause_length);
+                ccadical_get_clause(self.ptr, self.index, clause.as_mut_ptr());
+                clause.set_len(clause_length);
+                self.index += 1;
+                Some(clause)
+            }
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.length - self.index;
+        (remaining, Some(remaining))
+    }
 }
 
 /// Additional methods.
