@@ -162,7 +162,11 @@ impl Algorithm {
                     // debug!("{} => {} => {}", neg_lit, _neg_res, DisplaySlice(&neg_prop));
                     heuristic.insert(var, h);
                 }
-                debug!("Computed heuristic values for {} vars in {:.3} s", self.pool.len(), time_pool_limit.elapsed().as_secs_f64());
+                debug!(
+                    "Computed heuristic values for {} vars in {:.3} s",
+                    self.pool.len(),
+                    time_pool_limit.elapsed().as_secs_f64()
+                );
                 let mut hs: Vec<_> = heuristic.values().copied().collect();
                 hs.sort();
                 hs.reverse();

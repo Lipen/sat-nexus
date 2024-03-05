@@ -758,7 +758,11 @@ fn main() -> color_eyre::Result<()> {
                     all_cadical_clauses.insert(clause);
                 }
                 let time_all_clauses = time_all_clauses.elapsed();
-                debug!("Retrieved {} clauses from the solver in {:.1}s", all_cadical_clauses.len(), time_all_clauses.as_secs_f64());
+                debug!(
+                    "Retrieved {} clauses from the solver in {:.1}s",
+                    all_cadical_clauses.len(),
+                    time_all_clauses.as_secs_f64()
+                );
                 info!("Solver currently has {} clauses", all_cadical_clauses.len());
             }
         };
