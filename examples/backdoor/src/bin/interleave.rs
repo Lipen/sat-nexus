@@ -117,6 +117,10 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     pool_limit: Option<usize>,
 
+    /// Use simple-sat for pool-limit.
+    #[arg(long)]
+    use_simple_sat_for_pool_limit: bool,
+
     /// Always update the budget for filtering.
     #[arg(long)]
     always_update_filter_budget: bool,
@@ -222,9 +226,13 @@ fn main() -> color_eyre::Result<()> {
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             0,
             args.pool_limit,
-            // if args.pool_limit.is_some() { Some(&mut mysolver) } else { None },
-            None,
+            if args.pool_limit.is_some() && args.use_simple_sat_for_pool_limit {
+                Some(&mut mysolver)
+            } else {
+                None
+            },
         );
+        break;
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
