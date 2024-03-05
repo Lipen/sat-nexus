@@ -118,6 +118,7 @@ impl Algorithm {
         if let Some(pool_limit) = pool_limit {
             if self.pool.len() > pool_limit {
                 debug!("Limiting the pool to {}...", pool_limit);
+                let time_pool_limit = Instant::now();
                 let mut heuristic = AHashMap::new();
                 for &var in self.pool.iter().progress() {
                     let pos_lit = Lit::new(var, false);
@@ -161,6 +162,7 @@ impl Algorithm {
                     // debug!("{} => {} => {}", neg_lit, _neg_res, DisplaySlice(&neg_prop));
                     heuristic.insert(var, h);
                 }
+                debug!("Computed heuristic values for {} vars in {:.3} s", self.pool.len(), time_pool_limit.elapsed().as_secs_f64());
                 let mut hs: Vec<_> = heuristic.values().copied().collect();
                 hs.sort();
                 hs.reverse();
