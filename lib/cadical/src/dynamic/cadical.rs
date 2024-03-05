@@ -119,8 +119,8 @@ impl Cadical {
     // The result is 'true' iff the 'name' is a valid configuration.
     pub fn configure(&self, name: &'static str) {
         let c_string = CString::new(name).expect("CString::new failed");
-        let res = unsafe { self.ffi.ccadical_configure(self.ptr, c_string.as_ptr()) };
-        assert!(res);
+        let ok = unsafe { self.ffi.ccadical_configure(self.ptr, c_string.as_ptr()) };
+        assert!(ok, "ccadical_configure returned false");
     }
 
     /// Explicit version of setting an option.  If the option 'name' exists
@@ -132,7 +132,7 @@ impl Cadical {
     pub fn set_option(&self, name: &'static str, val: i32) {
         let c_string = CString::new(name).expect("CString::new failed");
         let ok = unsafe { self.ffi.ccadical_set_option(self.ptr, c_string.as_ptr(), val) };
-        assert!(ok);
+        assert!(ok, "ccadical_set_option returned false");
     }
 
     /// Get the current value of the option 'name'.  If 'name' is invalid then
