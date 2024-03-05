@@ -131,8 +131,8 @@ impl Cadical {
     /// Options can only be set right after initialization.
     pub fn set_option(&self, name: &'static str, val: i32) {
         let c_string = CString::new(name).expect("CString::new failed");
-        let res = unsafe { self.ffi.ccadical_set_option(self.ptr, c_string.as_ptr(), val) };
-        assert!(res);
+        let ok = unsafe { self.ffi.ccadical_set_option(self.ptr, c_string.as_ptr(), val) };
+        assert!(ok);
     }
 
     /// Get the current value of the option 'name'.  If 'name' is invalid then
@@ -157,7 +157,8 @@ impl Cadical {
     /// which however should only be used for testing and debugging.
     pub fn limit(&self, name: &str, limit: i32) {
         let c_string = CString::new(name).expect("CString::new failed");
-        unsafe { self.ffi.ccadical_limit(self.ptr, c_string.as_ptr(), limit) }
+        let ok = unsafe { self.ffi.ccadical_limit(self.ptr, c_string.as_ptr(), limit) };
+        assert!(ok, "ccadical_limit returned false");
     }
 
     /// Add valid literal to clause or zero to terminate clause.
