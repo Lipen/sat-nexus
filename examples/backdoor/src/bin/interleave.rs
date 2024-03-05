@@ -232,7 +232,6 @@ fn main() -> color_eyre::Result<()> {
                 None
             },
         );
-        break;
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
