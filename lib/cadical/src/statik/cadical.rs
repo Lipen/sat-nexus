@@ -2,6 +2,7 @@ use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
+use log::{debug, trace, warn};
 use snafu::ensure;
 
 use cadical_sys::statik::*;
@@ -264,6 +265,36 @@ impl Cadical {
         Ok(())
     }
 
+    pub fn internal_propagate(&self) -> bool {
+        unsafe { ccadical_internal_propagate(self.ptr) }
+    }
+
+    pub fn internal_reset_conflict(&self) {
+        unsafe { ccadical_internal_reset_conflict(self.ptr) }
+    }
+
+    pub fn internal_level(&self) -> usize {
+        unsafe { ccadical_internal_level(self.ptr) as usize }
+    }
+
+    pub fn internal_val(&self, lit: i32) -> i8 {
+        assert_ne!(lit, 0);
+        unsafe { ccadical_internal_val(self.ptr, lit) }
+    }
+
+    pub fn internal_assume_decision(&self, lit: i32) {
+        // Note: lit can be 0, which creates a "dummy" level without a decision.
+        unsafe {
+            ccadical_internal_assume_decision(self.ptr, lit);
+        }
+    }
+
+    pub fn internal_backtrack(&self, new_level: usize) {
+        unsafe {
+            ccadical_internal_backtrack(self.ptr, new_level as i32);
+        }
+    }
+
     pub fn propcheck(&self, lits: &[i32], restore: bool) -> bool {
         unsafe {
             ccadical_propcheck_begin(self.ptr);
@@ -416,5 +447,125 @@ impl Cadical {
         let lits: Vec<i32> = lits.into_iter().map(|x| x.try_into()).try_collect()?;
         self.add_clause(lits);
         Ok(())
+    }
+}
+
+impl Cadical {
+    pub fn propcheck_all_tree_via_internal(&self, vars: &[i32], limit: u64) -> u64 {
+        assert!(vars.len() < 30);
+
+        // TODO:
+        // if (internal->unsat || internal->unsat_constraint) {
+        //     std::cout << "Already unsat" << std::endl;
+        //     return 0;
+        // }
+
+        // Trivial case:
+        if vars.is_empty() {
+            return 0;
+        }
+
+        // Backtrack to 0 level before prop-checking:
+        if self.internal_level() > 0 {
+            trace!("Backtracking from level {} to 0", self.internal_level());
+            self.internal_backtrack(0);
+        }
+
+        // Propagate everything that needs to be propagated:
+        if !self.internal_propagate() {
+            debug!("Conflict during pre-propagation");
+            self.internal_reset_conflict();
+            return 0;
+        }
+
+        let mut cube = vec![-1; vars.len()];
+        let mut total_checked = 0u64;
+        let mut total_count = 0u64;
+
+        #[derive(Debug)]
+        enum State {
+            Descending,
+            Ascending,
+            Propagating,
+        }
+        let mut state = State::Descending;
+
+        loop {
+            let level = self.internal_level();
+            assert!(level <= vars.len());
+
+            match state {
+                State::Descending => {
+                    if level == vars.len() {
+                        total_count += 1;
+                        if limit > 0 && total_count >= limit {
+                            trace!("reached the limit: {} >= {}", total_count, limit);
+                            break;
+                        }
+                        state = State::Ascending;
+                    } else {
+                        let lit = vars[level] * cube[level];
+                        let b = self.internal_val(lit);
+                        if b > 0 {
+                            // Dummy level:
+                            self.internal_assume_decision(0);
+                            state = State::Descending;
+                        } else if b < 0 {
+                            // Dummy level:
+                            self.internal_assume_decision(0);
+                            state = State::Ascending;
+                        } else {
+                            // Enqueue the literal:
+                            self.internal_assume_decision(lit);
+                            state = State::Propagating;
+                        }
+                    }
+                }
+
+                State::Ascending => {
+                    assert!(level > 0);
+
+                    // Find the 1-based index of the last 'false' value in 'cube':
+                    let mut i = level; // 1-based
+                    while i > 0 && cube[i - 1] > 0 {
+                        i -= 1;
+                    }
+                    if i == 0 {
+                        break;
+                    }
+
+                    // Increment the 'cube':
+                    assert_eq!(cube[i - 1], -1);
+                    cube[i - 1] = 1;
+                    for j in i..vars.len() {
+                        cube[j] = -1;
+                    }
+
+                    // Backtrack to the level before `i`:
+                    self.internal_backtrack(i - 1);
+
+                    // Switch state to descending:
+                    state = State::Descending;
+                }
+
+                State::Propagating => {
+                    total_checked += 1;
+                    if !self.internal_propagate() {
+                        // Conflict.
+                        self.internal_reset_conflict();
+                        state = State::Ascending;
+                    } else {
+                        // No conflict.
+                        state = State::Descending;
+                    }
+                }
+            }
+        }
+
+        // Post-backtrack to zero level:
+        self.internal_backtrack(0);
+
+        trace!("Checked {} cubes, found {} valid", total_checked, total_count);
+        total_count
     }
 }

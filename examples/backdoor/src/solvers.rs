@@ -68,7 +68,8 @@ impl SatSolver {
             }
             SatSolver::Cadical(solver) => {
                 let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
-                solver.propcheck_all_tree(&vars_external, limit)
+                // solver.propcheck_all_tree(&vars_external, limit)
+                solver.propcheck_all_tree_via_internal(&vars_external, limit)
             }
         }
     }
