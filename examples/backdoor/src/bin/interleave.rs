@@ -105,14 +105,6 @@ struct Cli {
     #[arg(long)]
     use_sorted_filtering: bool,
 
-    /// Time limit (in seconds).
-    #[arg(long, value_name = "INT")]
-    time_limit: Option<u64>,
-
-    /// Act as preprocessor only before delegating to Cadical.
-    #[arg(long)]
-    only_preprocess: bool,
-
     /// Danya's propcheck-based heuristic.
     #[arg(long, value_name = "INT")]
     pool_limit: Option<usize>,
@@ -134,13 +126,6 @@ fn main() -> color_eyre::Result<()> {
     let start_time = Instant::now();
     let args = Cli::parse();
     info!("args = {:?}", args);
-
-    if args.only_preprocess {
-        assert!(
-            args.time_limit.is_some(),
-            "Whe using '--only-preprocess', option '--time-limit <INT>' must be also specified"
-        );
-    }
 
     // Initialize SAT solver:
     let mut mysolver = Solver::default();
@@ -205,13 +190,6 @@ fn main() -> color_eyre::Result<()> {
         run_number += 1;
         info!("Run {}", run_number);
         let time_run = Instant::now();
-
-        if let Some(time_limit) = args.time_limit {
-            if start_time.elapsed().as_secs_f64() > time_limit as f64 {
-                info!("Time limit ({}s) reached", time_limit);
-                break;
-            }
-        }
 
         // Reset banned used variables:
         if args.reset_used_vars && cubes_product == vec![vec![]] {
@@ -773,35 +751,33 @@ fn main() -> color_eyre::Result<()> {
             }
         };
 
-        if !args.only_preprocess {
-            info!("Just solving with {} conflicts budget...", budget_solve);
-            match &mut algorithm.solver {
-                SatSolver::SimpleSat(_) => unreachable!(),
-                SatSolver::Cadical(solver) => {
-                    solver.limit("conflicts", budget_solve as i32);
-                    let time_solve = Instant::now();
-                    let res = solver.solve().unwrap();
-                    let time_solve = time_solve.elapsed();
-                    match res {
-                        SolveResponse::Interrupted => {
-                            info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
-                            // do nothing
-                        }
-                        SolveResponse::Unsat => {
-                            info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                            break;
-                        }
-                        SolveResponse::Sat => {
-                            info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                            // TODO: dump model
-                            break;
-                        }
+        info!("Just solving with {} conflicts budget...", budget_solve);
+        match &mut algorithm.solver {
+            SatSolver::SimpleSat(_) => unreachable!(),
+            SatSolver::Cadical(solver) => {
+                solver.limit("conflicts", budget_solve as i32);
+                let time_solve = Instant::now();
+                let res = solver.solve().unwrap();
+                let time_solve = time_solve.elapsed();
+                match res {
+                    SolveResponse::Interrupted => {
+                        info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                        // do nothing
+                    }
+                    SolveResponse::Unsat => {
+                        info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                        break;
+                    }
+                    SolveResponse::Sat => {
+                        info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                        // TODO: dump model
+                        break;
                     }
                 }
             }
-            // Update the budget for solving:
-            budget_solve = (budget_solve as f64 * args.factor_budget_solve) as u64;
         }
+        // Update the budget for solving:
+        budget_solve = (budget_solve as f64 * args.factor_budget_solve) as u64;
 
         let time_run = time_run.elapsed();
         info!("Done run {} in {:.1}s", run_number, time_run.as_secs_f64());
@@ -816,31 +792,6 @@ fn main() -> color_eyre::Result<()> {
         all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
         all_derived_clauses.iter().filter(|c| c.len() > 2).count()
     );
-
-    if args.only_preprocess {
-        info!("Just solving...");
-        match &mut algorithm.solver {
-            SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => {
-                let time_solve = Instant::now();
-                let res = solver.solve().unwrap();
-                let time_solve = time_solve.elapsed();
-                match res {
-                    SolveResponse::Interrupted => {
-                        info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
-                        unreachable!()
-                    }
-                    SolveResponse::Unsat => {
-                        info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                    }
-                    SolveResponse::Sat => {
-                        info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                        // TODO: dump model
-                    }
-                }
-            }
-        }
-    }
 
     println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());
     Ok(())
