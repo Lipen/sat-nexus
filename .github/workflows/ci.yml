@@ -110,7 +110,7 @@ jobs:
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
           make -j8
-          make install --prefix=install
+          make install prefix=install
           # Note: the resulting file `build/libminisat.so` is actually a DLL, just have a Linux-name!
           cp build/libminisat.so build/minisat.dll
           # Result: build/minisat.dll
