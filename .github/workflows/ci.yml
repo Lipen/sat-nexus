@@ -39,16 +39,7 @@ jobs:
       - name: Build and install MiniSat shared library (libminisat.so)
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -- -j8
-          sudo cmake --install build --strip --prefix /usr/local
-
-      - name: Build and install MiniSat-C shared library (libminisat-c.so)
-        working-directory: lib/minisat-sys/vendor/minisat-c-bindings
-        run: |
-          make config MINISAT_INCLUDE="-I/usr/local/include"
-          make config MINISAT_LIB="-L/usr/local/lib -lminisat"
-          make config prefix=/usr/local
+          make -j8
           sudo make install
 
       - name: Build and install Cadical shared library (libcadical.so)
@@ -77,7 +68,6 @@ jobs:
           name: shared-libs
           path: |
             /usr/local/lib/libminisat.so
-            /usr/local/lib/libminisat-c.so
             /usr/local/lib/libcadical.so
             /usr/local/lib/libkissat.so
 
@@ -119,20 +109,11 @@ jobs:
       - name: Build MiniSat dynamic library
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -G "MinGW Makefiles"
-          cmake --build build
-          cmake --install build --strip --prefix install
-          # Result: install/bin/libminisat.dll
-
-      - name: Build MiniSat-C dynamic library
-        working-directory: lib/minisat-sys/vendor/minisat-c-bindings
-        run: |
-          make config MINISAT_INCLUDE="-I../zlib -I../minisat/install/include"
-          make config MINISAT_LIB="-LC:/Strawberry/c/lib -L../minisat/install/lib -lminisat"
-          make config prefix=install
-          make install
-          mv install/lib/libminisat-c.so install/lib/minisat-c.dll
-          # Result: install/lib/minisat-c.dll
+          make -j8
+          make install --prefix=install
+          # Note: the resulting file `build/libminisat.so` is actually a DLL, just have a Linux-name!
+          cp build/libminisat.so build/minisat.dll
+          # Result: build/minisat.dll
 
       - name: Build Cadical dynamic library
         working-directory: lib/cadical-sys/vendor/cadical
