@@ -6,7 +6,7 @@ fn main() -> color_eyre::Result<()> {
     unsafe {
         let ffi = CMiniSatFFI::load("minisat-c");
         println!("ffi created");
-        let ptr = ffi.minisat_new();
+        let ptr = ffi.minisat_init();
         println!("ptr = {:?}", ptr);
 
         println!("minisat_l_True = {:?}", ffi.minisat_get_l_True());
@@ -84,6 +84,8 @@ fn main() -> color_eyre::Result<()> {
         let result = ffi.minisat_solve_commit(ptr);
         println!("result = {}", result);
         assert!(!result);
+
+        ffi.minisat_release(ptr);
     }
 
     Ok(())

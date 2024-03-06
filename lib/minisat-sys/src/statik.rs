@@ -7,10 +7,4 @@ pub mod bindings {
 
     include!(concat!(env!("OUT_DIR"), "/bindings-cminisat-static.rs"));
     // include!("../_bindings-cminisat-static.rs");
-
-    // `minisat.h` contains the following declaration:
-    //   typedef opaque(int) minisat_bool;
-    // However, in the implementation (`minisat.cc`) it is just a plain c-bool.
-    // Hence, we blocklist `minisat_bool` in bindgen and declare its Rust counterpart manually.
-    pub type minisat_bool = bool;
 }

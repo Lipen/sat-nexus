@@ -7,16 +7,10 @@ pub mod bindings {
 
     include!(concat!(env!("OUT_DIR"), "/bindings-cminisat-dynamic.rs"));
     // include!("../_bindings-cminisat-dynamic.rs");
-
-    // `minisat.h` contains the following declaration:
-    //   typedef opaque(int) minisat_bool;
-    // However, in the implementation (`minisat.cc`) it is just a plain c-bool.
-    // Hence, we blocklist `minisat_bool` in bindgen and declare its Rust counterpart manually.
-    pub type minisat_bool = bool;
 }
 
 pub type CMiniSatFFI = bindings::cminisat;
-pub type CMiniSatPtr = *mut bindings::minisat_solver;
+pub type CMiniSatPtr = *mut bindings::CMiniSat;
 
 impl CMiniSatFFI {
     pub fn load(name: &str) -> Self {
@@ -27,6 +21,6 @@ impl CMiniSatFFI {
     pub fn instance() -> &'static Self {
         use ::once_cell::sync::OnceCell;
         static INSTANCE: OnceCell<CMiniSatFFI> = OnceCell::new();
-        INSTANCE.get_or_init(|| Self::load("minisat-c"))
+        INSTANCE.get_or_init(|| Self::load("minisat"))
     }
 }

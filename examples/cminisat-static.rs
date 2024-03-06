@@ -4,7 +4,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     unsafe {
-        let ptr = minisat_new();
+        let ptr = minisat_init();
         println!("ptr = {:?}", ptr);
 
         println!("minisat_l_True = {:?}", minisat_l_True);
@@ -82,6 +82,8 @@ fn main() -> color_eyre::Result<()> {
         let result = minisat_solve_commit(ptr);
         println!("result = {}", result);
         assert!(!result);
+
+        minisat_release(ptr);
     }
 
     Ok(())

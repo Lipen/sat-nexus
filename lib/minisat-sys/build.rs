@@ -17,13 +17,12 @@ fn generate_bindings_dynamic() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --dynamic-link-require-all --blocklist-type minisat_bool --no-layout-tests
+    //   bindgen wrapper.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --dynamic-link-require-all --no-layout-tests
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("cminisat")
         .dynamic_link_require_all(true)
         // .allowlist_function("minisat_.*")
-        .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .layout_tests(false)
         .generate()
@@ -41,11 +40,10 @@ fn generate_bindings_static() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-cminisat-static.rs --blocklist-type minisat_bool
+    //   bindgen wrapper.h -o _bindings-cminisat-static.rs
     let bindings = bindgen::builder()
         .header("wrapper.h")
         // .allowlist_function("minisat_.*")
-        .blocklist_type("minisat_bool") // manually aliased to Rust's `bool`
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Could not create bindings!");
@@ -64,11 +62,10 @@ fn build_static_lib() {
         .cpp(true)
         .include("vendor/minisat/minisat")
         .include("vendor/minisat")
-        .include("vendor/zlib")
+        .file("vendor/minisat/minisat/capi/cminisat.cc")
         .file("vendor/minisat/minisat/core/Solver.cc")
         .file("vendor/minisat/minisat/simp/SimpSolver.cc")
         .file("vendor/minisat/minisat/utils/System.cc")
-        .file("vendor/minisat-c-bindings/minisat.cc")
         .define("__STDC_LIMIT_MACROS", None)
         .define("__STDC_FORMAT_MACROS", None)
         .warnings(false)

@@ -1,1 +1,1 @@
-#include "vendor/minisat-c-bindings/minisat.h"
+#include "vendor/minisat/minisat/capi/cminisat.h"

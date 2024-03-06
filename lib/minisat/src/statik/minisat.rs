@@ -35,12 +35,12 @@ use super::var::*;
 /// # }
 /// ```
 pub struct MiniSat {
-    ptr: *mut minisat_solver,
+    ptr: *mut CMiniSat,
 }
 
 impl MiniSat {
     pub fn new() -> Self {
-        let ptr = unsafe { minisat_new() };
+        let ptr = unsafe { minisat_init() };
         unsafe {
             minisat_eliminate(ptr, true);
         }
@@ -83,7 +83,7 @@ impl MiniSat {
     pub fn release(&mut self) {
         if !self.ptr.is_null() {
             unsafe {
-                minisat_delete(self.ptr);
+                minisat_release(self.ptr);
             }
             self.ptr = std::ptr::null_mut();
         }
@@ -214,16 +214,16 @@ impl MiniSat {
     pub fn num_learnts(&self) -> i32 {
         unsafe { minisat_num_learnts(self.ptr) }
     }
-    pub fn num_conflicts(&self) -> i32 {
+    pub fn num_conflicts(&self) -> i64 {
         unsafe { minisat_num_conflicts(self.ptr) }
     }
-    pub fn num_decisions(&self) -> i32 {
+    pub fn num_decisions(&self) -> i64 {
         unsafe { minisat_num_decisions(self.ptr) }
     }
-    pub fn num_restarts(&self) -> i32 {
+    pub fn num_restarts(&self) -> i64 {
         unsafe { minisat_num_restarts(self.ptr) }
     }
-    pub fn num_propagations(&self) -> i32 {
+    pub fn num_propagations(&self) -> i64 {
         unsafe { minisat_num_propagations(self.ptr) }
     }
 }
@@ -232,7 +232,7 @@ impl MiniSat {
 impl MiniSat {
     pub fn reset(&mut self) {
         self.release();
-        self.ptr = unsafe { minisat_new() };
+        self.ptr = unsafe { minisat_init() };
     }
 
     pub fn set_polarity_lit(&self, lit: Lit, pol: LBool) {
