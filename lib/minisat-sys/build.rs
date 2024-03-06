@@ -17,12 +17,12 @@ fn generate_bindings_dynamic() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --dynamic-link-require-all --no-layout-tests
+    //   bindgen wrapper.h -o _bindings-cminisat-dynamic.rs --dynamic-loading cminisat --dynamic-link-require-all --allowlist-function "minisat_.*" --no-layout-tests
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("cminisat")
         .dynamic_link_require_all(true)
-        // .allowlist_function("minisat_.*")
+        .allowlist_function("minisat_.*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .layout_tests(false)
         .generate()
@@ -40,10 +40,10 @@ fn generate_bindings_static() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-cminisat-static.rs
+    //   bindgen wrapper.h -o _bindings-cminisat-static.rs --allowlist-function "minisat_.*"
     let bindings = bindgen::builder()
         .header("wrapper.h")
-        // .allowlist_function("minisat_.*")
+        .allowlist_function("minisat_.*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Could not create bindings!");
