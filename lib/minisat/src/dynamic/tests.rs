@@ -49,6 +49,5 @@ fn test_minisat_solver_dynamic() -> color_eyre::Result<()> {
     println!("restarts =     {}", solver.num_restarts());
     println!("propagations = {}", solver.num_propagations());
 
-    println!("{}", "=".repeat(42));
     Ok(())
 }

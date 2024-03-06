@@ -3,6 +3,7 @@ use super::*;
 #[test]
 fn test_kissat_solver() {
     let solver = Kissat::new();
+    println!("solver = {}", solver);
     assert!(solver.signature().contains("kissat"));
 
     // Encoding (x1 xor x2) and (x3 xor x4)

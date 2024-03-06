@@ -4,6 +4,7 @@ use crate::common::*;
 #[test]
 fn test_cadical_solver() -> color_eyre::Result<()> {
     let solver = Cadical::new();
+    println!("solver = {}", solver);
     assert!(solver.signature().contains("cadical"));
 
     // Adding [(1 or 2) and (3 or 4) and not(1 and 2) and not(3 and 4)]
