@@ -110,9 +110,8 @@ jobs:
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
           make -j8
-          make install prefix=install
-          # Note: the resulting file `build/libminisat.so` is actually a DLL, just have a Linux-name!
-          cp build/libminisat.so build/minisat.dll
+          # Note: the resulting file `libminisat.so` is actually a DLL, just have a Linux-name!
+          cp build/dynamic/lib/libminisat.so.2.1.0 build/minisat.dll
           # Result: build/minisat.dll
 
       - name: Build Cadical dynamic library
@@ -136,8 +135,7 @@ jobs:
       - name: Copy DLLs to 'libs/'
         run: |
           mkdir -p libs
-          cp lib/minisat-sys/vendor/minisat/install/bin/libminisat.dll libs/
-          cp lib/minisat-sys/vendor/minisat-c-bindings/install/lib/minisat-c.dll libs/
+          cp lib/minisat-sys/vendor/minisat/build/minisat.dll libs/
           cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
           cp lib/kissat-sys/vendor/kissat/build/kissat.dll libs/
           ldd libs/*.dll
