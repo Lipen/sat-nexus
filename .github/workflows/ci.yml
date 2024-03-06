@@ -110,8 +110,7 @@ jobs:
         working-directory: lib/minisat-sys/vendor/minisat
         run: |
           make -j8
-          # Note: the resulting file `libminisat.so` is actually a DLL, just have a Linux-name!
-          cp build/dynamic/lib/libminisat.so.2.1.0 build/minisat.dll
+          cp build/dynamic/lib/minisat.dll.2.1.0 build/minisat.dll
           # Result: build/minisat.dll
 
       - name: Build Cadical dynamic library
