@@ -105,7 +105,7 @@ struct Cli {
     #[arg(long)]
     use_sorted_filtering: bool,
 
-    /// Danya's propcheck-based heuristic.
+    /// Daniil's propcheck-based heuristic.
     #[arg(long, value_name = "INT")]
     pool_limit: Option<usize>,
 
