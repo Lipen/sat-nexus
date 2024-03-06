@@ -86,7 +86,6 @@ impl Algorithm {
         max_rho: Option<f64>,
         min_iter: usize,
         pool_limit: Option<usize>,
-        mut solver_for_pool_limit: Option<&mut SimpleSatSolver>,
     ) -> RunResult {
         let start_time = Instant::now();
 
@@ -124,40 +123,26 @@ impl Algorithm {
                     let pos_lit = Lit::new(var, false);
                     let neg_lit = Lit::new(var, true);
 
-                    let (_pos_res, pos_prop) = if let Some(solver) = &mut solver_for_pool_limit {
-                        // let (res, propagated) = solver.propcheck_save_propagated(&[pos_lit]);
-                        // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                        // (res, propagated)
-                        solver.propcheck_num_propagated(&[pos_lit])
-                    } else {
-                        match &mut self.solver {
-                            SatSolver::SimpleSat(solver) => {
-                                // let (res, propagated) = solver.propcheck_save_propagated(&[pos_lit]);
-                                // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                                // (res, propagated)
-                                solver.propcheck_num_propagated(&[pos_lit])
-                            }
-                            SatSolver::Cadical(solver) => solver.propcheck_num_propagated(&[pos_lit.to_external()], false),
+                    let (_pos_res, pos_prop) = match &mut self.solver {
+                        SatSolver::SimpleSat(solver) => {
+                            // let (res, propagated) = solver.propcheck_save_propagated(&[pos_lit]);
+                            // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                            // (res, propagated)
+                            solver.propcheck_num_propagated(&[pos_lit])
                         }
+                        SatSolver::Cadical(solver) => solver.propcheck_num_propagated(&[pos_lit.to_external()], false),
                     };
-                    let (_neg_res, neg_prop) = if let Some(solver) = &mut solver_for_pool_limit {
-                        // let (res, propagated) = solver.propcheck_save_propagated(&[neg_lit]);
-                        // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                        // (res, propagated)
-                        solver.propcheck_num_propagated(&[neg_lit])
-                    } else {
-                        match &mut self.solver {
-                            SatSolver::SimpleSat(solver) => {
-                                // let (res, propagated) = solver.propcheck_save_propagated(&[neg_lit]);
-                                // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                                // (res, propagated)
-                                solver.propcheck_num_propagated(&[neg_lit])
-                            }
-                            SatSolver::Cadical(solver) => solver.propcheck_num_propagated(&[neg_lit.to_external()], false),
+                    let (_neg_res, neg_prop) = match &mut self.solver {
+                        SatSolver::SimpleSat(solver) => {
+                            // let (res, propagated) = solver.propcheck_save_propagated(&[neg_lit]);
+                            // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
+                            // (res, propagated)
+                            solver.propcheck_num_propagated(&[neg_lit])
                         }
+                        SatSolver::Cadical(solver) => solver.propcheck_num_propagated(&[neg_lit.to_external()], false),
                     };
                     let h = pos_prop * neg_prop;
-                    // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop.len(), neg_prop.len(), h);
+                    // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop, neg_prop, h);
                     // debug!("{} => {} => {}", pos_lit, _pos_res, DisplaySlice(&pos_prop));
                     // debug!("{} => {} => {}", neg_lit, _neg_res, DisplaySlice(&neg_prop));
                     heuristic.insert(var, h);

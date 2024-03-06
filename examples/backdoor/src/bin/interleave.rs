@@ -203,11 +203,6 @@ fn main() -> color_eyre::Result<()> {
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             0,
             args.pool_limit,
-            if args.pool_limit.is_some() && args.use_simple_sat_for_pool_limit {
-                Some(&mut mysolver)
-            } else {
-                None
-            },
         );
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
