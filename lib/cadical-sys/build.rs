@@ -16,7 +16,7 @@ fn generate_bindings_dynamic() {
     build_script::cargo_warning("Generating Cadical dynamic bindings...");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical --dynamic-link-require-all --allowlist-function ccadical_.* --no-layout-tests
+    //   bindgen wrapper.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical --no-layout-tests --allowlist-function "ccadical_.*"
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("ccadical")
@@ -39,7 +39,7 @@ fn generate_bindings_static() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-ccadical-static.rs --allowlist-function ccadical_.*
+    //   bindgen wrapper.h -o _bindings-ccadical-static.rs --allowlist-function "ccadical_.*"
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .allowlist_function("ccadical_.*")
