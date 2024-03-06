@@ -61,7 +61,7 @@ struct Cli {
     #[arg(long = "ban", value_name = "INT...")]
     banned_vars: Option<String>,
 
-    /// Do ban variables used in best backdoors on previous runs?
+    /// Do ban variables used in the best backdoors on previous runs?
     #[arg(long)]
     ban_used: bool,
 
