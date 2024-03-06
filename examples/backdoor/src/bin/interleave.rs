@@ -98,7 +98,7 @@ struct Cli {
     budget_solve: u64,
 
     /// Multiplicative factor for solving budget.
-    #[arg(long, value_name = "FLOAT", default_value_t = 1.1)]
+    #[arg(long, value_name = "FLOAT", default_value_t = 1.0)]
     factor_budget_solve: f64,
 
     /// Use novel sorted filtering method.
