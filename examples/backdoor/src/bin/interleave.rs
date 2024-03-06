@@ -73,9 +73,9 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     stagnation_limit: Option<usize>,
 
-    /// Do not freeze variables.
+    /// Freeze variables.
     #[arg(long)]
-    no_freeze: bool,
+    freeze: bool,
 
     /// Derive ternary clauses.
     #[arg(long)]
@@ -150,11 +150,10 @@ fn main() -> color_eyre::Result<()> {
 
     // Initialize Cadical:
     let solver = Cadical::new();
-    // solver.set_option("reimply", 0);
     for clause in parse_dimacs(&args.path_cnf) {
         solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
-    if !args.no_freeze {
+    if args.freeze {
         for i in 0..solver.vars() {
             let lit = (i + 1) as i32;
             solver.freeze(lit).unwrap();
