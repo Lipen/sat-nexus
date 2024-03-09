@@ -4,18 +4,19 @@ use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
 use std::time::Instant;
 
-use cadical::statik::Cadical;
-use cadical::SolveResponse;
 use itertools::{zip_eq, Itertools, MultiProduct};
-use log::{debug, info};
+use log::{debug, info, trace};
 use ordered_float::OrderedFloat;
 
-use crate::solvers::SatSolver;
-
+use cadical::statik::Cadical;
+use cadical::SolveResponse;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
+use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
+
+use crate::solvers::SatSolver;
 
 pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) -> Vec<Vec<usize>> {
     let path = path.as_ref();
@@ -450,9 +451,136 @@ where
     lits.into_iter().map(|lit| lit.to_external())
 }
 
+pub fn propcheck_all_trie_via_internal(solver: &Cadical, vars: &[i32], trie: &Trie, limit: u64) -> u64 {
+    assert!(vars.len() < 30);
+
+    // TODO:
+    // if (internal->unsat || internal->unsat_constraint) {
+    //     std::cout << "Already unsat" << std::endl;
+    //     return 0;
+    // }
+
+    // Trivial case:
+    if vars.is_empty() || trie.is_empty() {
+        return 0;
+    }
+
+    // Backtrack to 0 level before prop-checking:
+    if solver.internal_level() > 0 {
+        trace!("Backtracking from level {} to 0", solver.internal_level());
+        solver.internal_backtrack(0);
+    }
+
+    // Propagate everything that needs to be propagated:
+    if !solver.internal_propagate() {
+        debug!("Conflict during pre-propagation");
+        solver.internal_reset_conflict();
+        return 0;
+    }
+
+    let mut cube = vec![false; vars.len()];
+    let mut total_checked = 0u64;
+    let mut total_count = 0u64;
+
+    #[derive(Debug)]
+    enum State {
+        Descending,
+        Ascending,
+        Propagating,
+    }
+    let mut state = State::Descending;
+
+    loop {
+        let level = solver.internal_level();
+        assert!(level <= vars.len());
+
+        match state {
+            State::Descending => {
+                if level == vars.len() {
+                    total_count += 1;
+                    if limit > 0 && total_count >= limit {
+                        trace!("reached the limit: {} >= {}", total_count, limit);
+                        break;
+                    }
+                    state = State::Ascending;
+                } else {
+                    if trie.search(&cube[..=level]) == 0 {
+                        // Dummy level:
+                        solver.internal_assume_decision(0);
+                        state = State::Ascending;
+                    } else {
+                        let lit = if cube[level] { vars[level] } else { -vars[level] };
+                        let b = solver.internal_val(lit);
+                        if b > 0 {
+                            // Dummy level:
+                            solver.internal_assume_decision(0);
+                            state = State::Descending;
+                        } else if b < 0 {
+                            // Dummy level:
+                            solver.internal_assume_decision(0);
+                            state = State::Ascending;
+                        } else {
+                            // Enqueue the literal:
+                            solver.internal_assume_decision(lit);
+                            state = State::Propagating;
+                        }
+                    }
+                }
+            }
+
+            State::Ascending => {
+                assert!(level > 0);
+
+                // Find the 1-based index of the last 'false' value in 'cube':
+                let mut i = level; // 1-based
+                while i > 0 && cube[i - 1] {
+                    i -= 1;
+                }
+                if i == 0 {
+                    break;
+                }
+
+                // Increment the 'cube':
+                assert!(!cube[i - 1]);
+                cube[i - 1] = true;
+                for j in i..vars.len() {
+                    cube[j] = false;
+                }
+
+                // Backtrack to the level before `i`:
+                solver.internal_backtrack(i - 1);
+
+                // Switch state to descending:
+                state = State::Descending;
+            }
+
+            State::Propagating => {
+                total_checked += 1;
+                if !solver.internal_propagate() {
+                    // Conflict.
+                    solver.internal_reset_conflict();
+                    state = State::Ascending;
+                } else {
+                    // No conflict.
+                    state = State::Descending;
+                }
+            }
+        }
+    }
+
+    // Post-backtrack to zero level:
+    solver.internal_backtrack(0);
+
+    trace!("Checked {} cubes, found {} valid", total_checked, total_count);
+    total_count
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::assert_equal;
+    use test_log::test;
+
+    use simple_sat::trie::build_trie;
 
     use super::*;
 
@@ -489,5 +617,49 @@ mod tests {
             mask(&[x1, x2, x3, x7, x9], &[x2, x3, x5, x7, x8]),
             [false, false, true, false, true],
         )
+    }
+
+    #[test]
+    fn test_cadical_propcheck() {
+        let mut solver = Cadical::new();
+
+        let x1 = 1;
+        let x2 = 2;
+        let g1 = 3;
+        info!("x1 = {}, x2 = {}, g1 = {}", x1, x2, g1);
+
+        // g1 <=> x1 AND x2
+        solver.add_clause([g1, -x1, -x2]);
+        solver.add_clause([-g1, x1]);
+        solver.add_clause([-g1, x2]);
+
+        // Forbid (x1 AND ~x2)
+        solver.add_clause([-x1, x2]);
+
+        info!("vars = {}, clauses = {}", solver.vars(), solver.all_clauses_iter().count());
+
+        // Problem is satisfiable.
+        // let res = solver.solve();
+        // assert_eq!(res, SolveResult::Sat);
+
+        let variables = vec![x1, x2];
+
+        info!("----------------------");
+        let count_tree = solver.propcheck_all_tree(&variables, 0);
+        info!("count_tree = {}", count_tree);
+
+        info!("----------------------");
+        let count_tree_internal = solver.propcheck_all_tree_via_internal(&variables, 0);
+        info!("count_tree_internal = {}", count_tree_internal);
+
+        assert_eq!(count_tree, count_tree_internal);
+
+        info!("----------------------");
+        let cubes = vec![vec![false, false], vec![true, true], vec![true, false], vec![false, true]];
+        let trie = build_trie(&cubes);
+        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0);
+        info!("count_trie_internal = {}", count_trie_internal);
+
+        assert_eq!(count_tree_internal, count_trie_internal);
     }
 }
