@@ -381,7 +381,7 @@ impl Cadical {
     }
 
     pub fn all_clauses_iter(&self) -> AllClausesIter {
-        AllClausesIter::new(self.ptr)
+        unsafe { AllClausesIter::new(self.ptr) }
     }
 }
 
@@ -392,8 +392,8 @@ pub struct AllClausesIter {
 }
 
 impl AllClausesIter {
-    pub fn new(ptr: CCadicalPtr) -> Self {
-        let length = unsafe { ccadical_build_all_clauses(ptr) };
+    pub unsafe fn new(ptr: CCadicalPtr) -> Self {
+        let length = ccadical_build_all_clauses(ptr);
         Self { ptr, length, index: 0 }
     }
 }
