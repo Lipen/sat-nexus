@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_cadical_propcheck() {
-        let mut solver = Cadical::new();
+        let solver = Cadical::new();
 
         let x1 = 1;
         let x2 = 2;
