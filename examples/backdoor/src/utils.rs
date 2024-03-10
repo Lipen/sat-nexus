@@ -132,7 +132,6 @@ pub fn filter_cubes(
     num_conflicts_budget: u64,
     num_conflicts_limit: u64,
     solver: &mut SatSolver,
-    mysolver: &mut Solver,
     all_clauses: &mut HashSet<Vec<Lit>>,
     all_derived_clauses: &mut Vec<Vec<Lit>>,
     file_derived_clauses: &mut Option<LineWriter<File>>,
@@ -284,7 +283,6 @@ pub fn filter_cubes(
                                         writeln!(f, "0").unwrap();
                                     }
                                     solver.add_clause(clause_to_external(&lemma));
-                                    mysolver.add_clause(&lemma);
                                     all_derived_clauses.push(lemma);
                                 }
                             }

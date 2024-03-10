@@ -13,7 +13,10 @@ use rand::prelude::*;
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
 use backdoor::solvers::SatSolver;
-use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks};
+use backdoor::utils::{
+    clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks,
+    propcheck_all_trie_via_internal,
+};
 
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
@@ -109,10 +112,6 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     pool_limit: Option<usize>,
 
-    /// Use simple-sat for pool-limit.
-    #[arg(long)]
-    use_simple_sat_for_pool_limit: bool,
-
     /// Always update the budget for filtering.
     #[arg(long)]
     always_update_filter_budget: bool,
@@ -120,18 +119,11 @@ struct Cli {
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,simple_sat::solver=info,backdoor::derivation=info"))
-        .init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,backdoor::derivation=info")).init();
 
     let start_time = Instant::now();
     let args = Cli::parse();
     info!("args = {:?}", args);
-
-    // Initialize SAT solver:
-    let mut mysolver = Solver::default();
-    mysolver.init_from_file(&args.path_cnf);
-    mysolver.propagate();
-    mysolver.simplify();
 
     // Initialize Cadical:
     let solver = Cadical::new();
@@ -223,7 +215,6 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "{} 0", lit)?;
                     }
                     algorithm.solver.add_clause(&[lit]);
-                    mysolver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -234,8 +225,6 @@ fn main() -> color_eyre::Result<()> {
                     solver.solve()?;
                 }
             }
-            mysolver.propagate();
-            mysolver.simplify();
             cubes_product = vec![vec![]];
             continue;
         }
@@ -267,7 +256,6 @@ fn main() -> color_eyre::Result<()> {
                     writeln!(f, "0")?;
                 }
                 algorithm.solver.add_clause(&lemma);
-                mysolver.add_clause(&lemma);
                 new_clauses.push(lemma.clone());
                 all_derived_clauses.push(lemma);
             }
@@ -279,8 +267,6 @@ fn main() -> color_eyre::Result<()> {
                 solver.solve()?;
             }
         }
-        mysolver.propagate();
-        mysolver.simplify();
         info!(
             "Derived {} new clauses ({} units, {} binary, {} other)",
             new_clauses.len(),
@@ -380,7 +366,14 @@ fn main() -> color_eyre::Result<()> {
         info!("Filtering {} hard cubes via trie...", trie.num_leaves());
         let time_filter = Instant::now();
         let mut valid = Vec::new();
-        mysolver.propcheck_all_trie(&variables, &trie, &mut valid);
+        match &mut algorithm.solver {
+            SatSolver::SimpleSat(solver) => {
+                solver.propcheck_all_trie(&variables, &trie, &mut valid);
+            }
+            SatSolver::Cadical(solver) => {
+                propcheck_all_trie_via_internal(solver, &variables, &trie, 0, Some(&mut valid));
+            }
+        }
         drop(trie);
         cubes_product = valid;
         info!(
@@ -405,7 +398,6 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "{} 0", lit)?;
                     }
                     algorithm.solver.add_clause(&[lit]);
-                    mysolver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -416,8 +408,6 @@ fn main() -> color_eyre::Result<()> {
                     solver.solve()?;
                 }
             }
-            mysolver.propagate();
-            mysolver.simplify();
             cubes_product = vec![vec![]];
             continue;
         }
@@ -450,7 +440,6 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "0")?;
                     }
                     algorithm.solver.add_clause(&lemma);
-                    mysolver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -462,8 +451,6 @@ fn main() -> color_eyre::Result<()> {
                     solver.solve()?;
                 }
             }
-            mysolver.propagate();
-            mysolver.simplify();
             info!(
                 "Derived {} new clauses ({} units, {} binary, {} other)",
                 new_clauses.len(),
@@ -508,7 +495,6 @@ fn main() -> color_eyre::Result<()> {
                 args.num_conflicts as u64,
                 num_conflicts_limit,
                 &mut algorithm.solver,
-                &mut mysolver,
                 &mut all_clauses,
                 &mut all_derived_clauses,
                 &mut file_derived_clauses,
@@ -568,7 +554,6 @@ fn main() -> color_eyre::Result<()> {
                                         writeln!(f, "0").unwrap();
                                     }
                                     solver.add_clause(clause_to_external(&lemma));
-                                    mysolver.add_clause(&lemma);
                                     all_derived_clauses.push(lemma);
                                 }
                                 false
@@ -649,7 +634,6 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "{} 0", lit)?;
                     }
                     algorithm.solver.add_clause(&[lit]);
-                    mysolver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -660,8 +644,6 @@ fn main() -> color_eyre::Result<()> {
                     solver.solve()?;
                 }
             }
-            mysolver.propagate();
-            mysolver.simplify();
             cubes_product = vec![vec![]];
             continue;
         }
@@ -694,7 +676,6 @@ fn main() -> color_eyre::Result<()> {
                         writeln!(f, "0")?;
                     }
                     algorithm.solver.add_clause(&lemma);
-                    mysolver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -706,8 +687,6 @@ fn main() -> color_eyre::Result<()> {
                     solver.solve()?;
                 }
             }
-            mysolver.propagate();
-            mysolver.simplify();
             info!(
                 "Derived {} new clauses ({} units, {} binary, {} other)",
                 new_clauses.len(),
