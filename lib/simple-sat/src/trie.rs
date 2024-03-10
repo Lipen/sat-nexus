@@ -36,6 +36,12 @@ impl Trie {
     }
 }
 
+impl Default for Trie {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Trie {
     pub fn node(&self, index: Id) -> &TrieNode {
         &self.nodes[index]
