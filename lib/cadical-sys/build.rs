@@ -22,7 +22,7 @@ fn generate_bindings_dynamic() {
         .dynamic_library_name("ccadical")
         // .dynamic_link_require_all(true) // Note: fails in runtime on ccadical instantiation
         .allowlist_function("ccadical_.*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .layout_tests(false)
         .generate()
         .expect("Could not create bindings!");
@@ -43,7 +43,7 @@ fn generate_bindings_static() {
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .allowlist_function("ccadical_.*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Could not create bindings!");
 

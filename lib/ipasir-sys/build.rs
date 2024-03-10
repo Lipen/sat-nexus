@@ -16,7 +16,7 @@ fn generate_bindings_dynamic() {
         .dynamic_library_name("ipasir")
         .dynamic_link_require_all(true)
         .allowlist_function("ipasir_.*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .layout_tests(false)
         .generate()
         .expect("Could not create bindings!");
