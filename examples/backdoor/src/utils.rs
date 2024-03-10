@@ -451,7 +451,13 @@ where
     lits.into_iter().map(|lit| lit.to_external())
 }
 
-pub fn propcheck_all_trie_via_internal(solver: &Cadical, vars: &[i32], trie: &Trie, limit: u64) -> u64 {
+pub fn propcheck_all_trie_via_internal(
+    solver: &Cadical,
+    vars: &[Var],
+    trie: &Trie,
+    limit: u64,
+    mut out_valid: Option<&mut Vec<Vec<Lit>>>,
+) -> u64 {
     assert!(vars.len() < 30);
 
     // TODO:
@@ -497,6 +503,9 @@ pub fn propcheck_all_trie_via_internal(solver: &Cadical, vars: &[i32], trie: &Tr
         match state {
             State::Descending => {
                 if level == vars.len() {
+                    if let Some(valid) = &mut out_valid {
+                        valid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| Lit::new(v, s)).collect_vec());
+                    }
                     total_count += 1;
                     if limit > 0 && total_count >= limit {
                         trace!("reached the limit: {} >= {}", total_count, limit);
@@ -509,7 +518,8 @@ pub fn propcheck_all_trie_via_internal(solver: &Cadical, vars: &[i32], trie: &Tr
                         solver.internal_assume_decision(0);
                         state = State::Ascending;
                     } else {
-                        let lit = if cube[level] { vars[level] } else { -vars[level] };
+                        let v = vars[level].to_external() as i32;
+                        let lit = if cube[level] { v } else { -v };
                         let b = solver.internal_val(lit);
                         if b > 0 {
                             // Dummy level:
@@ -642,22 +652,24 @@ mod tests {
         // let res = solver.solve();
         // assert_eq!(res, SolveResult::Sat);
 
-        let variables = vec![x1, x2];
+        let vars = vec![x1, x2];
 
         info!("----------------------");
-        let count_tree = solver.propcheck_all_tree(&variables, 0);
+        let count_tree = solver.propcheck_all_tree(&vars, 0);
         info!("count_tree = {}", count_tree);
 
         info!("----------------------");
-        let count_tree_internal = solver.propcheck_all_tree_via_internal(&variables, 0);
+        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0);
         info!("count_tree_internal = {}", count_tree_internal);
 
         assert_eq!(count_tree, count_tree_internal);
 
         info!("----------------------");
+        let variables = vars.iter().map(|&v| Var::from_external(v as u32)).collect::<Vec<_>>();
         let cubes = vec![vec![false, false], vec![true, true], vec![true, false], vec![false, true]];
         let trie = build_trie(&cubes);
-        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0);
+        let mut valid = Vec::new();
+        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0, Some(&mut valid));
         info!("count_trie_internal = {}", count_trie_internal);
 
         assert_eq!(count_tree_internal, count_trie_internal);
