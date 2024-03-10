@@ -35,7 +35,7 @@ pub fn parse_dimacs<P>(path: P) -> impl Iterator<Item = Vec<Lit>>
 where
     P: AsRef<Path>,
 {
-    read_maybe_gzip(path).unwrap().lines().flatten().filter_map(|line| {
+    read_maybe_gzip(path).unwrap().lines().map_while(Result::ok).filter_map(|line| {
         if line.is_empty() {
             trace!("Skipping empty line");
             None
