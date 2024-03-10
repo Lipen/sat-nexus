@@ -519,7 +519,7 @@ pub fn propcheck_all_trie_via_internal(
                         state = State::Ascending;
                     } else {
                         let v = vars[level].to_external() as i32;
-                        let lit = if cube[level] { v } else { -v };
+                        let lit = if cube[level] { -v } else { v };
                         let b = solver.internal_val(lit);
                         if b > 0 {
                             // Dummy level:
