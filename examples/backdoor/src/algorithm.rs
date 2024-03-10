@@ -9,8 +9,6 @@ use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
 use simple_sat::lit::Lit;
-use simple_sat::solver::Solver as SimpleSatSolver;
-use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
 use crate::fitness::Fitness;

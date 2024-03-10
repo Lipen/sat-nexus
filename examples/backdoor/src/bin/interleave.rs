@@ -21,7 +21,6 @@ use backdoor::utils::{
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
-use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;

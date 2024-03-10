@@ -2,7 +2,7 @@ use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
-use log::{debug, trace, warn};
+use log::{debug, trace};
 use snafu::ensure;
 
 use cadical_sys::statik::*;

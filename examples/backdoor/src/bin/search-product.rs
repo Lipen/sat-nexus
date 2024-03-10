@@ -5,21 +5,17 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
-use itertools::{iproduct, zip_eq, Itertools};
+use indicatif::{ProgressBar, ProgressStyle};
+use itertools::{iproduct, Itertools};
 use log::{debug, info};
-use rand::prelude::*;
 
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
-use backdoor::derivation::derive_clauses;
 use backdoor::solvers::SatSolver;
 use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks};
 
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
-use simple_sat::solver::{SolveResult, Solver};
-use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 

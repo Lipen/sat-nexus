@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use indicatif::{ProgressBar, ProgressStyle};
-// use indicatif::ParallelProgressIterator;
-use indicatif::ProgressIterator;
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
-use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 
 pub use _pyeda::*;
 use simple_sat::lit::Lit;
