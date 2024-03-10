@@ -458,8 +458,6 @@ pub fn propcheck_all_trie_via_internal(
     limit: u64,
     mut out_valid: Option<&mut Vec<Vec<Lit>>>,
 ) -> u64 {
-    assert!(vars.len() < 30);
-
     // TODO:
     // if (internal->unsat || internal->unsat_constraint) {
     //     std::cout << "Already unsat" << std::endl;
