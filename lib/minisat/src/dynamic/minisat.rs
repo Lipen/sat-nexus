@@ -113,7 +113,7 @@ impl MiniSat {
         unsafe { self.ffi.minisat_setPolarity(self.ptr, var_to_c(var), lbool_to_c(pol, self.ffi)) }
     }
     pub fn set_decision_var(&self, var: Var, pol: bool) {
-        unsafe { self.ffi.minisat_setDecisionVar(self.ptr, var_to_c(var), pol.into()) }
+        unsafe { self.ffi.minisat_setDecisionVar(self.ptr, var_to_c(var), pol) }
     }
     pub fn set_frozen(&self, var: Var, frozen: bool) {
         unsafe { self.ffi.minisat_setFrozen(self.ptr, var_to_c(var), frozen) }
