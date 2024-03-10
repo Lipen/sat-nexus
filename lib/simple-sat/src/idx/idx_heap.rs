@@ -46,7 +46,7 @@ impl<K: Idx> IdxHeap<K> {
 
     /// Peek the top item in the heap.
     pub fn peek(&self) -> Option<&K> {
-        self.heap.get(0)
+        self.heap.first()
     }
 
     fn parent(&self, i: usize) -> usize {
