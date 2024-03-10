@@ -49,7 +49,7 @@ fn conjunction<'a>() -> Parser<'a, char, Expr> {
     // let sep = sym('&');
     let sep = tag("&") | tag("and");
     list(term(), sep - space()).map(|mut args| {
-        assert!(args.len() > 0);
+        assert!(!args.is_empty());
         if args.len() > 1 {
             Expr::And { args }
         } else {
@@ -62,7 +62,7 @@ fn disjunction<'a>() -> Parser<'a, char, Expr> {
     // let sep = sym('|');
     let sep = tag("|") | tag("or");
     list(conjunction(), sep - space()).map(|mut args| {
-        assert!(args.len() > 0);
+        assert!(!args.is_empty());
         if args.len() > 1 {
             Expr::Or { args }
         } else {

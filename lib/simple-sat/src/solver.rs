@@ -574,7 +574,7 @@ impl Solver {
             self.backtrack(backtrack_level);
 
             // Add the learnt clause:
-            assert!(lemma.len() > 0);
+            assert!(!lemma.is_empty());
             if lemma.len() == 1 {
                 // Learn a unit clause
                 debug_assert_eq!(self.decision_level(), 0);
@@ -1315,7 +1315,7 @@ impl Solver {
         if add_learnts {
             // Add learnt units only:
             for lemma in learnts {
-                assert!(lemma.len() > 0);
+                assert!(!lemma.is_empty());
                 if lemma.len() == 1 {
                     assert_eq!(self.decision_level(), 0);
                     debug!("Adding unit {}", lemma[0]);

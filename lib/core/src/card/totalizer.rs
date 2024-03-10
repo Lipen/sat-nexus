@@ -22,7 +22,7 @@ impl Totalizer {
     where
         S: Solver,
     {
-        assert!(input_vars.len() > 0);
+        assert!(!input_vars.is_empty());
 
         let mut queue = VecDeque::new();
 
