@@ -642,7 +642,7 @@ mod tests {
         // Forbid (x1 AND ~x2)
         solver.add_clause([-x1, x2]);
 
-        info!("vars = {}, clauses = {}", solver.vars(), solver.all_clauses_iter().count());
+        info!("vars = {}, clauses = {}", solver.vars(), solver.clauses_iter().count());
 
         // Problem is satisfiable.
         // let res = solver.solve();
