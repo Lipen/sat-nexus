@@ -1,5 +1,6 @@
 use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
+use std::path::Path;
 
 use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
@@ -186,6 +187,31 @@ impl Cadical {
             1 => Ok(true),
             invalid => InvalidResponseFailedSnafu { lit, value: invalid }.fail(),
         }
+    }
+
+    pub fn trace_proof<P>(&self, path: P)
+    where
+        P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+        let path = path.to_str().expect("path is not valid UTF-8");
+        let path = CString::new(path).expect("CString::new failed");
+        let ok = unsafe { ccadical_trace_proof(self.ptr, path.as_ptr()) };
+        assert!(ok, "ccadical_trace_proof returned false");
+    }
+
+    pub fn close_proof(&self) {
+        unsafe { ccadical_close_proof(self.ptr) }
+    }
+
+    pub fn write_dimacs<P>(&self, path: P)
+        where
+            P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+        let path = path.to_str().expect("path is not valid UTF-8");
+        let path = CString::new(path).expect("CString::new failed");
+        unsafe { ccadical_write_dimacs(self.ptr, path.as_ptr()) }
     }
 
     pub fn print_statistics(&self) {
