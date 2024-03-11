@@ -659,8 +659,10 @@ mod tests {
         info!("count_tree = {}", count_tree);
 
         info!("----------------------");
-        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0);
+        let mut valid_tree =  Vec::new();
+        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0, Some(&mut valid_tree));
         info!("count_tree_internal = {}", count_tree_internal);
+        assert_eq!(count_tree_internal, valid_tree.len() as u64);
 
         assert_eq!(count_tree, count_tree_internal);
 
@@ -668,9 +670,10 @@ mod tests {
         let variables = vars.iter().map(|&v| Var::from_external(v as u32)).collect::<Vec<_>>();
         let cubes = vec![vec![false, false], vec![true, true], vec![true, false], vec![false, true]];
         let trie = build_trie(&cubes);
-        let mut valid = Vec::new();
-        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0, Some(&mut valid));
+        let mut valid_trie = Vec::new();
+        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0, Some(&mut valid_trie));
         info!("count_trie_internal = {}", count_trie_internal);
+        assert_eq!(count_trie_internal, valid_trie.len() as u64);
 
         assert_eq!(count_tree_internal, count_trie_internal);
     }

@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
 
-use itertools::Itertools;
+use itertools::{Itertools, zip_eq};
 use log::{debug, trace};
 use snafu::ensure;
 
@@ -433,7 +433,7 @@ impl Cadical {
 }
 
 impl Cadical {
-    pub fn propcheck_all_tree_via_internal(&self, vars: &[i32], limit: u64) -> u64 {
+    pub fn propcheck_all_tree_via_internal(&self, vars: &[i32], limit: u64, mut out_valid: Option<&mut Vec<Vec<i32>>>) -> u64 {
         assert!(vars.len() < 30);
 
         // TODO:
@@ -479,6 +479,9 @@ impl Cadical {
             match state {
                 State::Descending => {
                     if level == vars.len() {
+                        if let Some (valid ) = &mut out_valid {
+                            valid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| v * s).collect());
+                        }
                         total_count += 1;
                         if limit > 0 && total_count >= limit {
                             trace!("reached the limit: {} >= {}", total_count, limit);
