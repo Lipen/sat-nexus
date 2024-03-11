@@ -295,79 +295,43 @@ impl Cadical {
         }
     }
 
-    pub fn propcheck(&self, lits: &[i32], restore: bool) -> bool {
+    pub fn propcheck(&self, lits: &[i32], restore: bool, save: bool) -> (bool, u64) {
         unsafe {
             ccadical_propcheck_begin(self.ptr);
             for &lit in lits {
                 assert_ne!(lit, 0);
                 ccadical_propcheck_add(self.ptr, lit);
             }
-            if restore {
-                ccadical_propcheck(self.ptr)
-            } else {
-                ccadical_propcheck_no_restore(self.ptr)
-            }
-        }
-    }
-
-    pub fn propcheck_num_propagated(&self, lits: &[i32], restore: bool) -> (bool, u64) {
-        unsafe {
-            ccadical_propcheck_begin(self.ptr);
-            for &lit in lits {
-                assert_ne!(lit, 0);
-                ccadical_propcheck_add(self.ptr, lit);
-            }
-            let mut num_propagated = 0;
-            let res = if restore {
-                ccadical_propcheck_num_propagated(self.ptr, &mut num_propagated)
-            } else {
-                ccadical_propcheck_num_propagated_no_restore(self.ptr, &mut num_propagated)
-            };
+            let res = ccadical_propcheck(self.ptr, restore, save);
+            let num_propagated = ccadical_propcheck_num_propagated(self.ptr);
             (res, num_propagated)
         }
     }
 
-    pub fn propcheck_save_propagated(&self, lits: &[i32], restore: bool) -> (bool, Vec<i32>) {
+    pub fn propcheck_get_propagated(&self) -> Vec<i32> {
         unsafe {
-            ccadical_propcheck_begin(self.ptr);
-            for &lit in lits {
-                assert_ne!(lit, 0);
-                ccadical_propcheck_add(self.ptr, lit);
-            }
-            let res = if restore {
-                ccadical_propcheck_save_propagated(self.ptr)
-            } else {
-                ccadical_propcheck_save_propagated_no_restore(self.ptr)
-            };
             let propagated_length = ccadical_propcheck_get_propagated_length(self.ptr);
             let mut propagated = Vec::with_capacity(propagated_length);
             ccadical_propcheck_get_propagated(self.ptr, propagated.as_mut_ptr());
             propagated.set_len(propagated_length);
-            (res, propagated)
+            propagated
         }
     }
 
-    pub fn propcheck_all_tree(&self, vars: &[i32], limit: u64) -> u64 {
+    pub fn propcheck_all_tree(&self, vars: &[i32], limit: u64, save: bool) -> u64 {
         unsafe {
             ccadical_propcheck_all_tree_begin(self.ptr);
             for &v in vars {
                 assert!(v > 0);
                 ccadical_propcheck_all_tree_add(self.ptr, v);
             }
-            ccadical_propcheck_all_tree(self.ptr, limit)
+            ccadical_propcheck_all_tree(self.ptr, limit, save)
         }
     }
 
-    pub fn propcheck_all_tree_valid(&self, vars: &[i32]) -> Vec<Vec<i32>> {
+    pub fn propcheck_all_tree_get_valid(&self) -> Vec<Vec<i32>> {
         unsafe {
-            ccadical_propcheck_all_tree_begin(self.ptr);
-            for &v in vars {
-                assert!(v > 0);
-                ccadical_propcheck_all_tree_add(self.ptr, v);
-            }
-            let res = ccadical_propcheck_all_tree_save_valid(self.ptr);
             let valid_length = ccadical_propcheck_all_tree_get_valid_length(self.ptr);
-            assert_eq!(valid_length as u64, res);
             let mut valid = Vec::with_capacity(valid_length);
             for i in 0..valid_length {
                 let cube_length = ccadical_propcheck_all_tree_get_cube_length(self.ptr, i);
