@@ -100,7 +100,7 @@ fn main() -> color_eyre::Result<()> {
         ccadical_propcheck_all_tree_begin(ptr);
         ccadical_propcheck_all_tree_add(ptr, 1);
         ccadical_propcheck_all_tree_add(ptr, 2);
-        let count = ccadical_propcheck_all_tree(ptr, 0);
+        let count = ccadical_propcheck_all_tree(ptr, 0, false);
         println!("count = {}", count);
 
         ccadical_release(ptr);

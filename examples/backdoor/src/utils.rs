@@ -655,7 +655,7 @@ mod tests {
         let vars = vec![x1, x2];
 
         info!("----------------------");
-        let count_tree = solver.propcheck_all_tree(&vars, 0);
+        let count_tree = solver.propcheck_all_tree(&vars, 0, false);
         info!("count_tree = {}", count_tree);
 
         info!("----------------------");
