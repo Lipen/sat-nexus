@@ -205,8 +205,8 @@ impl Cadical {
     }
 
     pub fn write_dimacs<P>(&self, path: P)
-        where
-            P: AsRef<Path>,
+    where
+        P: AsRef<Path>,
     {
         let path = path.as_ref();
         let path = path.to_str().expect("path is not valid UTF-8");
