@@ -84,7 +84,7 @@ jobs:
             /usr/local/lib/libkissat.so
 
       - name: Test all
-        run: cargo test --workspace --lib --bins --examples
+        run: cargo test --workspace --lib --bins --tests --examples
 
   build-windows:
     name: Build and test on Windows
@@ -165,7 +165,7 @@ jobs:
           path: libs/
 
       - name: Test all
-        run: cargo test --workspace --lib --bins --examples
+        run: cargo test --workspace --lib --bins --tests --examples
 
   fmt:
     name: Rustfmt
