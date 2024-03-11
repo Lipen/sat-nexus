@@ -426,6 +426,12 @@ impl Iterator for ClausesIter {
     }
 }
 
+impl ExactSizeIterator for ClausesIter {
+    fn len(&self) -> usize {
+        self.length
+    }
+}
+
 /// Additional methods.
 impl Cadical {
     pub fn reset(&mut self) {
