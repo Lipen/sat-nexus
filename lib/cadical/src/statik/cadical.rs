@@ -380,25 +380,29 @@ impl Cadical {
         }
     }
 
-    pub fn all_clauses_iter(&self) -> AllClausesIter {
-        unsafe { AllClausesIter::new(self.ptr) }
+    pub fn clauses_iter(&self) -> ClausesIter {
+        unsafe { ClausesIter::new(self.ptr, false) }
+    }
+
+    pub fn all_clauses_iter(&self) -> ClausesIter {
+        unsafe { ClausesIter::new(self.ptr, true) }
     }
 }
 
-pub struct AllClausesIter {
+pub struct ClausesIter {
     ptr: CCadicalPtr,
     length: usize,
     index: usize,
 }
 
-impl AllClausesIter {
-    pub unsafe fn new(ptr: CCadicalPtr) -> Self {
-        let length = ccadical_build_all_clauses(ptr);
+impl ClausesIter {
+    pub unsafe fn new(ptr: CCadicalPtr, redundant: bool) -> Self {
+        let length = ccadical_traverse_clauses(ptr, redundant);
         Self { ptr, length, index: 0 }
     }
 }
 
-impl Iterator for AllClausesIter {
+impl Iterator for ClausesIter {
     type Item = Vec<i32>;
 
     fn next(&mut self) -> Option<Self::Item> {
