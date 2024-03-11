@@ -402,6 +402,12 @@ impl ClausesIter {
     }
 }
 
+impl Drop for ClausesIter {
+    fn drop(&mut self) {
+        unsafe { ccadical_clear_clauses(self.ptr) }
+    }
+}
+
 impl Iterator for ClausesIter {
     type Item = Vec<i32>;
 
