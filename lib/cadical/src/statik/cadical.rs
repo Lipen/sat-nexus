@@ -78,8 +78,8 @@ impl Cadical {
     // Overwrite (some) options with the forced values of the configuration.
     // The result is 'true' iff the 'name' is a valid configuration.
     pub fn configure(&self, name: &'static str) {
-        let c_string = CString::new(name).expect("CString::new failed");
-        let res = unsafe { ccadical_configure(self.ptr, c_string.as_ptr()) };
+        let name = CString::new(name).expect("CString::new failed");
+        let res = unsafe { ccadical_configure(self.ptr, name.as_ptr()) };
         assert!(res);
     }
 
@@ -90,16 +90,16 @@ impl Cadical {
     ///
     /// Options can only be set right after initialization.
     pub fn set_option(&self, name: &'static str, val: i32) {
-        let c_string = CString::new(name).expect("CString::new failed");
-        let ok = unsafe { ccadical_set_option(self.ptr, c_string.as_ptr(), val) };
+        let name = CString::new(name).expect("CString::new failed");
+        let ok = unsafe { ccadical_set_option(self.ptr, name.as_ptr(), val) };
         assert!(ok, "ccadical_set_option returned false");
     }
 
     /// Get the current value of the option 'name'.  If 'name' is invalid then
     /// zero is returned.  Here '--...' arguments as invalid options.
     pub fn get_option(&self, name: &'static str) -> i32 {
-        let c_string = CString::new(name).expect("CString::new failed");
-        unsafe { ccadical_get_option(self.ptr, c_string.as_ptr()) }
+        let name = CString::new(name).expect("CString::new failed");
+        unsafe { ccadical_get_option(self.ptr, name.as_ptr()) }
     }
 
     /// Specify search limits, where currently 'name' can be "conflicts",
@@ -116,8 +116,8 @@ impl Cadical {
     /// 'lookahead').  We actually also have an internal "terminate" limit
     /// which however should only be used for testing and debugging.
     pub fn limit(&self, name: &str, limit: i32) {
-        let c_string = CString::new(name).expect("CString::new failed");
-        let ok = unsafe { ccadical_limit(self.ptr, c_string.as_ptr(), limit) };
+        let name = CString::new(name).expect("CString::new failed");
+        let ok = unsafe { ccadical_limit(self.ptr, name.as_ptr(), limit) };
         assert!(ok, "ccadical_limit returned false");
     }
 
