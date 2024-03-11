@@ -66,7 +66,7 @@ pub fn get_hard_tasks(variables: &[Var], solver: &mut SatSolver) -> Vec<Vec<Lit>
         }
         SatSolver::Cadical(solver) => {
             let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
-            let res = solver.propcheck_all_tree(&vars_external, 0 , true);
+            let res = solver.propcheck_all_tree(&vars_external, 0, true);
             let valid = solver.propcheck_all_tree_get_valid();
             assert_eq!(valid.len(), res as usize);
             valid
@@ -659,7 +659,7 @@ mod tests {
         info!("count_tree = {}", count_tree);
 
         info!("----------------------");
-        let mut valid_tree =  Vec::new();
+        let mut valid_tree = Vec::new();
         let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0, Some(&mut valid_tree));
         info!("count_tree_internal = {}", count_tree_internal);
         assert_eq!(count_tree_internal, valid_tree.len() as u64);

@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::fmt::{Debug, Display, Formatter};
 
-use itertools::{Itertools, zip_eq};
+use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
 use snafu::ensure;
 
@@ -479,7 +479,7 @@ impl Cadical {
             match state {
                 State::Descending => {
                     if level == vars.len() {
-                        if let Some (valid ) = &mut out_valid {
+                        if let Some(valid) = &mut out_valid {
                             valid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| v * s).collect());
                         }
                         total_count += 1;
