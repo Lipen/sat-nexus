@@ -409,10 +409,10 @@ pub fn determine_vars_pool<P: AsRef<Path>>(path: P, allowed_vars: &Option<String
 
     // Ban some variables:
     if let Some(banned_vars) = banned_vars {
-        let chunks = if banned_vars.starts_with('@') {
-            parse_multiple_comma_separated_intervals_from(&banned_vars[1..])
+        let chunks = if let Some(banned_vars) = banned_vars.strip_prefix('@') {
+            parse_multiple_comma_separated_intervals_from(banned_vars)
         } else {
-            parse_multiple_comma_separated_intervals(&banned_vars)
+            parse_multiple_comma_separated_intervals(banned_vars)
         };
         let banned_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
         encountered_vars.retain(|v| !banned_vars.contains(v));
@@ -420,10 +420,10 @@ pub fn determine_vars_pool<P: AsRef<Path>>(path: P, allowed_vars: &Option<String
 
     // Allow only some variables:
     if let Some(allowed_vars) = allowed_vars {
-        let chunks = if allowed_vars.starts_with('@') {
-            parse_multiple_comma_separated_intervals_from(&allowed_vars[1..])
+        let chunks = if let Some(allowed_vars) = allowed_vars.strip_prefix('@') {
+            parse_multiple_comma_separated_intervals_from(allowed_vars)
         } else {
-            parse_multiple_comma_separated_intervals(&allowed_vars)
+            parse_multiple_comma_separated_intervals(allowed_vars)
         };
         let allowed_vars: HashSet<Var> = chunks.into_iter().flatten().map(|i| Var::from_external(i as u32)).collect();
         encountered_vars.retain(|v| allowed_vars.contains(v));
