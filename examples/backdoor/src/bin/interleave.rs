@@ -699,7 +699,7 @@ fn main() -> color_eyre::Result<()> {
                 let time_all_clauses = Instant::now();
                 let mut all_cadical_clauses = HashSet::new();
                 for clause in solver.all_clauses_iter() {
-                    let mut clause = clause.into_iter().map(|i| Lit::from_external(i)).collect_vec();
+                    let mut clause = clause.into_iter().map(Lit::from_external).collect_vec();
                     clause.sort_by_key(|lit| lit.inner());
                     all_cadical_clauses.insert(clause);
                 }
