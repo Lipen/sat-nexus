@@ -24,7 +24,7 @@ pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) ->
     let f = File::open(path).unwrap_or_else(|_| panic!("Could not open '{}'", path.display()));
     let f = BufReader::new(f);
     let mut result = Vec::new();
-    for line in f.lines().flatten() {
+    for line in f.lines().map_while(Result::ok) {
         result.push(parse_comma_separated_intervals(&line));
     }
     result
