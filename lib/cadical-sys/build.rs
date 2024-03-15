@@ -64,7 +64,7 @@ fn build_static_lib() {
     // Initialize the git submodule if necessary:
     if !Path::new("vendor/cadical/src").exists() {
         let _ = Command::new("git")
-            .args(&["submodule", "update", "--init", "vendor/cadical"])
+            .args(["submodule", "update", "--init", "vendor/cadical"])
             .status();
     }
 
