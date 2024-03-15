@@ -558,7 +558,7 @@ fn main() -> color_eyre::Result<()> {
                                 if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
                                     pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
                                     if let Some(f) = &mut file_derived_clauses {
-                                        write_clause(f, &lemma)?;
+                                        write_clause(f, &lemma).unwrap();
                                     }
                                     solver.add_clause(clause_to_external(&lemma));
                                     all_derived_clauses.push(lemma);
