@@ -1,10 +1,11 @@
-use crate::utils::clause_to_external;
 use cadical::statik::Cadical;
 use cadical::FixedResponse;
 use simple_sat::lbool::LBool;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::var::Var;
+
+use crate::utils::clause_to_external;
 
 #[derive(Debug)]
 pub enum SatSolver {
@@ -55,7 +56,47 @@ impl SatSolver {
                 solver.add_clause(lits);
             }
             SatSolver::Cadical(solver) => {
-                solver.add_clause(clause_to_external(lits));
+                // solver.add_clause(clause_to_external(lits));
+
+                solver.internal_backtrack(0);
+
+                let lits = clause_to_external(lits).collect::<Vec<_>>();
+                if lits.len() >= 2 {
+                    for lit in lits {
+                        if !solver.is_active(lit) {
+                            log::warn!("lit {} is not active", lit);
+                        }
+
+                        assert!(solver.is_active(lit), "lit {} is not active", lit);
+                        solver.add_derived(lit);
+                    }
+                    solver.add_derived(0);
+                } else {
+                    let lit = lits[0];
+
+                    // FIXME: this is madness
+                    if solver.is_active(lit) {
+                        let var = lit.abs();
+                        for other in 1..solver.vars() {
+                            let other = other as i32;
+                            if other == var {
+                                continue;
+                            }
+                            if solver.is_active(other) {
+                                log::warn!("Adding unit {} as two clauses: [{}, {}] and [{}, {}]", lit, lit, other, lit, -other);
+                                solver.add_derived(lit);
+                                solver.add_derived(other);
+                                solver.add_derived(0);
+                                solver.add_derived(lit);
+                                solver.add_derived(-other);
+                                solver.add_derived(0);
+                                break;
+                            }
+                        }
+                    } else {
+                        log::warn!("unit {} is not active", lit);
+                    }
+                }
             }
         }
     }
@@ -68,8 +109,8 @@ impl SatSolver {
             }
             SatSolver::Cadical(solver) => {
                 let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
-                // solver.propcheck_all_tree(&vars_external, limit)
-                solver.propcheck_all_tree_via_internal(&vars_external, limit, None)
+                solver.propcheck_all_tree(&vars_external, limit, false)
+                // solver.propcheck_all_tree_via_internal(&vars_external, limit, None)
             }
         }
     }

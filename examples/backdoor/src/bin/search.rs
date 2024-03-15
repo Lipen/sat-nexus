@@ -10,7 +10,7 @@ use log::{debug, info};
 use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
 use backdoor::solvers::SatSolver;
-use backdoor::utils::{create_line_writer, determine_vars_pool, get_hard_tasks};
+use backdoor::utils::{create_line_writer, determine_vars_pool, get_hard_tasks, write_clause};
 
 use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
@@ -214,10 +214,7 @@ fn main() -> color_eyre::Result<()> {
                 lemma.sort_by_key(|lit| lit.inner());
                 if all_clauses.insert(lemma.clone()) {
                     if let Some(f) = &mut file_derived_clauses {
-                        for lit in lemma.iter() {
-                            write!(f, "{} ", lit)?;
-                        }
-                        writeln!(f, "0")?;
+                        write_clause(f, &lemma)?;
                     }
                     algorithm.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());

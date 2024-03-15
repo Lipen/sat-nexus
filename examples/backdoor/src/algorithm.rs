@@ -92,17 +92,8 @@ impl Algorithm {
         debug!("solver.vars() = {}", self.solver.num_vars());
         debug!("pool.len() = {}", self.pool.len());
 
-        // Ban already assigned variables:
-        let mut active_vars = HashSet::new();
-        for i in 0..self.solver.num_vars() {
-            let var = Var::new(i as u32);
-            if self.solver.is_active(var) {
-                active_vars.insert(var);
-            }
-        }
-        debug!("Active variables: {} / {}", active_vars.len(), self.solver.num_vars());
-        self.pool.retain(|v| active_vars.contains(v));
-        drop(active_vars);
+        // Keep only active variables:
+        self.pool.retain(|&v| self.solver.is_active(v));
 
         debug!("pool.len() = {}", self.pool.len());
         assert!(

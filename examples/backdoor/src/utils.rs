@@ -459,6 +459,7 @@ pub fn propcheck_all_trie_via_internal(
     trie: &Trie,
     limit: u64,
     mut out_valid: Option<&mut Vec<Vec<Lit>>>,
+    mut out_invalid: Option<&mut Vec<Vec<Lit>>>,
 ) -> u64 {
     // TODO:
     // if (internal->unsat || internal->unsat_constraint) {
@@ -504,7 +505,7 @@ pub fn propcheck_all_trie_via_internal(
             State::Descending => {
                 if level == vars.len() {
                     if let Some(valid) = &mut out_valid {
-                        valid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| Lit::new(v, s)).collect_vec());
+                        valid.push(zip_eq(vars, &cube).map(|(&v, &s)| Lit::new(v, s)).collect());
                     }
                     total_count += 1;
                     if limit > 0 && total_count >= limit {
@@ -528,6 +529,9 @@ pub fn propcheck_all_trie_via_internal(
                         } else if b < 0 {
                             // Dummy level:
                             solver.internal_assume_decision(0);
+                            if let Some(invalid) = &mut out_invalid {
+                                invalid.push(zip_eq(vars, &cube).take(level + 1).map(|(&v, &s)| Lit::new(v, s)).collect());
+                            }
                             state = State::Ascending;
                         } else {
                             // Enqueue the literal:
@@ -569,6 +573,9 @@ pub fn propcheck_all_trie_via_internal(
                 if !solver.internal_propagate() {
                     // Conflict.
                     solver.internal_reset_conflict();
+                    if let Some(invalid) = &mut out_invalid {
+                        invalid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| Lit::new(v, s)).collect());
+                    }
                     state = State::Ascending;
                 } else {
                     // No conflict.
@@ -583,6 +590,13 @@ pub fn propcheck_all_trie_via_internal(
 
     trace!("Checked {} cubes, found {} valid", total_checked, total_count);
     total_count
+}
+
+pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
+    for lit in lits.iter() {
+        write!(f, "{} ", lit)?;
+    }
+    writeln!(f, "0")
 }
 
 #[cfg(test)]
@@ -660,7 +674,7 @@ mod tests {
 
         info!("----------------------");
         let mut valid_tree = Vec::new();
-        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0, Some(&mut valid_tree));
+        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0, Some(&mut valid_tree), None);
         info!("count_tree_internal = {}", count_tree_internal);
         assert_eq!(count_tree_internal, valid_tree.len() as u64);
 
@@ -671,7 +685,7 @@ mod tests {
         let cubes = vec![vec![false, false], vec![true, true], vec![true, false], vec![false, true]];
         let trie = build_trie(&cubes);
         let mut valid_trie = Vec::new();
-        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0, Some(&mut valid_trie));
+        let count_trie_internal = propcheck_all_trie_via_internal(&solver, &variables, &trie, 0, Some(&mut valid_trie), None);
         info!("count_trie_internal = {}", count_trie_internal);
         assert_eq!(count_trie_internal, valid_trie.len() as u64);
 

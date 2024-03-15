@@ -189,6 +189,20 @@ impl Cadical {
         }
     }
 
+    /// Triggers the conclusion of incremental proofs.
+    /// if the solver is SATISFIED it will trigger extend ()
+    /// and give the model to the proof tracer through conclude_sat ()
+    /// if the solver is UNSATISFIED it will trigger failing ()
+    /// which will learn new clauses as explained below:
+    /// In case of failed assumptions will provide a core negated
+    /// as a clause through the proof tracer interface.
+    /// With a failing constraint these can be multiple clauses.
+    /// Then it will trigger a conclude_unsat event with the id(s)
+    /// of the newly learnt clauses or the id of the global conflict.
+    pub fn conclude(&self) {
+        unsafe { ccadical_conclude(self.ptr) }
+    }
+
     pub fn trace_proof<P>(&self, path: P)
     where
         P: AsRef<Path>,
@@ -202,6 +216,17 @@ impl Cadical {
 
     pub fn close_proof(&self) {
         unsafe { ccadical_close_proof(self.ptr) }
+    }
+
+    pub fn read_dimacs<P>(&self, path: P, strict: i32)
+    where
+        P: AsRef<Path>,
+    {
+        assert!(0 <= strict && strict <= 2);
+        let path = path.as_ref();
+        let path = path.to_str().expect("path is not valid UTF-8");
+        let path = CString::new(path).expect("CString::new failed");
+        unsafe { ccadical_read_dimacs(self.ptr, path.as_ptr(), strict) }
     }
 
     pub fn write_dimacs<P>(&self, path: P)
@@ -226,6 +251,11 @@ impl Cadical {
     /// Number of active variables.
     pub fn active(&self) -> i64 {
         unsafe { ccadical_active(self.ptr) }
+    }
+
+    /// Number of active redundant clauses.
+    pub fn redundant(&self) -> i64 {
+        unsafe { ccadical_redundant(self.ptr) }
     }
 
     /// Number of active irredundant clauses.
@@ -267,7 +297,7 @@ impl Cadical {
     }
 
     pub fn is_active(&self, lit: i32) -> bool {
-        unsafe { ccadical_active_lit(self.ptr, lit) }
+        unsafe { ccadical_is_active(self.ptr, lit) }
     }
 
     pub fn frozen(&self, lit: i32) -> Result<bool> {
@@ -459,7 +489,13 @@ impl Cadical {
 }
 
 impl Cadical {
-    pub fn propcheck_all_tree_via_internal(&self, vars: &[i32], limit: u64, mut out_valid: Option<&mut Vec<Vec<i32>>>) -> u64 {
+    pub fn propcheck_all_tree_via_internal(
+        &self,
+        vars: &[i32],
+        limit: u64,
+        mut out_valid: Option<&mut Vec<Vec<i32>>>,
+        mut out_invalid: Option<&mut Vec<Vec<i32>>>,
+    ) -> u64 {
         assert!(vars.len() < 30);
 
         // TODO:
@@ -506,7 +542,7 @@ impl Cadical {
                 State::Descending => {
                     if level == vars.len() {
                         if let Some(valid) = &mut out_valid {
-                            valid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| v * s).collect());
+                            valid.push(zip_eq(vars, &cube).map(|(&v, &s)| v * s).collect());
                         }
                         total_count += 1;
                         if limit > 0 && total_count >= limit {
@@ -524,6 +560,9 @@ impl Cadical {
                         } else if b < 0 {
                             // Dummy level:
                             self.internal_assume_decision(0);
+                            if let Some(invalid) = &mut out_invalid {
+                                invalid.push(zip_eq(vars, &cube).take(level + 1).map(|(&v, &s)| v * s).collect());
+                            }
                             state = State::Ascending;
                         } else {
                             // Enqueue the literal:
@@ -563,6 +602,9 @@ impl Cadical {
                     total_checked += 1;
                     if !self.internal_propagate() {
                         // Conflict.
+                        if let Some(invalid) = &mut out_invalid {
+                            invalid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| v * s).collect());
+                        }
                         self.internal_reset_conflict();
                         state = State::Ascending;
                     } else {
@@ -578,5 +620,11 @@ impl Cadical {
 
         trace!("Checked {} cubes, found {} valid", total_checked, total_count);
         total_count
+    }
+}
+
+impl Cadical {
+    pub fn add_derived(&self, lit_or_zero: i32) {
+        unsafe { ccadical_add_derived(self.ptr, lit_or_zero) }
     }
 }

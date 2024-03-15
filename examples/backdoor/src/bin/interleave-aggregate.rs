@@ -15,7 +15,7 @@ use backdoor::derivation::derive_clauses;
 use backdoor::solvers::SatSolver;
 use backdoor::utils::{
     clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks,
-    propcheck_all_trie_via_internal,
+    propcheck_all_trie_via_internal, write_clause,
 };
 
 use cadical::statik::Cadical;
@@ -219,7 +219,7 @@ fn main() -> color_eyre::Result<()> {
                 for &lit in &hard[0] {
                     if all_clauses.insert(vec![lit]) {
                         if let Some(f) = &mut file_derived_clauses {
-                            writeln!(f, "{} 0", lit)?;
+                            write_clause(f, &[lit])?;
                         }
                         algorithm.solver.add_clause(&[lit]);
                         all_derived_clauses.push(vec![lit]);
@@ -256,10 +256,7 @@ fn main() -> color_eyre::Result<()> {
                     lemma.sort_by_key(|lit| lit.inner());
                     if all_clauses.insert(lemma.clone()) {
                         if let Some(f) = &mut file_derived_clauses {
-                            for lit in lemma.iter() {
-                                write!(f, "{} ", lit)?;
-                            }
-                            writeln!(f, "0")?;
+                            write_clause(f, &lemma)?;
                         }
                         algorithm.solver.add_clause(&lemma);
                         new_clauses.push(lemma.clone());
@@ -362,7 +359,7 @@ fn main() -> color_eyre::Result<()> {
                     solver.propcheck_all_trie(&variables, &trie, &mut valid);
                 }
                 SatSolver::Cadical(solver) => {
-                    propcheck_all_trie_via_internal(solver, &variables, &trie, 0, Some(&mut valid));
+                    propcheck_all_trie_via_internal(solver, &variables, &trie, 0, Some(&mut valid), None);
                 }
             }
             drop(trie);
@@ -387,7 +384,7 @@ fn main() -> color_eyre::Result<()> {
                     algorithm.pool.retain(|&v| v != lit.var());
                     if all_clauses.insert(vec![lit]) {
                         if let Some(f) = &mut file_derived_clauses {
-                            writeln!(f, "{} 0", lit)?;
+                            write_clause(f, &[lit])?;
                         }
                         algorithm.solver.add_clause(&[lit]);
                         all_derived_clauses.push(vec![lit]);
@@ -426,10 +423,7 @@ fn main() -> color_eyre::Result<()> {
                     lemma.sort_by_key(|lit| lit.inner());
                     if all_clauses.insert(lemma.clone()) {
                         if let Some(f) = &mut file_derived_clauses {
-                            for lit in lemma.iter() {
-                                write!(f, "{} ", lit)?;
-                            }
-                            writeln!(f, "0")?;
+                            write_clause(f, &lemma)?;
                         }
                         algorithm.solver.add_clause(&lemma);
                         new_clauses.push(lemma.clone());
@@ -564,10 +558,7 @@ fn main() -> color_eyre::Result<()> {
                                 if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
                                     pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
                                     if let Some(f) = &mut file_derived_clauses {
-                                        for lit in lemma.iter() {
-                                            write!(f, "{} ", lit).unwrap();
-                                        }
-                                        writeln!(f, "0").unwrap();
+                                        write_clause(f, &lemma)?;
                                     }
                                     solver.add_clause(clause_to_external(&lemma));
                                     all_derived_clauses.push(lemma);
@@ -647,7 +638,7 @@ fn main() -> color_eyre::Result<()> {
                 algorithm.pool.retain(|&v| v != lit.var());
                 if all_clauses.insert(vec![lit]) {
                     if let Some(f) = &mut file_derived_clauses {
-                        writeln!(f, "{} 0", lit)?;
+                        write_clause(f, &[lit])?;
                     }
                     algorithm.solver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
@@ -686,10 +677,7 @@ fn main() -> color_eyre::Result<()> {
                 lemma.sort_by_key(|lit| lit.inner());
                 if all_clauses.insert(lemma.clone()) {
                     if let Some(f) = &mut file_derived_clauses {
-                        for lit in lemma.iter() {
-                            write!(f, "{} ", lit)?;
-                        }
-                        writeln!(f, "0")?;
+                        write_clause(f, &lemma)?;
                     }
                     algorithm.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
