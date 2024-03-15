@@ -187,7 +187,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
         );
         pb.set_message("ternary");
         // count_ternary :: {(i,j,k): (+++, ++-, +-+, +--, -++, -+-, --+, ---)}
-        let count_ternary: HashMap<(usize, usize, usize), (u64, u64, u64, u64, u64, u64, u64, u64)> = (0..n)
+        let count_ternary: HashMap<(usize, usize, usize), [u64; 8]> = (0..n)
             .tuple_combinations()
             // .par_bridge()
             .progress_with(pb)
@@ -234,11 +234,11 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
                         (true, true, true) => nnn += 1,    // neg-neg-neg
                     };
                 }
-                Some(((i, j, k), (ppp, ppn, pnp, pnn, npp, npn, nnp, nnn)))
+                Some(((i, j, k), [ppp, ppn, pnp, pnn, npp, npn, nnp, nnn]))
             })
             .collect();
 
-        for (&(i, j, k), &(ppp, ppn, pnp, pnn, npp, npn, nnp, nnn)) in count_ternary.iter() {
+        for (&(i, j, k), &[ppp, ppn, pnp, pnn, npp, npn, nnp, nnn]) in count_ternary.iter() {
             let a = hard[0][i].var();
             let b = hard[0][j].var();
             let c = hard[0][k].var();
@@ -247,7 +247,7 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
                 a, b, c, ppp, ppn, pnp, pnn, npp, npn, nnp, nnn
             );
         }
-        for (&(i, j, k), &(ppp, ppn, pnp, pnn, npp, npn, nnp, nnn)) in count_ternary.iter() {
+        for (&(i, j, k), &[ppp, ppn, pnp, pnn, npp, npn, nnp, nnn]) in count_ternary.iter() {
             let a = hard[0][i].var();
             let b = hard[0][j].var();
             let c = hard[0][k].var();
