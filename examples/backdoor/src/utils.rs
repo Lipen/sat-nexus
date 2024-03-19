@@ -485,6 +485,11 @@ pub fn propcheck_all_trie_via_internal(
         return 0;
     }
 
+    // // Freeze variables:
+    // for &var in vars.iter() {
+    //     solver.freeze(var.to_external() as i32).unwrap();
+    // }
+
     let mut cube = vec![false; vars.len()];
     let mut total_checked = 0u64;
     let mut total_count = 0u64;
@@ -514,7 +519,7 @@ pub fn propcheck_all_trie_via_internal(
                     }
                     state = State::Ascending;
                 } else {
-                    if trie.search(&cube[..=level]) == 0 {
+                    if trie.search_iter(cube.iter().take(level + 1).copied()) == 0 {
                         // Dummy level:
                         solver.internal_assume_decision(0);
                         state = State::Ascending;
@@ -529,6 +534,7 @@ pub fn propcheck_all_trie_via_internal(
                         } else if b < 0 {
                             // Dummy level:
                             solver.internal_assume_decision(0);
+                            // Conflicting assignment:
                             if let Some(invalid) = &mut out_invalid {
                                 invalid.push(zip_eq(vars, &cube).take(level + 1).map(|(&v, &s)| Lit::new(v, s)).collect());
                             }
@@ -572,10 +578,16 @@ pub fn propcheck_all_trie_via_internal(
                 total_checked += 1;
                 if !solver.internal_propagate() {
                     // Conflict.
-                    solver.internal_reset_conflict();
                     if let Some(invalid) = &mut out_invalid {
-                        invalid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| Lit::new(v, s)).collect());
+                        invalid.push(
+                            zip_eq(vars, &cube)
+                                .take(level)
+                                .map(|(&v, &s)| Lit::new(v, s))
+                                // .filter(|&lit| solver.internal_failed(lit.to_external()))
+                                .collect(),
+                        );
                     }
+                    solver.internal_reset_conflict();
                     state = State::Ascending;
                 } else {
                     // No conflict.
@@ -587,6 +599,11 @@ pub fn propcheck_all_trie_via_internal(
 
     // Post-backtrack to zero level:
     solver.internal_backtrack(0);
+
+    // // Melt variables:
+    // for &var in vars.iter() {
+    //     solver.melt(var.to_external() as i32).unwrap();
+    // }
 
     trace!("Checked {} cubes, found {} valid", total_checked, total_count);
     total_count

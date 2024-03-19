@@ -253,8 +253,9 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
             // assert!(zip_eq(&cube, &variables).all(|(lit, var)| lit.var() == *var));
-            trie.insert(cube.iter().map(|lit| lit.negated()));
-            num_normal_cubes += 1;
+            if let (true, _) = trie.insert(cube.iter().map(|lit| lit.negated())) {
+                num_normal_cubes += 1;
+            }
         }
         let time_trie_construct = time_trie_construct.elapsed();
         info!(

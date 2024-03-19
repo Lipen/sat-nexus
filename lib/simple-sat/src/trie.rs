@@ -67,29 +67,32 @@ impl Trie {
     // }
 
     pub fn len(&self) -> usize {
-        self.nodes.len() - 1
+        self.nodes.len()
     }
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.len() == 1
     }
 
-    pub fn insert(&mut self, word: impl IntoIterator<Item = bool>) -> Id {
+    pub fn insert(&mut self, word: impl IntoIterator<Item = bool>) -> (bool, Id) {
+        let mut is_new = false;
         let mut current = self.root;
         for bit in word.into_iter() {
             current = if bit {
                 if self.nodes[current].right == 0 {
                     self.nodes[current].right = self.nodes.alloc(TrieNode::new(current));
+                    is_new = true;
                 }
                 self.nodes[current].right
             } else {
                 if self.nodes[current].left == 0 {
                     self.nodes[current].left = self.nodes.alloc(TrieNode::new(current));
+                    is_new = true;
                 }
                 self.nodes[current].left
             };
         }
         // self.nodes[current].is_end = true;
-        current
+        (is_new, current)
     }
 
     // pub fn contains(&self, word: &[bool]) -> bool {
@@ -106,6 +109,20 @@ impl Trie {
     pub fn search(&self, word: &[bool]) -> Id {
         let mut current = self.root;
         for &bit in word {
+            current = if bit { self.right(current) } else { self.left(current) };
+            if current == 0 {
+                return 0;
+            }
+        }
+        current
+    }
+
+    pub fn search_iter<I>(&self, word: I) -> Id
+    where
+        I: IntoIterator<Item = bool>,
+    {
+        let mut current = self.root;
+        for bit in word.into_iter() {
             current = if bit { self.right(current) } else { self.left(current) };
             if current == 0 {
                 return 0;
@@ -275,9 +292,9 @@ mod tests {
     #[test]
     fn test_insert_multiple_words() {
         let mut trie = Trie::new();
-        let a = trie.insert([true, false, true]);
-        let b = trie.insert([false, true, false]);
-        let c = trie.insert([true, true, true]);
+        let (_, a) = trie.insert([true, false, true]);
+        let (_, b) = trie.insert([false, true, false]);
+        let (_, c) = trie.insert([true, true, true]);
         // assert!(!trie.is_end(trie.root));
         // assert!(trie.is_end(a));
         // assert!(trie.is_end(b));

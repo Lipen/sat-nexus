@@ -522,6 +522,11 @@ impl Cadical {
             return 0;
         }
 
+        // // Freeze variables:
+        // for &v in vars.iter() {
+        //     self.freeze(v).unwrap()
+        // }
+
         let mut cube = vec![-1; vars.len()];
         let mut total_checked = 0u64;
         let mut total_count = 0u64;
@@ -541,8 +546,8 @@ impl Cadical {
             match state {
                 State::Descending => {
                     if level == vars.len() {
-                        if let Some(valid) = &mut out_valid {
-                            valid.push(zip_eq(vars, &cube).map(|(&v, &s)| v * s).collect());
+                        if let Some(out_valid) = &mut out_valid {
+                            out_valid.push(zip_eq(vars, &cube).map(|(&v, &s)| v * s).collect());
                         }
                         total_count += 1;
                         if limit > 0 && total_count >= limit {
@@ -560,7 +565,9 @@ impl Cadical {
                         } else if b < 0 {
                             // Dummy level:
                             self.internal_assume_decision(0);
+                            // Conflicting assignment:
                             if let Some(invalid) = &mut out_invalid {
+                                // TODO: extract core somehow
                                 invalid.push(zip_eq(vars, &cube).take(level + 1).map(|(&v, &s)| v * s).collect());
                             }
                             state = State::Ascending;
@@ -603,7 +610,13 @@ impl Cadical {
                     if !self.internal_propagate() {
                         // Conflict.
                         if let Some(invalid) = &mut out_invalid {
-                            invalid.push(zip_eq(vars, &cube).take(level).map(|(&v, &s)| v * s).collect());
+                            invalid.push(
+                                zip_eq(vars, &cube)
+                                    .take(level)
+                                    .map(|(&v, &s)| v * s)
+                                    // .filter(|&lit| self.internal_failed(lit))
+                                    .collect(),
+                            );
                         }
                         self.internal_reset_conflict();
                         state = State::Ascending;
@@ -618,12 +631,24 @@ impl Cadical {
         // Post-backtrack to zero level:
         self.internal_backtrack(0);
 
+        // // Melt variables:
+        // for &v in vars.iter() {
+        //     self.melt(v).unwrap()
+        // }
+
         trace!("Checked {} cubes, found {} valid", total_checked, total_count);
         total_count
     }
 }
 
 impl Cadical {
+    pub fn add_unit_clause(&self, lit: i32) {
+        assert_ne!(lit, 0);
+        unsafe {
+            ccadical_add_unit_clause(self.ptr, lit);
+        }
+    }
+
     pub fn add_derived(&self, lit_or_zero: i32) {
         unsafe { ccadical_add_derived(self.ptr, lit_or_zero) }
     }
