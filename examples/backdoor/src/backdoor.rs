@@ -7,11 +7,11 @@ use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
 
 #[derive(Debug, Clone)]
-pub struct Instance {
+pub struct Backdoor {
     pub(crate) variables: Vec<Var>,
 }
 
-impl Instance {
+impl Backdoor {
     pub fn new(variables: Vec<Var>) -> Self {
         Self { variables }
     }
@@ -28,7 +28,7 @@ impl Instance {
     }
 }
 
-impl Display for Instance {
+impl Display for Backdoor {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             // Note: "alternate" style (`{:#}`) shows the ordered set of variables:
@@ -41,7 +41,7 @@ impl Display for Instance {
     }
 }
 
-impl Instance {
+impl Backdoor {
     pub fn get_variables(&self) -> Vec<Var> {
         self.variables.iter().sorted().copied().collect()
     }

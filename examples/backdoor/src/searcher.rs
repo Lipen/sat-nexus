@@ -10,12 +10,12 @@ use rand::prelude::*;
 use simple_sat::lit::Lit;
 use simple_sat::var::Var;
 
+use crate::backdoor::Backdoor;
 use crate::fitness::Fitness;
-use crate::instance::Instance;
 use crate::solvers::SatSolver;
 
 #[derive(Debug)]
-pub struct Algorithm {
+pub struct BackdoorSearcher {
     pub solver: SatSolver,
     pub pool: Vec<Var>,
     pub rng: StdRng,
@@ -26,7 +26,7 @@ pub struct Algorithm {
     pub used_vars: AHashSet<Var>,
 }
 
-impl Algorithm {
+impl BackdoorSearcher {
     pub fn new(solver: SatSolver, pool: Vec<Var>, options: Options) -> Self {
         Self {
             solver,
@@ -61,7 +61,7 @@ impl Default for Options {
 #[derive(Debug)]
 pub struct RunResult {
     pub best_iteration: usize,
-    pub best_instance: Instance,
+    pub best_instance: Backdoor,
     pub best_fitness: Fitness,
     pub time: Duration,
     pub records: Vec<Record>,
@@ -70,11 +70,11 @@ pub struct RunResult {
 #[derive(Debug)]
 pub struct Record {
     pub iteration: usize,
-    pub instance: Instance,
+    pub instance: Backdoor,
     pub fitness: Fitness,
 }
 
-impl Algorithm {
+impl BackdoorSearcher {
     pub fn run(
         &mut self,
         backdoor_size: usize,
@@ -275,8 +275,8 @@ impl Algorithm {
         }
     }
 
-    fn initial_instance(&mut self, size: usize) -> Instance {
-        Instance::new_random(size, &self.pool, &mut self.rng)
+    fn initial_instance(&mut self, size: usize) -> Backdoor {
+        Backdoor::new_random(size, &self.pool, &mut self.rng)
         // let vars: Vec<Var> = [15, 482, 820, 1155, 2072, 2231, 2509, 3579, 4051, 4483]
         //     .into_iter()
         //     .map(|v| Var::from_external(v))
@@ -285,7 +285,7 @@ impl Algorithm {
         // Instance::new(vars)
     }
 
-    fn calculate_fitness(&mut self, instance: &Instance, best: Option<&Fitness>) -> Fitness {
+    fn calculate_fitness(&mut self, instance: &Backdoor, best: Option<&Fitness>) -> Fitness {
         let key = instance.get_variables();
         if let Some(fit) = self.cache.get(&key) {
             self.cache_hits += 1;
@@ -313,7 +313,7 @@ impl Algorithm {
         }
     }
 
-    fn mutate(&mut self, instance: &mut Instance) {
+    fn mutate(&mut self, instance: &mut Backdoor) {
         let n = instance.len();
         let p = 1.0 / n as f64;
         let d = Bernoulli::new(p).unwrap();

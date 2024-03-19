@@ -7,8 +7,8 @@ use clap::Parser;
 use itertools::Itertools;
 use log::{debug, info};
 
-use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
+use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solvers::SatSolver;
 use backdoor::utils::{create_line_writer, determine_vars_pool, get_hard_tasks, write_clause};
 
@@ -143,7 +143,7 @@ fn main() -> color_eyre::Result<()> {
         ban_used_variables: args.ban_used,
         ..DEFAULT_OPTIONS
     };
-    let mut algorithm = Algorithm::new(solver, pool, options);
+    let mut searcher = BackdoorSearcher::new(solver, pool, options);
 
     // Create and open the file with resulting backdoors:
     let mut file_backdoors = args.path_output.as_ref().map(create_line_writer);
@@ -170,7 +170,7 @@ fn main() -> color_eyre::Result<()> {
         let time_run = Instant::now();
 
         // Run the evolutionary algorithm:
-        let result = algorithm.run(
+        let result = searcher.run(
             args.backdoor_size,
             args.num_iters,
             args.stagnation_limit,
@@ -190,7 +190,7 @@ fn main() -> color_eyre::Result<()> {
             //     hard.len(),
             //     easy.len()
             // );
-            let hard = get_hard_tasks(&backdoor, &mut algorithm.solver);
+            let hard = get_hard_tasks(&backdoor, &mut searcher.solver);
             debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
             assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
@@ -216,12 +216,12 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    algorithm.solver.add_clause(&lemma);
+                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
             }
-            match &mut algorithm.solver {
+            match &mut searcher.solver {
                 SatSolver::SimpleSat(solver) => {
                     solver.simplify();
                 }

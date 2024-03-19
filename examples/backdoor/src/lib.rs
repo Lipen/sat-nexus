@@ -1,7 +1,7 @@
-pub mod algorithm;
+pub mod backdoor;
 pub mod derivation;
 pub mod fitness;
-pub mod instance;
 pub mod pool;
+pub mod searcher;
 pub mod solvers;
 pub mod utils;

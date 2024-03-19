@@ -10,8 +10,8 @@ use itertools::{iproduct, zip_eq, Itertools};
 use log::{debug, info};
 use rand::prelude::*;
 
-use backdoor::algorithm::{Algorithm, Options, DEFAULT_OPTIONS};
 use backdoor::derivation::derive_clauses;
+use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solvers::SatSolver;
 use backdoor::utils::{
     concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks, propcheck_all_trie_via_internal, write_clause,
@@ -147,11 +147,6 @@ fn main() -> color_eyre::Result<()> {
     // Initialize Cadical:
     let solver = Cadical::new();
     // solver.configure("plain");
-    // solver.set_option("check", 1);
-    // solver.set_option("checkproof", 1); // 1=drat, 2=lrat, 3=both (default=3)
-    // solver.set_option("checkfrozen", 1);
-    solver.set_option("ilb", 0);
-    solver.set_option("ilbassumptions", 0);
     if let Some(path_proof) = &args.path_proof {
         if args.proof_no_binary {
             solver.set_option("binary", 0);
@@ -189,7 +184,7 @@ fn main() -> color_eyre::Result<()> {
         ban_used_variables: args.ban_used,
         ..DEFAULT_OPTIONS
     };
-    let mut algorithm = Algorithm::new(SatSolver::new_cadical(solver), pool, options);
+    let mut searcher = BackdoorSearcher::new(SatSolver::new_cadical(solver), pool, options);
 
     // Create and open the file with derived clauses:
     let mut file_derived_clauses = Some(create_line_writer("derived_clauses.txt"));
@@ -220,7 +215,7 @@ fn main() -> color_eyre::Result<()> {
 
     if args.budget_presolve > 0 {
         info!("Pre-solving with {} conflicts budget...", args.budget_presolve);
-        match &mut algorithm.solver {
+        match &mut searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
                 solver.limit("conflicts", args.budget_presolve as i32);
@@ -245,7 +240,7 @@ fn main() -> color_eyre::Result<()> {
             }
         }
 
-        match &algorithm.solver {
+        match &searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
                 let res = solver.internal_propagate();
@@ -263,15 +258,15 @@ fn main() -> color_eyre::Result<()> {
         // Remove non-active variables from all cubes:
         cubes_product = cubes_product
             .into_iter()
-            .map(|cube| cube.into_iter().filter(|&lit| algorithm.solver.is_active(lit.var())).collect())
+            .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
 
         // Reset banned used variables:
         if args.reset_used_vars && cubes_product == vec![vec![]] {
-            algorithm.pool.extend(algorithm.used_vars.drain());
+            searcher.pool.extend(searcher.used_vars.drain());
         }
 
-        let result = algorithm.run(
+        let result = searcher.run(
             args.backdoor_size,
             args.num_iters,
             args.stagnation_limit,
@@ -282,12 +277,12 @@ fn main() -> color_eyre::Result<()> {
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
-        let hard = get_hard_tasks(&backdoor, &mut algorithm.solver);
+        let hard = get_hard_tasks(&backdoor, &mut searcher.solver);
         debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
         if args.add_easy_tasks {
-            match &algorithm.solver {
+            match &searcher.solver {
                 SatSolver::SimpleSat(_) => unreachable!(),
                 SatSolver::Cadical(solver) => {
                     let vars_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
@@ -313,14 +308,14 @@ fn main() -> color_eyre::Result<()> {
                             if let Some(f) = &mut file_derived_clauses {
                                 write_clause(f, &lemma)?;
                             }
-                            algorithm.solver.add_clause(&lemma);
+                            searcher.solver.add_clause(&lemma);
                             all_derived_clauses.push(lemma);
                         }
                     }
                 }
             }
 
-            match &algorithm.solver {
+            match &searcher.solver {
                 SatSolver::SimpleSat(_) => unreachable!(),
                 SatSolver::Cadical(solver) => {
                     let res = solver.internal_propagate();
@@ -331,7 +326,7 @@ fn main() -> color_eyre::Result<()> {
 
         for &var in backdoor.iter() {
             // assert!(algorithm.solver.is_active(var), "var {} is not active", var);
-            if !algorithm.solver.is_active(var) {
+            if !searcher.solver.is_active(var) {
                 log::warn!("var {} is not active", var);
             }
         }
@@ -341,7 +336,7 @@ fn main() -> color_eyre::Result<()> {
 
             {
                 info!("Just solving with {} conflicts budget...", budget_solve);
-                match &mut algorithm.solver {
+                match &mut searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
                         solver.limit("conflicts", budget_solve as i32);
@@ -378,7 +373,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;
                     }
-                    algorithm.solver.add_clause(&[lit]);
+                    searcher.solver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -411,7 +406,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    algorithm.solver.add_clause(&lemma);
+                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -429,7 +424,7 @@ fn main() -> color_eyre::Result<()> {
         // Remove non-active variables from all cubes:
         cubes_product = cubes_product
             .into_iter()
-            .map(|cube| cube.into_iter().filter(|&lit| algorithm.solver.is_active(lit.var())).collect())
+            .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
 
         // debug!(
@@ -445,7 +440,7 @@ fn main() -> color_eyre::Result<()> {
 
         let hard: Vec<Vec<Lit>> = hard
             .into_iter()
-            .map(|cube| cube.into_iter().filter(|lit| algorithm.solver.is_active(lit.var())).collect())
+            .map(|cube| cube.into_iter().filter(|lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
 
         // ------------------------------------------------------------------------
@@ -462,12 +457,12 @@ fn main() -> color_eyre::Result<()> {
         let variables = {
             let mut s = HashSet::new();
             s.extend(cubes_product[0].iter().map(|lit| lit.var()));
-            s.extend(backdoor.iter().filter(|&&var| algorithm.solver.is_active(var)));
+            s.extend(backdoor.iter().filter(|&&var| searcher.solver.is_active(var)));
             s.into_iter().sorted().collect_vec()
         };
         debug!("Total {} variables: {}", variables.len(), DisplaySlice(&variables));
         for &var in variables.iter() {
-            assert!(algorithm.solver.is_active(var), "var {} is not active", var);
+            assert!(searcher.solver.is_active(var), "var {} is not active", var);
         }
 
         info!("Constructing trie out of {} potential cubes...", cubes_product.len() * hard.len());
@@ -508,7 +503,7 @@ fn main() -> color_eyre::Result<()> {
         let time_filter = Instant::now();
         let mut valid = Vec::new();
         let mut invalid = Vec::new(); // TODO: remove 'invalid' extraction
-        match &mut algorithm.solver {
+        match &mut searcher.solver {
             SatSolver::SimpleSat(solver) => {
                 solver.propcheck_all_trie(&variables, &trie, &mut valid);
             }
@@ -541,7 +536,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    algorithm.solver.add_clause(&lemma);
+                    searcher.solver.add_clause(&lemma);
                     all_derived_clauses.push(lemma);
                 }
             }
@@ -552,7 +547,7 @@ fn main() -> color_eyre::Result<()> {
 
             {
                 info!("Just solving with {} conflicts budget...", budget_solve);
-                match &mut algorithm.solver {
+                match &mut searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
                         solver.limit("conflicts", budget_solve as i32);
@@ -589,7 +584,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &[lit])?;
                     }
-                    algorithm.solver.add_clause(&[lit]);
+                    searcher.solver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -621,7 +616,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    algorithm.solver.add_clause(&lemma);
+                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -656,13 +651,13 @@ fn main() -> color_eyre::Result<()> {
         // Remove non-active variables from all cubes:
         cubes_product = cubes_product
             .into_iter()
-            .map(|cube| cube.into_iter().filter(|&lit| algorithm.solver.is_active(lit.var())).collect())
+            .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
 
         info!("Filtering {} hard cubes via solver...", cubes_product.len());
         let time_filter = Instant::now();
         let num_cubes_before_filtering = cubes_product.len();
-        let num_conflicts = match &mut algorithm.solver {
+        let num_conflicts = match &mut searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => solver.conflicts() as u64,
         };
@@ -675,13 +670,13 @@ fn main() -> color_eyre::Result<()> {
                 cubes_product,
                 args.num_conflicts as u64,
                 num_conflicts_limit,
-                &mut algorithm.solver,
+                &mut searcher.solver,
                 &mut all_clauses,
                 &mut all_derived_clauses,
                 &mut file_derived_clauses,
             );
         } else {
-            cubes_product.shuffle(&mut algorithm.rng);
+            cubes_product.shuffle(&mut searcher.rng);
             let pb = ProgressBar::new(cubes_product.len() as u64);
             pb.set_style(
                 ProgressStyle::with_template("{spinner:.green} [{elapsed}] [{bar:40.cyan/white}] {pos:>6}/{len} (ETA: {eta}) {msg}")?
@@ -695,7 +690,7 @@ fn main() -> color_eyre::Result<()> {
                     return true;
                 }
 
-                let num_conflicts = match &mut algorithm.solver {
+                let num_conflicts = match &mut searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => solver.conflicts() as u64,
                 };
@@ -708,7 +703,7 @@ fn main() -> color_eyre::Result<()> {
                     return true;
                 }
 
-                match &algorithm.solver {
+                match &searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
                         for &lit in cube.iter() {
@@ -796,7 +791,7 @@ fn main() -> color_eyre::Result<()> {
             writeln!(f, "{},limited,{}", run_number, cubes_product.len())?;
         }
 
-        let num_conflicts = match &mut algorithm.solver {
+        let num_conflicts = match &mut searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => solver.conflicts() as u64,
         };
@@ -810,7 +805,7 @@ fn main() -> color_eyre::Result<()> {
 
             {
                 info!("Just solving with {} conflicts budget...", budget_solve);
-                match &mut algorithm.solver {
+                match &mut searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
                         solver.limit("conflicts", budget_solve as i32);
@@ -847,7 +842,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &[lit])?;
                     }
-                    algorithm.solver.add_clause(&[lit]);
+                    searcher.solver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
                 }
             }
@@ -879,7 +874,7 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    algorithm.solver.add_clause(&lemma);
+                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -901,7 +896,7 @@ fn main() -> color_eyre::Result<()> {
             );
         }
 
-        match &mut algorithm.solver {
+        match &mut searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
                 debug!("Retrieving clauses from the solver...");
@@ -923,7 +918,7 @@ fn main() -> color_eyre::Result<()> {
         };
 
         info!("Just solving with {} conflicts budget...", budget_solve);
-        match &mut algorithm.solver {
+        match &mut searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
                 solver.limit("conflicts", budget_solve as i32);
