@@ -58,7 +58,7 @@ impl SatSolver {
                 solver.add_clause(lits);
             }
             SatSolver::Cadical(solver) => {
-                log::info!("add_clause({})", DisplaySlice(lits));
+                // log::info!("add_clause({})", DisplaySlice(lits));
 
                 solver.internal_backtrack(0);
                 let res = solver.internal_propagate();
