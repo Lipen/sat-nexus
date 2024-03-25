@@ -271,7 +271,7 @@ pub fn filter_cubes(
                                 debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
                             }
 
-                            if true {
+                            if false {
                                 let mut lemma = Vec::new();
                                 for &lit in cubes[best_cube].iter() {
                                     if solver.failed(lit.to_external()).unwrap() {
