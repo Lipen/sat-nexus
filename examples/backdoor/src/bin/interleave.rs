@@ -131,11 +131,17 @@ struct Cli {
     #[arg(long)]
     proof_no_binary: bool,
 
+    /// Do compute cores for easy tasks and invalid cubes.
     #[arg(long)]
     compute_cores: bool,
 
+    /// Do add lemmas from cores.
     #[arg(long)]
     add_cores: bool,
+
+    /// Maximum core size to be added (0 = unlimited).
+    #[arg(long, default_value_t = 0)]
+    max_core_size: usize,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -365,8 +371,13 @@ fn main() -> color_eyre::Result<()> {
                     if args.add_cores {
                         debug!("Adding {} cores...", easy_cores.len());
                         let mut num_added = 0;
-                        for cube in easy_cores.iter() {
-                            let mut lemma = cube.iter().map(|&lit| -lit).collect_vec();
+                        for core in easy_cores.iter() {
+                            // Skip big cores:
+                            if args.max_core_size > 0 && core.len() > args.max_core_size {
+                                continue;
+                            }
+
+                            let mut lemma = core.iter().map(|&lit| -lit).collect_vec();
                             lemma.sort_by_key(|lit| lit.inner());
                             if all_clauses.insert(lemma.clone()) {
                                 if let Some(f) = &mut file_derived_clauses {
@@ -630,8 +641,13 @@ fn main() -> color_eyre::Result<()> {
                     if args.add_cores {
                         debug!("Adding {} cores...", invalid_cores.len());
                         let mut num_added = 0;
-                        for cube in invalid_cores.iter() {
-                            let mut lemma = cube.iter().map(|&lit| -lit).collect_vec();
+                        for core in invalid_cores.iter() {
+                            // Skip big cores:
+                            if args.max_core_size > 0 && core.len() > args.max_core_size {
+                                continue;
+                            }
+
+                            let mut lemma = core.iter().map(|&lit| -lit).collect_vec();
                             lemma.sort_by_key(|lit| lit.inner());
                             if all_clauses.insert(lemma.clone()) {
                                 if let Some(f) = &mut file_derived_clauses {
