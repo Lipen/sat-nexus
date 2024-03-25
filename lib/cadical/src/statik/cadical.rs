@@ -78,7 +78,7 @@ impl Cadical {
 
     // Overwrite (some) options with the forced values of the configuration.
     // The result is 'true' iff the 'name' is a valid configuration.
-    pub fn configure(&self, name: &'static str) {
+    pub fn configure(&self, name: &str) {
         let name = CString::new(name).expect("CString::new failed");
         let res = unsafe { ccadical_configure(self.ptr, name.as_ptr()) };
         assert!(res);
@@ -90,7 +90,7 @@ impl Cadical {
     /// maximum) value possible, but still 'true' is returned.
     ///
     /// Options can only be set right after initialization.
-    pub fn set_option(&self, name: &'static str, val: i32) {
+    pub fn set_option(&self, name: &str, val: i32) {
         let name = CString::new(name).expect("CString::new failed");
         let ok = unsafe { ccadical_set_option(self.ptr, name.as_ptr(), val) };
         assert!(ok, "ccadical_set_option returned false");
@@ -98,7 +98,7 @@ impl Cadical {
 
     /// Get the current value of the option 'name'.  If 'name' is invalid then
     /// zero is returned.  Here '--...' arguments as invalid options.
-    pub fn get_option(&self, name: &'static str) -> i32 {
+    pub fn get_option(&self, name: &str) -> i32 {
         let name = CString::new(name).expect("CString::new failed");
         unsafe { ccadical_get_option(self.ptr, name.as_ptr()) }
     }
