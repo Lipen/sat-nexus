@@ -1,19 +1,18 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
 use std::time::Instant;
 
 use itertools::{zip_eq, Itertools, MultiProduct};
-use log::{debug, info, trace};
-use ordered_float::OrderedFloat;
+use log::{debug, trace};
 
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
 use simple_sat::lit::Lit;
 use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
-use simple_sat::utils::{parse_dimacs, DisplaySlice};
+use simple_sat::utils::parse_dimacs;
 use simple_sat::var::Var;
 
 use crate::solvers::SatSolver;
@@ -131,214 +130,6 @@ where
     }
 
     (hard, easy)
-}
-
-pub fn filter_cubes(
-    cubes: Vec<Vec<Lit>>,
-    num_conflicts_budget: u64,
-    num_conflicts_limit: u64,
-    solver: &mut SatSolver,
-    all_clauses: &mut HashSet<Vec<Lit>>,
-    all_derived_clauses: &mut Vec<Vec<Lit>>,
-    file_derived_clauses: &mut Option<LineWriter<File>>,
-) -> Vec<Vec<Lit>> {
-    debug!("Computing neighbors...");
-    let time_compute_neighbors = Instant::now();
-    let mut neighbors: HashMap<(Lit, Lit), Vec<usize>> = HashMap::new();
-    for (i, cube) in cubes.iter().enumerate() {
-        for (&a, &b) in cube.iter().tuple_combinations() {
-            neighbors.entry((a, b)).or_default().push(i);
-        }
-    }
-    let time_compute_neighbors = time_compute_neighbors.elapsed();
-    debug!(
-        "Computed neighbors (size={}, cubes={}) in {:.1}s",
-        neighbors.len(),
-        neighbors.values().map(|vs| vs.len()).sum::<usize>(),
-        time_compute_neighbors.as_secs_f64()
-    );
-
-    let compute_cube_score = |cube: &[Lit], neighbors: &HashMap<(Lit, Lit), Vec<usize>>| {
-        let mut score: f64 = 0.0;
-        for (&a, &b) in cube.iter().tuple_combinations() {
-            if let Some(neighbors) = neighbors.get(&(a, b)) {
-                let d = neighbors.len();
-                if d != 0 {
-                    score += 1.0 / d as f64;
-                    if d == 1 {
-                        score += 50.0;
-                    }
-                }
-            }
-        }
-        score
-    };
-
-    debug!("Computing cube score...");
-    let time_cube_scores = Instant::now();
-    let mut cube_score: Vec<f64> = cubes.iter().map(|cube| compute_cube_score(cube, &neighbors)).collect();
-    let time_cube_scores = time_cube_scores.elapsed();
-    debug!(
-        "Computed cube scores (size={}) in {:.1}s",
-        cube_score.len(),
-        time_cube_scores.as_secs_f64()
-    );
-
-    let mut remaining_cubes: Vec<usize> = (0..cubes.len()).collect();
-    let mut indet_cubes: Vec<usize> = Vec::new();
-
-    let verb = false;
-
-    while !remaining_cubes.is_empty() {
-        let num_conflicts = match solver {
-            SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => solver.conflicts() as u64,
-        };
-        if num_conflicts > num_conflicts_limit {
-            info!("Budget exhausted");
-            break;
-        }
-
-        if false {
-            // debug!("Asserting...");
-            let time_asserting = Instant::now();
-            for &i in remaining_cubes.iter() {
-                assert!(
-                    (compute_cube_score(&cubes[i], &neighbors) - cube_score[i]).abs() <= 1e-6,
-                    "compute = {}, score = {}",
-                    compute_cube_score(&cubes[i], &neighbors),
-                    cube_score[i]
-                );
-            }
-            let time_asserting = time_asserting.elapsed();
-            debug!("Asserted in {:.1}s", time_asserting.as_secs_f64());
-        }
-
-        let best_cube_position = remaining_cubes
-            .iter()
-            .position_max_by_key(|&&i| OrderedFloat(cube_score[i]))
-            .unwrap();
-        let best_cube = remaining_cubes.swap_remove(best_cube_position);
-        let best_cube_score = cube_score[best_cube];
-
-        if best_cube_score > 0.0 {
-            // debug!(
-            //     "Max score ({}) cube: {}",
-            //     best_cube_score,
-            //     DisplaySlice(&cubes[best_cube])
-            // );
-            match solver {
-                SatSolver::SimpleSat(_) => unreachable!(),
-                SatSolver::Cadical(solver) => {
-                    for &lit in cubes[best_cube].iter() {
-                        solver.assume(lit.to_external()).unwrap();
-                    }
-                    solver.limit("conflicts", num_conflicts_budget as i32);
-                    // debug!("Solving {}...", DisplaySlice(&best_cube));
-                    let time_solve = Instant::now();
-                    match solver.solve().unwrap() {
-                        SolveResponse::Unsat => {
-                            if verb {
-                                debug!(
-                                    "UNSAT in {:.1}s for cube with score {}: {}",
-                                    time_solve.elapsed().as_secs_f64(),
-                                    best_cube_score,
-                                    DisplaySlice(&cubes[best_cube])
-                                );
-                            }
-                            let time_rescore = Instant::now();
-                            for (&a, &b) in cubes[best_cube].iter().tuple_combinations() {
-                                let d = neighbors[&(a, b)].len();
-                                if d == 0 {
-                                    continue;
-                                } else if d == 1 {
-                                    // debug!("should derive {}", DisplaySlice(&[-a, -b]));
-                                    assert_eq!(neighbors[&(a, b)][0], best_cube);
-                                    cube_score[best_cube] = 0.0;
-                                } else {
-                                    for &i in neighbors[&(a, b)].iter() {
-                                        cube_score[i] -= 1.0 / d as f64;
-                                        cube_score[i] += 1.0 / (d - 1) as f64;
-                                        if d - 1 == 1 {
-                                            cube_score[i] += 50.0;
-                                        }
-                                    }
-                                }
-                                neighbors.get_mut(&(a, b)).unwrap().retain(|&i| i != best_cube);
-                            }
-                            let time_rescore = time_rescore.elapsed();
-                            if verb || time_rescore.as_secs_f64() > 0.1 {
-                                debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
-                            }
-
-                            if false {
-                                let mut lemma = Vec::new();
-                                for &lit in cubes[best_cube].iter() {
-                                    if solver.failed(lit.to_external()).unwrap() {
-                                        lemma.push(-lit);
-                                    }
-                                }
-                                // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
-                                lemma.sort_by_key(|lit| lit.inner());
-                                if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
-                                    debug!("new lemma from unsat core: {}", DisplaySlice(&lemma));
-                                    if let Some(f) = file_derived_clauses {
-                                        for lit in lemma.iter() {
-                                            write!(f, "{} ", lit).unwrap();
-                                        }
-                                        writeln!(f, "0").unwrap();
-                                    }
-                                    solver.add_clause(clause_to_external(&lemma));
-                                    all_derived_clauses.push(lemma);
-                                }
-                            }
-                        }
-                        SolveResponse::Interrupted => {
-                            if verb {
-                                debug!(
-                                    "INDET in {:.1}s for cube with score {}: {}",
-                                    time_solve.elapsed().as_secs_f64(),
-                                    best_cube_score,
-                                    DisplaySlice(&cubes[best_cube])
-                                );
-                            }
-                            let time_rescore = Instant::now();
-                            for (&a, &b) in cubes[best_cube].iter().tuple_combinations() {
-                                let ns = neighbors.get_mut(&(a, b)).unwrap();
-                                let d = ns.len();
-                                for i in ns.drain(..) {
-                                    // score[cube] -= 1 / d
-                                    cube_score[i] -= 1.0 / d as f64;
-                                }
-                                assert_eq!(neighbors[&(a, b)].len(), 0);
-                            }
-                            let time_rescore = time_rescore.elapsed();
-                            if verb {
-                                debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
-                            }
-                            indet_cubes.push(best_cube);
-                        }
-                        SolveResponse::Sat => panic!("Unexpected SAT"),
-                    }
-                }
-            }
-        } else {
-            indet_cubes.push(best_cube);
-            break;
-        }
-    }
-
-    cubes
-        .into_iter()
-        .enumerate()
-        .filter_map(|(i, cube)| {
-            if remaining_cubes.contains(&i) || indet_cubes.contains(&i) {
-                Some(cube)
-            } else {
-                None
-            }
-        })
-        .collect()
 }
 
 /// Rust version of Python's `itertools.product()`.
@@ -628,6 +419,7 @@ pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use itertools::assert_equal;
+    use log::info;
     use test_log::test;
 
     use simple_sat::trie::build_trie;

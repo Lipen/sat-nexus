@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -8,14 +8,15 @@ use color_eyre::eyre::bail;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, zip_eq, Itertools};
 use log::{debug, info};
+use ordered_float::OrderedFloat;
 use rand::prelude::*;
 
 use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solvers::SatSolver;
 use backdoor::utils::{
-    clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks,
-    propcheck_all_trie_via_internal, write_clause,
+    clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks, propcheck_all_trie_via_internal,
+    write_clause,
 };
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
@@ -708,11 +709,11 @@ fn main() -> color_eyre::Result<()> {
                 match &mut searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
-                        let time_solve = Instant::now();
                         solver.limit("conflicts", budget_solve as i32);
+                        let time_solve = Instant::now();
                         let res = solver.solve().unwrap();
-                        solver.internal_backtrack(0);
                         let time_solve = time_solve.elapsed();
+                        solver.internal_backtrack(0);
                         match res {
                             SolveResponse::Interrupted => {
                                 info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
@@ -834,15 +835,257 @@ fn main() -> color_eyre::Result<()> {
         let mut in_budget = true;
 
         if args.use_sorted_filtering {
-            cubes_product = filter_cubes(
-                cubes_product,
-                args.num_conflicts as u64,
-                num_conflicts_limit,
-                &mut searcher.solver,
-                &mut all_clauses,
-                &mut all_derived_clauses,
-                &mut file_derived_clauses,
+            debug!("Computing neighbors...");
+            let time_compute_neighbors = Instant::now();
+            let mut neighbors: HashMap<(Lit, Lit), Vec<usize>> = HashMap::new();
+            for (i, cube) in cubes_product.iter().enumerate() {
+                for (&a, &b) in cube.iter().tuple_combinations() {
+                    neighbors.entry((a, b)).or_default().push(i);
+                }
+            }
+            let time_compute_neighbors = time_compute_neighbors.elapsed();
+            debug!(
+                "Computed neighbors (size={}, cubes={}) in {:.1}s",
+                neighbors.len(),
+                neighbors.values().map(|vs| vs.len()).sum::<usize>(),
+                time_compute_neighbors.as_secs_f64()
             );
+
+            let compute_cube_score = |cube: &[Lit], neighbors: &HashMap<(Lit, Lit), Vec<usize>>| {
+                let mut score: f64 = 0.0;
+                for (&a, &b) in cube.iter().tuple_combinations() {
+                    if let Some(neighbors) = neighbors.get(&(a, b)) {
+                        let d = neighbors.len();
+                        if d != 0 {
+                            score += 1.0 / d as f64;
+                            if d == 1 {
+                                score += 50.0;
+                            }
+                        }
+                    }
+                }
+                score
+            };
+
+            debug!("Computing cube score...");
+            let time_cube_scores = Instant::now();
+            let mut cube_score: Vec<f64> = cubes_product.iter().map(|cube| compute_cube_score(cube, &neighbors)).collect();
+            let time_cube_scores = time_cube_scores.elapsed();
+            debug!(
+                "Computed cube scores (size={}) in {:.1}s",
+                cube_score.len(),
+                time_cube_scores.as_secs_f64()
+            );
+
+            let mut remaining_cubes: Vec<usize> = (0..cubes_product.len()).collect();
+            let mut indet_cubes: Vec<usize> = Vec::new();
+            let mut cores: HashSet<Vec<Lit>> = HashSet::new();
+
+            let verb = false;
+
+            while !remaining_cubes.is_empty() {
+                let num_conflicts = match &mut searcher.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => solver.conflicts() as u64,
+                };
+                if num_conflicts > num_conflicts_limit {
+                    info!("Budget exhausted");
+                    break;
+                }
+
+                if false {
+                    // debug!("Asserting...");
+                    let time_asserting = Instant::now();
+                    for &i in remaining_cubes.iter() {
+                        assert!(
+                            (compute_cube_score(&cubes_product[i], &neighbors) - cube_score[i]).abs() <= 1e-6,
+                            "compute = {}, score = {}",
+                            compute_cube_score(&cubes_product[i], &neighbors),
+                            cube_score[i]
+                        );
+                    }
+                    let time_asserting = time_asserting.elapsed();
+                    debug!("Asserted in {:.1}s", time_asserting.as_secs_f64());
+                }
+
+                let best_cube_position = remaining_cubes
+                    .iter()
+                    .position_max_by_key(|&&i| OrderedFloat(cube_score[i]))
+                    .unwrap();
+                let best_cube = remaining_cubes.swap_remove(best_cube_position);
+                let best_cube_score = cube_score[best_cube];
+
+                if best_cube_score > 0.0 {
+                    // debug!(
+                    //     "Max score ({}) cube: {}",
+                    //     best_cube_score,
+                    //     DisplaySlice(&cubes[best_cube])
+                    // );
+                    match &searcher.solver {
+                        SatSolver::SimpleSat(_) => unreachable!(),
+                        SatSolver::Cadical(solver) => {
+                            for &lit in cubes_product[best_cube].iter() {
+                                solver.assume(lit.to_external()).unwrap();
+                            }
+                            solver.limit("conflicts", (args.num_conflicts as u64) as i32);
+                            // debug!("Solving {}...", DisplaySlice(&best_cube));
+                            let time_solve = Instant::now();
+                            let res = solver.solve().unwrap();
+                            let time_solve = time_solve.elapsed();
+                            match res {
+                                SolveResponse::Unsat => {
+                                    if verb {
+                                        debug!(
+                                            "UNSAT in {:.1}s for cube with score {}: {}",
+                                            time_solve.as_secs_f64(),
+                                            best_cube_score,
+                                            DisplaySlice(&cubes_product[best_cube])
+                                        );
+                                    }
+                                    let time_rescore = Instant::now();
+                                    for (&a, &b) in cubes_product[best_cube].iter().tuple_combinations() {
+                                        let d = neighbors[&(a, b)].len();
+                                        if d == 0 {
+                                            continue;
+                                        } else if d == 1 {
+                                            // debug!("should derive {}", DisplaySlice(&[-a, -b]));
+                                            assert_eq!(neighbors[&(a, b)][0], best_cube);
+                                            cube_score[best_cube] = 0.0;
+                                        } else {
+                                            for &i in neighbors[&(a, b)].iter() {
+                                                cube_score[i] -= 1.0 / d as f64;
+                                                cube_score[i] += 1.0 / (d - 1) as f64;
+                                                if d - 1 == 1 {
+                                                    cube_score[i] += 50.0;
+                                                }
+                                            }
+                                        }
+                                        neighbors.get_mut(&(a, b)).unwrap().retain(|&i| i != best_cube);
+                                    }
+                                    let time_rescore = time_rescore.elapsed();
+                                    if verb || time_rescore.as_secs_f64() > 0.1 {
+                                        debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
+                                    }
+
+                                    if args.compute_cores {
+                                        let mut core = Vec::new();
+                                        for &lit in cubes_product[best_cube].iter() {
+                                            if solver.failed(lit.to_external()).unwrap() {
+                                                core.push(lit);
+                                            }
+                                        }
+                                        // debug!("UNSAT for cube = {}, core = {}", DisplaySlice(&cube), DisplaySlice(&core));
+                                        cores.insert(core);
+                                    }
+                                }
+                                SolveResponse::Interrupted => {
+                                    if verb {
+                                        debug!(
+                                            "INDET in {:.1}s for cube with score {}: {}",
+                                            time_solve.as_secs_f64(),
+                                            best_cube_score,
+                                            DisplaySlice(&cubes_product[best_cube])
+                                        );
+                                    }
+                                    let time_rescore = Instant::now();
+                                    for (&a, &b) in cubes_product[best_cube].iter().tuple_combinations() {
+                                        let ns = neighbors.get_mut(&(a, b)).unwrap();
+                                        let d = ns.len();
+                                        for i in ns.drain(..) {
+                                            // score[cube] -= 1 / d
+                                            cube_score[i] -= 1.0 / d as f64;
+                                        }
+                                        assert_eq!(neighbors[&(a, b)].len(), 0);
+                                    }
+                                    let time_rescore = time_rescore.elapsed();
+                                    if verb {
+                                        debug!("Rescored in {:.1}s", time_rescore.as_secs_f64());
+                                    }
+                                    indet_cubes.push(best_cube);
+                                }
+                                SolveResponse::Sat => {
+                                    if verb {
+                                        debug!(
+                                            "SAT in {:.1}s for cube with score {}: {}",
+                                            time_solve.as_secs_f64(),
+                                            best_cube_score,
+                                            DisplaySlice(&cubes_product[best_cube])
+                                        );
+                                    }
+                                    let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                                    final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    indet_cubes.push(best_cube);
+                    break;
+                }
+            }
+
+            if final_model.is_some() {
+                break;
+            }
+
+            // Populate the set of ALL clauses:
+            match &mut searcher.solver {
+                SatSolver::SimpleSat(_) => unreachable!(),
+                SatSolver::Cadical(solver) => {
+                    debug!("Retrieving clauses from the solver...");
+                    let time_extract = Instant::now();
+                    let mut num_new = 0;
+                    for clause in solver.all_clauses_iter() {
+                        let mut clause = clause_from_external(clause);
+                        clause.sort_by_key(|lit| lit.inner());
+                        (&mut all_clauses).insert(clause);
+                        num_new += 1;
+                    }
+                    let time_extract = time_extract.elapsed();
+                    total_time_extract += time_extract;
+                    debug!("Extracted {} new clauses in {:.1}s", num_new, time_extract.as_secs_f64());
+                    debug!(
+                        "So far total {} clauses, total spent {:.3}s for extraction",
+                        all_clauses.len(),
+                        total_time_extract.as_secs_f64()
+                    );
+                }
+            }
+
+            if args.add_cores {
+                debug!("Adding {} cores...", cores.len());
+                let mut num_added = 0;
+                for core in cores.iter() {
+                    // Skip big cores:
+                    if args.max_core_size > 0 && core.len() > args.max_core_size {
+                        continue;
+                    }
+
+                    let lemma = core.iter().map(|&lit| -lit).collect_vec();
+                    if all_clauses.insert(lemma.clone()) {
+                        if let Some(f) = &mut &mut file_derived_clauses {
+                            write_clause(f, &lemma)?;
+                        }
+                        searcher.solver.add_clause(&lemma);
+                        all_derived_clauses.push(lemma);
+                        num_added += 1;
+                    }
+                }
+                debug!("Added {} new lemmas from cores", num_added);
+            }
+
+            cubes_product = cubes_product
+                .into_iter()
+                .enumerate()
+                .filter_map(|(i, cube)| {
+                    if remaining_cubes.contains(&i) || indet_cubes.contains(&i) {
+                        Some(cube)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
         } else {
             let mut cores: HashSet<Vec<Lit>> = HashSet::new();
 
@@ -855,6 +1098,10 @@ fn main() -> color_eyre::Result<()> {
             pb.set_message("filtering");
             cubes_product.retain(|cube| {
                 pb.inc(1);
+
+                if final_model.is_some() {
+                    return false;
+                }
 
                 if !in_budget {
                     return true;
@@ -876,11 +1123,11 @@ fn main() -> color_eyre::Result<()> {
                 match &searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
-                        let time_solve = Instant::now();
                         for &lit in cube.iter() {
                             solver.assume(lit.to_external()).unwrap();
                         }
                         solver.limit("conflicts", args.num_conflicts as i32);
+                        let time_solve = Instant::now();
                         let res = solver.solve().unwrap();
                         let time_solve = time_solve.elapsed();
 
@@ -916,6 +1163,10 @@ fn main() -> color_eyre::Result<()> {
                 }
             });
             pb.finish_and_clear();
+
+            if final_model.is_some() {
+                break;
+            }
 
             // Populate the set of ALL clauses:
             match &mut searcher.solver {
@@ -1115,8 +1366,8 @@ fn main() -> color_eyre::Result<()> {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
                 solver.limit("conflicts", budget_solve as i32);
-                let time_solve = Instant::now();
                 solver.reset_assumptions();
+                let time_solve = Instant::now();
                 let res = solver.solve().unwrap();
                 let time_solve = time_solve.elapsed();
                 solver.internal_backtrack(0);
