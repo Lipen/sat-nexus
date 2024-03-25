@@ -52,8 +52,8 @@ struct Cli {
 
     /// Path to a file with model (if the problem is SAT)
     /// in DIMACS format ("s SATISFIABLE\nv 1 2 ... 0\n").
-    #[arg(long = "model", value_name = "FILE", default_value = "model.dimacs")]
-    path_model: PathBuf,
+    #[arg(long = "model", value_name = "FILE")]
+    path_model: Option<PathBuf>,
 
     /// Random seed.
     #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
@@ -1150,24 +1150,26 @@ fn main() -> color_eyre::Result<()> {
 
     debug!("Time spent on extracting all clauses: {:.3}s", total_time_extract.as_secs_f64());
 
-    if _unsat {
-        println!("s UNSATISFIABLE");
+    let res = if _unsat {
+        "UNSAT"
     } else if let Some(model) = &final_model {
-        println!("s SATISFIABLE");
-        debug!("Writing SAT model in '{}'...", args.path_model.display());
-        let mut f = create_line_writer(&args.path_model);
-        writeln!(f, "s SATISFIABLE")?;
-        write!(f, "v ")?;
-        for (i, &b) in model.iter().enumerate() {
-            let v = (i + 1) as i32;
-            let lit = if b { v } else { -v };
-            write!(f, "{} ", lit)?;
+        if let Some(path_model) = &args.path_model {
+            debug!("Writing SAT model in '{}'...", path_model.display());
+            let mut f = create_line_writer(path_model);
+            writeln!(f, "s SATISFIABLE")?;
+            write!(f, "v ")?;
+            for (i, &b) in model.iter().enumerate() {
+                let v = (i + 1) as i32;
+                let lit = if b { v } else { -v };
+                write!(f, "{} ", lit)?;
+            }
+            writeln!(f, "0")?;
         }
-        writeln!(f, "0")?;
+        "SAT"
     } else {
-        println!("s UNKNOWN");
-    }
+        "UNKNOWN"
+    };
 
-    println!("All done in {:.3} s", start_time.elapsed().as_secs_f64());
+    println!("{} in {:.3} s", res, start_time.elapsed().as_secs_f64());
     Ok(())
 }
