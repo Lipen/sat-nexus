@@ -142,6 +142,10 @@ struct Cli {
     /// Maximum core size to be added (0 = unlimited).
     #[arg(long, default_value_t = 0)]
     max_core_size: usize,
+
+    /// Comma-separated list of Cadical options ('key=value' pairs, e.g. 'elim=0,ilb=0,check=1').
+    #[arg(long)]
+    cadical_options: Option<String>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -159,6 +163,7 @@ fn main() -> color_eyre::Result<()> {
     // Initialize Cadical:
     let solver = Cadical::new();
     // solver.configure("plain");
+    // solver.set_option("elim", 0);
     // solver.set_option("walk", 0);
     // solver.set_option("lucky", 0);
     // solver.set_option("probe", 0);
@@ -167,6 +172,15 @@ fn main() -> color_eyre::Result<()> {
     // solver.set_option("vivify", 0);
     // solver.set_option("inprocessing", 0);
     // solver.set_option("check", 1);
+    if let Some(s) = &args.cadical_options {
+        for part in s.split(",") {
+            let mut parts: Vec<&str> = part.splitn(2, '=').collect();
+            let key = parts[0];
+            let value = parts[1].parse().unwrap();
+            info!("Cadical option: {}={}", key, value);
+            solver.set_option(key, value);
+        }
+    }
     if let Some(path_proof) = &args.path_proof {
         if args.proof_no_binary {
             solver.set_option("binary", 0);
