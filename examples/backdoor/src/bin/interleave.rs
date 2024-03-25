@@ -1,6 +1,5 @@
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -19,7 +18,7 @@ use backdoor::utils::{
     propcheck_all_trie_via_internal, write_clause,
 };
 use cadical::statik::Cadical;
-use cadical::{LitValue, SolveResponse};
+use cadical::SolveResponse;
 use simple_sat::lit::Lit;
 use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
@@ -50,6 +49,11 @@ struct Cli {
     /// Path to a file with results.
     #[arg(long = "results", value_name = "FILE")]
     path_results: Option<PathBuf>,
+
+    /// Path to a file with model (if the problem is SAT)
+    /// in DIMACS format ("s SATISFIABLE\nv 1 2 ... 0\n").
+    #[arg(long = "model", value_name = "FILE", default_value = "model.dimacs")]
+    path_model: PathBuf,
 
     /// Random seed.
     #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
@@ -174,7 +178,7 @@ fn main() -> color_eyre::Result<()> {
     // solver.set_option("check", 1);
     if let Some(s) = &args.cadical_options {
         for part in s.split(",") {
-            let mut parts: Vec<&str> = part.splitn(2, '=').collect();
+            let parts: Vec<&str> = part.splitn(2, '=').collect();
             let key = parts[0];
             let value = parts[1].parse().unwrap();
             info!("Cadical option: {}={}", key, value);
@@ -249,6 +253,11 @@ fn main() -> color_eyre::Result<()> {
 
     let mut total_time_extract = Duration::ZERO;
 
+    // Model (if the problem is found to be SAT):
+    let mut final_model: Option<Vec<bool>> = None;
+
+    let mut _unsat = false;
+
     if args.budget_presolve > 0 {
         info!("Pre-solving with {} conflicts budget...", args.budget_presolve);
         match &mut searcher.solver {
@@ -266,27 +275,30 @@ fn main() -> color_eyre::Result<()> {
                     }
                     SolveResponse::Unsat => {
                         info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                        panic!("Unexpected UNSAT during pre-solve");
+                        _unsat = true;
                     }
                     SolveResponse::Sat => {
                         info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                        panic!("Unexpected SAT during pre-solve");
+                        let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                        final_model = Some(model.iter().map(|&v| v.into()).collect());
                     }
                 }
-            }
-        }
-
-        match &searcher.solver {
-            SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => {
-                let res = solver.internal_propagate();
-                assert!(res);
             }
         }
     }
 
     let mut run_number = 0;
     loop {
+        // Break if already SAT/UNSAT:
+        {
+            if final_model.is_some() {
+                break;
+            }
+            if _unsat {
+                break;
+            }
+        }
+
         run_number += 1;
         info!("Run {}", run_number);
         let time_run = Instant::now();
@@ -366,30 +378,29 @@ fn main() -> color_eyre::Result<()> {
                         let (res, _) = solver.propcheck(&cube.iter().map(|lit| lit.to_external()).collect_vec(), false, false, true);
                         if res {
                             panic!("Unexpected SAT on cube = {}", DisplaySlice(&cube));
-                        } else {
-                            let core = solver
-                                .propcheck_get_core()
-                                .into_iter()
-                                .map(|i| Lit::from_external(i))
-                                .rev()
-                                .collect_vec();
-                            assert!(!core.is_empty());
-                            debug!(
-                                "{}/{}: core = {} for cube = {}",
-                                i + 1,
-                                easy.len(),
-                                DisplaySlice(&core),
-                                DisplaySlice(cube)
-                            );
-                            assert_eq!(
-                                core.last().unwrap(),
-                                cube.last().unwrap(),
-                                "core.last() = {}, cube.last() = {}",
-                                core.last().unwrap(),
-                                cube.last().unwrap()
-                            );
-                            easy_cores.insert(core);
                         }
+                        let core = solver
+                            .propcheck_get_core()
+                            .into_iter()
+                            .map(|i| Lit::from_external(i))
+                            .rev()
+                            .collect_vec();
+                        assert!(!core.is_empty());
+                        debug!(
+                            "{}/{}: core = {} for cube = {}",
+                            i + 1,
+                            easy.len(),
+                            DisplaySlice(&core),
+                            DisplaySlice(cube)
+                        );
+                        assert_eq!(
+                            core.last().unwrap(),
+                            cube.last().unwrap(),
+                            "core.last() = {}, cube.last() = {}",
+                            core.last().unwrap(),
+                            cube.last().unwrap()
+                        );
+                        easy_cores.insert(core);
                     }
                     debug!("Unique cores from easy tasks: {}", easy_cores.len());
                     debug!("[{}]", easy_cores.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -459,7 +470,8 @@ fn main() -> color_eyre::Result<()> {
                             }
                             SolveResponse::Sat => {
                                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                                // TODO: dump model
+                                let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                                final_model = Some(model.iter().map(|&v| v.into()).collect());
                                 break;
                             }
                         }
@@ -636,30 +648,29 @@ fn main() -> color_eyre::Result<()> {
                         let (res, _) = solver.propcheck(&cube.iter().map(|lit| lit.to_external()).collect_vec(), false, false, true);
                         if res {
                             panic!("Unexpected SAT on cube = {}", DisplaySlice(&cube));
-                        } else {
-                            let core = solver
-                                .propcheck_get_core()
-                                .into_iter()
-                                .map(|i| Lit::from_external(i))
-                                .rev()
-                                .collect_vec();
-                            assert!(!core.is_empty());
-                            debug!(
-                                "{}/{}: core = {} for cube = {}",
-                                i + 1,
-                                invalid.len(),
-                                DisplaySlice(&core),
-                                DisplaySlice(cube)
-                            );
-                            assert_eq!(
-                                core.last().unwrap(),
-                                cube.last().unwrap(),
-                                "core.last() = {}, cube.last() = {}",
-                                core.last().unwrap(),
-                                cube.last().unwrap()
-                            );
-                            invalid_cores.insert(core);
                         }
+                        let core = solver
+                            .propcheck_get_core()
+                            .into_iter()
+                            .map(|i| Lit::from_external(i))
+                            .rev()
+                            .collect_vec();
+                        assert!(!core.is_empty());
+                        debug!(
+                            "{}/{}: core = {} for cube = {}",
+                            i + 1,
+                            invalid.len(),
+                            DisplaySlice(&core),
+                            DisplaySlice(cube)
+                        );
+                        assert_eq!(
+                            core.last().unwrap(),
+                            cube.last().unwrap(),
+                            "core.last() = {}, cube.last() = {}",
+                            core.last().unwrap(),
+                            cube.last().unwrap()
+                        );
+                        invalid_cores.insert(core);
                     }
                     debug!("Unique cores from invalid cubes: {}", invalid_cores.len());
                     debug!("[{}]", invalid_cores.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -714,7 +725,8 @@ fn main() -> color_eyre::Result<()> {
                             }
                             SolveResponse::Sat => {
                                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                                // TODO: dump model
+                                let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                                final_model = Some(model.iter().map(|&v| v.into()).collect());
                                 break;
                             }
                         }
@@ -891,41 +903,10 @@ fn main() -> color_eyre::Result<()> {
                                 false
                             }
                             SolveResponse::Sat => {
-                                let model: Vec<_> = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect();
-                                {
-                                    let f = File::create("model.txt").unwrap();
-                                    let mut f = BufWriter::new(f);
-                                    writeln!(
-                                        f,
-                                        "{}",
-                                        model
-                                            .iter()
-                                            .enumerate()
-                                            .map(|(i, &value)| {
-                                                let lit = (i + 1) as i32;
-                                                match value {
-                                                    LitValue::True => lit,
-                                                    LitValue::False => -lit,
-                                                }
-                                            })
-                                            .join(" ")
-                                    )
-                                    .unwrap();
-                                }
-                                {
-                                    let f = File::create("model.cnf").unwrap();
-                                    let mut f = BufWriter::new(f);
-                                    for (i, &value) in model.iter().enumerate() {
-                                        let lit = (i + 1) as i32;
-                                        let lit = match value {
-                                            LitValue::True => lit,
-                                            LitValue::False => -lit,
-                                        };
-                                        writeln!(f, "{} 0", lit).unwrap();
-                                    }
-                                }
-                                panic!("unexpected SAT");
-                                // false
+                                let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                                final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                // TODO: break out of the outer loop (currently not possible due to closure in retain)
+                                false
                             }
                         }
                     }
@@ -1023,7 +1004,8 @@ fn main() -> color_eyre::Result<()> {
                             }
                             SolveResponse::Sat => {
                                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                                // TODO: dump model
+                                let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                                final_model = Some(model.iter().map(|&v| v.into()).collect());
                                 break;
                             }
                         }
@@ -1142,7 +1124,8 @@ fn main() -> color_eyre::Result<()> {
                     }
                     SolveResponse::Sat => {
                         info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                        // TODO: dump model
+                        let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
+                        final_model = Some(model.iter().map(|&v| v.into()).collect());
                         break;
                     }
                 }
@@ -1153,6 +1136,19 @@ fn main() -> color_eyre::Result<()> {
 
         let time_run = time_run.elapsed();
         info!("Done run {} in {:.1}s", run_number, time_run.as_secs_f64());
+    }
+
+    if let Some(model) = &final_model {
+        debug!("Writing SAT model in '{}'...", args.path_model.display());
+        let mut f = create_line_writer(&args.path_model);
+        writeln!(f, "s SATISFIABLE")?;
+        write!(f, "v ")?;
+        for (i, &b) in model.iter().enumerate() {
+            let v = (i + 1) as i32;
+            let lit = if b { v } else { -v };
+            write!(f, "{} ", lit)?;
+        }
+        writeln!(f, "0")?;
     }
 
     let time_runs = time_runs.elapsed();
