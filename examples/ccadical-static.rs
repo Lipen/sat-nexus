@@ -53,8 +53,8 @@ fn main() -> color_eyre::Result<()> {
             println!("failed({}) = {}", i, ccadical_failed(ptr, i));
             println!("failed(-{}) = {}", i, ccadical_failed(ptr, -i));
         }
-        assert_eq!(1, ccadical_failed(ptr, 1));
-        assert_eq!(1, ccadical_failed(ptr, 2));
+        assert_eq!(true, ccadical_failed(ptr, 1));
+        assert_eq!(true, ccadical_failed(ptr, 2));
 
         // `solve` automatically resets given assumptions: another call should be SAT
         let result = ccadical_solve(ptr);
