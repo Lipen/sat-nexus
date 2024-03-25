@@ -334,7 +334,7 @@ fn main() -> color_eyre::Result<()> {
                 total_time_extract += time_extract;
                 debug!("Extracted {} new clauses in {:.1}s", num_new, time_extract.as_secs_f64());
                 debug!(
-                    "So far total {} clauses, spent {:.3}s for extraction",
+                    "So far total {} clauses, total spent {:.3}s for extraction",
                     all_clauses.len(),
                     total_time_extract.as_secs_f64()
                 );
@@ -950,7 +950,7 @@ fn main() -> color_eyre::Result<()> {
                     total_time_extract += time_extract;
                     debug!("Extracted {} new clauses in {:.1}s", num_new, time_extract.as_secs_f64());
                     debug!(
-                        "So far total {} clauses, spent {:.3}s for extraction",
+                        "So far total {} clauses, total spent {:.3}s for extraction",
                         all_clauses.len(),
                         total_time_extract.as_secs_f64()
                     );
