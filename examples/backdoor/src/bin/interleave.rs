@@ -505,10 +505,11 @@ fn main() -> color_eyre::Result<()> {
             let derived_clauses = derive_clauses(&hard, args.derive_ternary);
             let time_derive = time_derive.elapsed();
             info!(
-                "Derived {} clauses ({} units, {} binary, {} other) for backdoor in {:.1}s",
+                "Derived {} clauses ({} units, {} binary, {} ternary, {} other) for backdoor in {:.1}s",
                 derived_clauses.len(),
                 derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                derived_clauses.iter().filter(|c| c.len() == 3).count(),
                 derived_clauses.iter().filter(|c| c.len() > 2).count(),
                 time_derive.as_secs_f64()
             );
@@ -526,10 +527,11 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
             info!(
-                "Derived {} new clauses ({} units, {} binary, {} other)",
+                "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
                 new_clauses.len(),
                 new_clauses.iter().filter(|c| c.len() == 1).count(),
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
+                new_clauses.iter().filter(|c| c.len() == 3).count(),
                 new_clauses.iter().filter(|c| c.len() > 2).count()
             );
             debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -757,10 +759,11 @@ fn main() -> color_eyre::Result<()> {
             let derived_clauses = derive_clauses(&cubes_product, args.derive_ternary);
             let time_derive = time_derive.elapsed();
             info!(
-                "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",
+                "Derived {} clauses ({} units, {} binary, {} ternary, {} other) for {} cubes in {:.1}s",
                 derived_clauses.len(),
                 derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                derived_clauses.iter().filter(|c| c.len() == 3).count(),
                 derived_clauses.iter().filter(|c| c.len() > 2).count(),
                 cubes_product.len(),
                 time_derive.as_secs_f64()
@@ -779,10 +782,11 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
             info!(
-                "Derived {} new clauses ({} units, {} binary, {} other)",
+                "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
                 new_clauses.len(),
                 new_clauses.iter().filter(|c| c.len() == 1).count(),
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
+                new_clauses.iter().filter(|c| c.len() == 3).count(),
                 new_clauses.iter().filter(|c| c.len() > 2).count()
             );
             debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -793,10 +797,11 @@ fn main() -> color_eyre::Result<()> {
             }
 
             info!(
-                "So far derived {} new clauses ({} units, {} binary, {} other)",
+                "So far derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
                 all_derived_clauses.len(),
                 all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
                 all_derived_clauses.iter().filter(|c| c.len() > 2).count()
             );
         }
@@ -1037,10 +1042,11 @@ fn main() -> color_eyre::Result<()> {
             let derived_clauses = derive_clauses(&cubes_product, args.derive_ternary);
             let time_derive = time_derive.elapsed();
             info!(
-                "Derived {} clauses ({} units, {} binary, {} other) for {} cubes in {:.1}s",
+                "Derived {} clauses ({} units, {} binary, {} ternary, {} other) for {} cubes in {:.1}s",
                 derived_clauses.len(),
                 derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                derived_clauses.iter().filter(|c| c.len() == 3).count(),
                 derived_clauses.iter().filter(|c| c.len() > 2).count(),
                 cubes_product.len(),
                 time_derive.as_secs_f64()
@@ -1059,10 +1065,11 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
             info!(
-                "Derived {} new clauses ({} units, {} binary, {} other)",
+                "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
                 new_clauses.len(),
                 new_clauses.iter().filter(|c| c.len() == 1).count(),
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
+                new_clauses.iter().filter(|c| c.len() == 3).count(),
                 new_clauses.iter().filter(|c| c.len() > 2).count()
             );
             debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -1073,10 +1080,11 @@ fn main() -> color_eyre::Result<()> {
             }
 
             info!(
-                "So far derived {} new clauses ({} units, {} binary, {} other)",
+                "So far derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
                 all_derived_clauses.len(),
                 all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
                 all_derived_clauses.iter().filter(|c| c.len() > 2).count()
             );
         };
@@ -1141,10 +1149,11 @@ fn main() -> color_eyre::Result<()> {
     let time_runs = time_runs.elapsed();
     info!("Finished {} runs in {:.1}s", run_number, time_runs.as_secs_f64());
     info!(
-        "Total derived {} new clauses ({} units, {} binary, {} other)",
+        "Total derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
         all_derived_clauses.len(),
         all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
         all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+        all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
         all_derived_clauses.iter().filter(|c| c.len() > 2).count()
     );
 
