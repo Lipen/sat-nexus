@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
+use color_eyre::eyre::bail;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{iproduct, zip_eq, Itertools};
 use log::{debug, info};
@@ -14,7 +15,8 @@ use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solvers::SatSolver;
 use backdoor::utils::{
-    concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks, propcheck_all_trie_via_internal, write_clause,
+    clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, filter_cubes, get_hard_tasks,
+    propcheck_all_trie_via_internal, write_clause,
 };
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
@@ -130,10 +132,10 @@ struct Cli {
     proof_no_binary: bool,
 
     #[arg(long)]
-    add_easy_tasks: bool,
+    compute_cores: bool,
 
     #[arg(long)]
-    add_invalid_subcubes: bool,
+    add_cores: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -144,9 +146,21 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
+    if args.add_cores && !args.compute_cores {
+        bail!("Cannot add cores (`--add-cores` flag) without computing them (`--compute-cores` flag)");
+    }
+
     // Initialize Cadical:
     let solver = Cadical::new();
     // solver.configure("plain");
+    // solver.set_option("walk", 0);
+    // solver.set_option("lucky", 0);
+    // solver.set_option("probe", 0);
+    // solver.set_option("ilb", 0);
+    // solver.set_option("subsume", 0);
+    // solver.set_option("vivify", 0);
+    // solver.set_option("inprocessing", 0);
+    // solver.set_option("check", 1);
     if let Some(path_proof) = &args.path_proof {
         if args.proof_no_binary {
             solver.set_option("binary", 0);
@@ -281,36 +295,89 @@ fn main() -> color_eyre::Result<()> {
         debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
-        if args.add_easy_tasks {
+        // Populate the set of ALL clauses:
+        match &mut searcher.solver {
+            SatSolver::SimpleSat(_) => unreachable!(),
+            SatSolver::Cadical(solver) => {
+                debug!("Retrieving clauses from the solver...");
+                for clause in solver.all_clauses_iter() {
+                    let mut clause = clause_from_external(clause);
+                    clause.sort_by_key(|lit| lit.inner());
+                    all_clauses.insert(clause);
+                }
+                debug!("So far total {} clauses", all_clauses.len());
+            }
+        };
+
+        if args.compute_cores {
             match &searcher.solver {
                 SatSolver::SimpleSat(_) => unreachable!(),
                 SatSolver::Cadical(solver) => {
                     let vars_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
                     for &v in vars_external.iter() {
-                        assert!(solver.is_active(v), "var {} is not active", v);
+                        assert!(solver.is_active(v), "var {} in backdoor is not active", v);
                     }
+                    let orig_hard_len = hard.len();
                     let mut hard = Vec::new();
                     let mut easy = Vec::new();
                     let res = solver.propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), Some(&mut easy));
                     assert_eq!(hard.len(), res as usize);
+                    assert_eq!(hard.len(), orig_hard_len);
                     let easy: Vec<Vec<Lit>> = easy
                         .into_iter()
                         .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
                         .collect();
-                    debug!("Easy task prefixes:");
+                    debug!("Easy tasks: {}", easy.len());
+
+                    let mut easy_cores: HashSet<Vec<Lit>> = HashSet::new();
                     for (i, cube) in easy.iter().enumerate() {
-                        debug!("{}/{}: {}", i + 1, easy.len(), DisplaySlice(cube));
-                    }
-                    for cube in easy.iter() {
-                        let mut lemma = cube.iter().map(|&lit| -lit).collect_vec();
-                        lemma.sort_by_key(|lit| lit.inner());
-                        if all_clauses.insert(lemma.clone()) {
-                            if let Some(f) = &mut file_derived_clauses {
-                                write_clause(f, &lemma)?;
-                            }
-                            searcher.solver.add_clause(&lemma);
-                            all_derived_clauses.push(lemma);
+                        let (res, _) = solver.propcheck(&cube.iter().map(|lit| lit.to_external()).collect_vec(), false, false, true);
+                        if res {
+                            panic!("Unexpected SAT on cube = {}", DisplaySlice(&cube));
+                        } else {
+                            let core = solver
+                                .propcheck_get_core()
+                                .into_iter()
+                                .map(|i| Lit::from_external(i))
+                                .rev()
+                                .collect_vec();
+                            assert!(!core.is_empty());
+                            debug!(
+                                "{}/{}: core = {} for cube = {}",
+                                i + 1,
+                                easy.len(),
+                                DisplaySlice(&core),
+                                DisplaySlice(cube)
+                            );
+                            assert_eq!(
+                                core.last().unwrap(),
+                                cube.last().unwrap(),
+                                "core.last() = {}, cube.last() = {}",
+                                core.last().unwrap(),
+                                cube.last().unwrap()
+                            );
+                            easy_cores.insert(core);
                         }
+                    }
+                    debug!("Unique cores from easy tasks: {}", easy_cores.len());
+                    debug!("[{}]", easy_cores.iter().map(|c| DisplaySlice(c)).join(", "));
+
+                    if args.add_cores {
+                        debug!("Adding {} cores...", easy_cores.len());
+                        let mut num_added = 0;
+                        for cube in easy_cores.iter() {
+                            let mut lemma = cube.iter().map(|&lit| -lit).collect_vec();
+                            lemma.sort_by_key(|lit| lit.inner());
+                            if all_clauses.insert(lemma.clone()) {
+                                if let Some(f) = &mut file_derived_clauses {
+                                    write_clause(f, &lemma)?;
+                                }
+                                searcher.solver.add_clause(&lemma);
+                                all_derived_clauses.push(lemma);
+                                num_added += 1;
+                            }
+                        }
+                        debug!("Added {} new lemmas from cores", num_added);
                     }
                 }
             }
@@ -325,9 +392,9 @@ fn main() -> color_eyre::Result<()> {
         }
 
         for &var in backdoor.iter() {
-            // assert!(algorithm.solver.is_active(var), "var {} is not active", var);
+            // assert!(searcher.solver.is_active(var), "var {} in backdoor is not active", var);
             if !searcher.solver.is_active(var) {
-                log::warn!("var {} is not active", var);
+                log::warn!("var {} in backdoor is not active", var);
             }
         }
 
@@ -371,7 +438,7 @@ fn main() -> color_eyre::Result<()> {
             for &lit in &hard[0] {
                 if all_clauses.insert(vec![lit]) {
                     if let Some(f) = &mut file_derived_clauses {
-                        writeln!(f, "{} 0", lit)?;
+                        write_clause(f, &[lit])?;
                     }
                     searcher.solver.add_clause(&[lit]);
                     all_derived_clauses.push(vec![lit]);
@@ -385,7 +452,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Derivation for backdoor:
         if !args.no_derive {
-            info!("Deriving clauses for {} cubes...", hard.len());
+            info!("Deriving clauses for {} hard tasks...", hard.len());
             let time_derive = Instant::now();
             let derived_clauses = derive_clauses(&hard, args.derive_ternary);
             let time_derive = time_derive.elapsed();
@@ -406,7 +473,6 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -418,7 +484,12 @@ fn main() -> color_eyre::Result<()> {
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
                 new_clauses.iter().filter(|c| c.len() > 2).count()
             );
-            // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
+            debug!("Adding {} new derived clauses to the solver...", new_clauses.len());
+            for lemma in new_clauses {
+                searcher.solver.add_clause(&lemma);
+            }
         }
 
         // Remove non-active variables from all cubes:
@@ -426,17 +497,6 @@ fn main() -> color_eyre::Result<()> {
             .into_iter()
             .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
-
-        // debug!(
-        //     "Hard tasks active: [{}]",
-        //     hard.iter()
-        //         .map(|cube| format!(
-        //             "{}/{}",
-        //             cube.iter().filter(|lit| algorithm.solver.is_active(lit.var())).count(),
-        //             cube.len()
-        //         ))
-        //         .join(", ")
-        // );
 
         let hard: Vec<Vec<Lit>> = hard
             .into_iter()
@@ -508,7 +568,14 @@ fn main() -> color_eyre::Result<()> {
                 solver.propcheck_all_trie(&variables, &trie, &mut valid);
             }
             SatSolver::Cadical(solver) => {
-                propcheck_all_trie_via_internal(solver, &variables, &trie, 0, Some(&mut valid), Some(&mut invalid));
+                propcheck_all_trie_via_internal(
+                    solver,
+                    &variables,
+                    &trie,
+                    0,
+                    Some(&mut valid),
+                    if args.compute_cores { Some(&mut invalid) } else { None },
+                );
             }
         }
         drop(trie);
@@ -522,22 +589,61 @@ fn main() -> color_eyre::Result<()> {
             writeln!(f, "{},propagate,{}", run_number, cubes_product.len())?;
         }
 
-        // TODO: remove
-        if args.add_invalid_subcubes {
-            debug!("Invalid sub-cubes: {}", invalid.len());
-            for (i, cube) in invalid.iter().enumerate() {
-                debug!("{}/{}: {}", i + 1, invalid.len(), DisplaySlice(cube));
-            }
-            // assert!(invalid.is_empty());
-            for cube in invalid.iter() {
-                let mut lemma = cube.iter().map(|&lit| -lit).collect_vec();
-                lemma.sort_by_key(|lit| lit.inner());
-                if all_clauses.insert(lemma.clone()) {
-                    if let Some(f) = &mut file_derived_clauses {
-                        write_clause(f, &lemma)?;
+        if args.compute_cores {
+            match &searcher.solver {
+                SatSolver::SimpleSat(_) => unreachable!(),
+                SatSolver::Cadical(solver) => {
+                    debug!("Invalid sub-cubes: {}", invalid.len());
+                    let mut invalid_cores: HashSet<Vec<Lit>> = HashSet::new();
+                    for (i, cube) in invalid.iter().enumerate() {
+                        let (res, _) = solver.propcheck(&cube.iter().map(|lit| lit.to_external()).collect_vec(), false, false, true);
+                        if res {
+                            panic!("Unexpected SAT on cube = {}", DisplaySlice(&cube));
+                        } else {
+                            let core = solver
+                                .propcheck_get_core()
+                                .into_iter()
+                                .map(|i| Lit::from_external(i))
+                                .rev()
+                                .collect_vec();
+                            assert!(!core.is_empty());
+                            debug!(
+                                "{}/{}: core = {} for cube = {}",
+                                i + 1,
+                                invalid.len(),
+                                DisplaySlice(&core),
+                                DisplaySlice(cube)
+                            );
+                            assert_eq!(
+                                core.last().unwrap(),
+                                cube.last().unwrap(),
+                                "core.last() = {}, cube.last() = {}",
+                                core.last().unwrap(),
+                                cube.last().unwrap()
+                            );
+                            invalid_cores.insert(core);
+                        }
                     }
-                    searcher.solver.add_clause(&lemma);
-                    all_derived_clauses.push(lemma);
+                    debug!("Unique cores from invalid cubes: {}", invalid_cores.len());
+                    debug!("[{}]", invalid_cores.iter().map(|c| DisplaySlice(c)).join(", "));
+
+                    if args.add_cores {
+                        debug!("Adding {} cores...", invalid_cores.len());
+                        let mut num_added = 0;
+                        for cube in invalid_cores.iter() {
+                            let mut lemma = cube.iter().map(|&lit| -lit).collect_vec();
+                            lemma.sort_by_key(|lit| lit.inner());
+                            if all_clauses.insert(lemma.clone()) {
+                                if let Some(f) = &mut file_derived_clauses {
+                                    write_clause(f, &lemma)?;
+                                }
+                                searcher.solver.add_clause(&lemma);
+                                all_derived_clauses.push(lemma);
+                                num_added += 1;
+                            }
+                        }
+                        debug!("Added {} new lemmas from cores", num_added);
+                    }
                 }
             }
         }
@@ -616,7 +722,6 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -628,7 +733,8 @@ fn main() -> color_eyre::Result<()> {
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
                 new_clauses.iter().filter(|c| c.len() > 2).count()
             );
-            // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
             info!(
                 "So far derived {} new clauses ({} units, {} binary, {} other)",
                 all_derived_clauses.len(),
@@ -636,6 +742,11 @@ fn main() -> color_eyre::Result<()> {
                 all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
                 all_derived_clauses.iter().filter(|c| c.len() > 2).count()
             );
+
+            debug!("Adding {} new derived clauses to the solver...", new_clauses.len());
+            for lemma in new_clauses {
+                searcher.solver.add_clause(&lemma);
+            }
         }
 
         if cubes_product.len() > args.max_product {
@@ -654,7 +765,7 @@ fn main() -> color_eyre::Result<()> {
             .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
 
-        info!("Filtering {} hard cubes via solver...", cubes_product.len());
+        info!("Filtering {} hard cubes via limited solver...", cubes_product.len());
         let time_filter = Instant::now();
         let num_cubes_before_filtering = cubes_product.len();
         let num_conflicts = match &mut searcher.solver {
@@ -714,6 +825,14 @@ fn main() -> color_eyre::Result<()> {
                         match response {
                             SolveResponse::Interrupted => true,
                             SolveResponse::Unsat => {
+                                // let mut core = Vec::new();
+                                // for &lit in cube {
+                                //     if solver.failed(lit.to_external()).unwrap() {
+                                //         core.push(lit);
+                                //     }
+                                // }
+                                // pb.println(format!("UNSAT for cube = {}, core = {}", DisplaySlice(&cube), DisplaySlice(&core)));
+
                                 // let mut lemma = Vec::new();
                                 // for &lit in cube {
                                 //     if solver.failed(lit.to_external()).unwrap() {
@@ -874,7 +993,6 @@ fn main() -> color_eyre::Result<()> {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
-                    searcher.solver.add_clause(&lemma);
                     new_clauses.push(lemma.clone());
                     all_derived_clauses.push(lemma);
                 }
@@ -886,7 +1004,8 @@ fn main() -> color_eyre::Result<()> {
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
                 new_clauses.iter().filter(|c| c.len() > 2).count()
             );
-            // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
             info!(
                 "So far derived {} new clauses ({} units, {} binary, {} other)",
                 all_derived_clauses.len(),
@@ -894,28 +1013,33 @@ fn main() -> color_eyre::Result<()> {
                 all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
                 all_derived_clauses.iter().filter(|c| c.len() > 2).count()
             );
-        }
 
-        match &mut searcher.solver {
-            SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => {
-                debug!("Retrieving clauses from the solver...");
-                let time_all_clauses = Instant::now();
-                let mut all_cadical_clauses = HashSet::new();
-                for clause in solver.all_clauses_iter() {
-                    let mut clause = clause.into_iter().map(Lit::from_external).collect_vec();
-                    clause.sort_by_key(|lit| lit.inner());
-                    all_cadical_clauses.insert(clause);
-                }
-                let time_all_clauses = time_all_clauses.elapsed();
-                debug!(
-                    "Retrieved {} clauses from the solver in {:.1}s",
-                    all_cadical_clauses.len(),
-                    time_all_clauses.as_secs_f64()
-                );
-                info!("Solver currently has {} clauses", all_cadical_clauses.len());
+            debug!("Adding {} new derived clauses to the solver...", new_clauses.len());
+            for lemma in new_clauses {
+                searcher.solver.add_clause(&lemma);
             }
         };
+
+        // match &mut searcher.solver {
+        //     SatSolver::SimpleSat(_) => unreachable!(),
+        //     SatSolver::Cadical(solver) => {
+        //         debug!("Retrieving clauses from the solver...");
+        //         let time_all_clauses = Instant::now();
+        //         let mut all_cadical_clauses = HashSet::new();
+        //         for clause in solver.all_clauses_iter() {
+        //             let mut clause = clause.into_iter().map(Lit::from_external).collect_vec();
+        //             clause.sort_by_key(|lit| lit.inner());
+        //             all_cadical_clauses.insert(clause);
+        //         }
+        //         let time_all_clauses = time_all_clauses.elapsed();
+        //         debug!(
+        //             "Retrieved {} clauses from the solver in {:.1}s",
+        //             all_cadical_clauses.len(),
+        //             time_all_clauses.as_secs_f64()
+        //         );
+        //         info!("Solver currently has {} clauses", all_cadical_clauses.len());
+        //     }
+        // };
 
         info!("Just solving with {} conflicts budget...", budget_solve);
         match &mut searcher.solver {
@@ -923,6 +1047,7 @@ fn main() -> color_eyre::Result<()> {
             SatSolver::Cadical(solver) => {
                 solver.limit("conflicts", budget_solve as i32);
                 let time_solve = Instant::now();
+                solver.reset_assumptions();
                 let res = solver.solve().unwrap();
                 let time_solve = time_solve.elapsed();
                 solver.internal_backtrack(0);

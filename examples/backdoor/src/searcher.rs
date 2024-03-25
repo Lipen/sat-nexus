@@ -118,7 +118,7 @@ impl BackdoorSearcher {
                             // (res, propagated)
                             solver.propcheck_num_propagated(&[pos_lit])
                         }
-                        SatSolver::Cadical(solver) => solver.propcheck(&[pos_lit.to_external()], false, false),
+                        SatSolver::Cadical(solver) => solver.propcheck(&[pos_lit.to_external()], false, false, false),
                     };
                     let (_neg_res, neg_prop) = match &mut self.solver {
                         SatSolver::SimpleSat(solver) => {
@@ -127,7 +127,7 @@ impl BackdoorSearcher {
                             // (res, propagated)
                             solver.propcheck_num_propagated(&[neg_lit])
                         }
-                        SatSolver::Cadical(solver) => solver.propcheck(&[neg_lit.to_external()], false, false),
+                        SatSolver::Cadical(solver) => solver.propcheck(&[neg_lit.to_external()], false, false, false),
                     };
                     let h = pos_prop * neg_prop;
                     // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop, neg_prop, h);

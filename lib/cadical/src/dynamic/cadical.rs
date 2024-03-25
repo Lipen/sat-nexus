@@ -221,11 +221,8 @@ impl Cadical {
     /// Note that the core does not have to be minimal.
     pub fn failed(&self, lit: i32) -> Result<bool> {
         ensure!(lit != 0, ZeroLiteralSnafu);
-        match unsafe { self.ffi.ccadical_failed(self.ptr, lit) } {
-            0 => Ok(false),
-            1 => Ok(true),
-            invalid => InvalidResponseFailedSnafu { lit, value: invalid }.fail(),
-        }
+        let res = unsafe { self.ffi.ccadical_failed(self.ptr, lit) };
+        Ok(res)
     }
 
     pub fn print_statistics(&self) {
@@ -282,11 +279,8 @@ impl Cadical {
 
     pub fn frozen(&self, lit: i32) -> Result<bool> {
         ensure!(lit != 0, ZeroLiteralSnafu);
-        match unsafe { self.ffi.ccadical_frozen(self.ptr, lit) } {
-            0 => Ok(false),
-            1 => Ok(true),
-            invalid => InvalidResponseFrozenSnafu { lit, value: invalid }.fail(),
-        }
+        let res = unsafe { self.ffi.ccadical_frozen(self.ptr, lit) };
+        Ok(res)
     }
 
     pub fn freeze(&self, lit: i32) -> Result<()> {

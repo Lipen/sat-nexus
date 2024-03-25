@@ -66,8 +66,10 @@ pub fn get_hard_tasks(variables: &[Var], solver: &mut SatSolver) -> Vec<Vec<Lit>
         }
         SatSolver::Cadical(solver) => {
             let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
-            let res = solver.propcheck_all_tree(&vars_external, 0, true);
-            let valid = solver.propcheck_all_tree_get_valid();
+            // let res = solver.propcheck_all_tree(&vars_external, 0, true);
+            // let valid = solver.propcheck_all_tree_get_valid();
+            let mut valid = Vec::new();
+            let res = solver.propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut valid), None);
             assert_eq!(valid.len(), res as usize);
             valid
                 .into_iter()
@@ -85,7 +87,7 @@ pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<
     partition_tasks_with(variables, |cube| {
         let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
         // Note: `restore = false` is UNSAFE in general, but since the variables are active, it should be safe.
-        let (res, _num_prop) = solver.propcheck(&cube, false, false);
+        let (res, _num_prop) = solver.propcheck(&cube, false, false, false);
         res
     })
 }
@@ -451,6 +453,13 @@ where
     <I as IntoIterator>::IntoIter: 'a,
 {
     lits.into_iter().map(|lit| lit.to_external())
+}
+
+pub fn clause_from_external<I>(lits: I) -> Vec<Lit>
+where
+    I: IntoIterator<Item = i32>,
+{
+    lits.into_iter().map(Lit::from_external).collect_vec()
 }
 
 pub fn propcheck_all_trie_via_internal(
