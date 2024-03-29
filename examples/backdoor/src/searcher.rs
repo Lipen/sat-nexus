@@ -88,11 +88,11 @@ impl BackdoorSearcher {
 
         info!("Running EA for {} iterations with backdoor size {}", num_iter, backdoor_size);
 
-        // Construct the pool of variables of EA:
+        // Keep only active variables in the pool:
+        self.global_pool.retain(|&v| self.solver.is_active(v));
+        // Construct the pool of variables:
         let mut pool = self.global_pool.clone();
-        // Keep only active variables:
-        pool.retain(|&v| self.solver.is_active(v));
-        // Exclude banned variables:
+        // Exclude banned variables from the pool:
         pool.retain(|v| !self.banned_vars.contains(v));
 
         debug!("pool.len() = {}", pool.len());
