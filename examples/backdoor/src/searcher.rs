@@ -96,7 +96,7 @@ impl BackdoorSearcher {
         pool.retain(|v| !self.banned_vars.contains(v));
 
         debug!("Pool size: {}", pool.len());
-        if pool.len() < 2 * backdoor_size {
+        if pool.len() < backdoor_size {
             info!("Pool size is too small, skipping the run");
             return None;
         }
@@ -313,25 +313,58 @@ impl BackdoorSearcher {
     }
 
     fn mutate(&mut self, instance: &mut Backdoor, pool: &[Var]) {
-        let n = instance.len();
-        let p = 1.0 / n as f64;
-        let d = Bernoulli::new(p).unwrap();
+        assert!(pool.len() >= instance.len());
 
-        let mut to_replace = Vec::new();
-        for i in 0..n {
-            if d.sample(&mut self.rng) {
-                to_replace.push(i);
+        if pool.len() - instance.len() >= instance.len() {
+            let n = instance.len();
+            let p = 1.0 / n as f64;
+            let d = Bernoulli::new(p).unwrap();
+
+            let mut to_replace = Vec::new();
+            for i in 0..n {
+                if d.sample(&mut self.rng) {
+                    to_replace.push(i);
+                }
             }
-        }
-        // to_replace.len() ~ Bin(1/n)
+            // to_replace.len() ~ Bin(1/n)
+            assert!(to_replace.len() <= n);
 
-        let other_vars: Vec<Var> = pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
-        let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());
-        for (i, &v) in zip_eq(to_replace, substituted) {
-            instance.variables[i] = v;
-        }
+            let other_vars: Vec<Var> = pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
+            assert!(other_vars.len() >= to_replace.len());
+            let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());
+            for (i, &v) in zip_eq(to_replace, substituted) {
+                instance.variables[i] = v;
+            }
 
-        // Instance size should stay the same:
-        assert_eq!(instance.len(), n);
+            // Instance size should stay the same:
+            assert_eq!(instance.len(), n);
+        } else {
+            let n = pool.len() - instance.len();
+            if n == 0 {
+                return;
+            }
+            let p = 1.0 / n as f64;
+            let d = Bernoulli::new(p).unwrap();
+
+            let mut to_replace = Vec::new();
+            for &v in pool.iter() {
+                if instance.variables.contains(&v) {
+                    continue;
+                }
+                if d.sample(&mut self.rng) {
+                    to_replace.push(v);
+                }
+            }
+            // to_replace.len() ~ Bin(1/n)
+            assert!(to_replace.len() <= n);
+
+            let substituted = (0..instance.len()).choose_multiple(&mut self.rng, to_replace.len());
+            for (i, v) in zip_eq(substituted, to_replace) {
+                instance.variables[i] = v;
+            }
+
+            // Instance size should stay the same:
+            assert_eq!(instance.len(), n);
+        }
     }
 }
