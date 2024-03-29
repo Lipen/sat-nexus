@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
-use std::time::Instant;
 
 use itertools::{zip_eq, Itertools, MultiProduct};
 use log::{debug, trace};
