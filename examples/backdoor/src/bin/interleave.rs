@@ -124,10 +124,6 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     pool_limit: Option<usize>,
 
-    /// Always update the budget for filtering.
-    #[arg(long)]
-    always_update_filter_budget: bool,
-
     /// Path to a file with proof.
     #[arg(long = "proof", value_name = "FILE")]
     path_proof: Option<PathBuf>,
@@ -1231,9 +1227,7 @@ fn main() -> color_eyre::Result<()> {
             SatSolver::Cadical(solver) => solver.conflicts() as u64,
         };
         // Update the budget for filtering:
-        if args.always_update_filter_budget || num_conflicts > num_conflicts_limit {
-            budget_filter = (budget_filter as f64 * args.factor_budget_filter) as u64;
-        }
+        budget_filter = (budget_filter as f64 * args.factor_budget_filter) as u64;
 
         if cubes_product.is_empty() {
             info!("No more cubes to solve after {} runs", run_number);
