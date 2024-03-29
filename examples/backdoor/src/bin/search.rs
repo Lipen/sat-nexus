@@ -262,14 +262,16 @@ fn main() -> color_eyre::Result<()> {
         let time_run = Instant::now();
 
         // Run the evolutionary algorithm:
-        let result = searcher.run(
-            args.backdoor_size,
-            args.num_iters,
-            args.stagnation_limit,
-            Some(args.max_rho),
-            args.min_iter,
-            args.pool_limit,
-        );
+        let result = searcher
+            .run(
+                args.backdoor_size,
+                args.num_iters,
+                args.stagnation_limit,
+                Some(args.max_rho),
+                args.min_iter,
+                args.pool_limit,
+            )
+            .unwrap();
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();

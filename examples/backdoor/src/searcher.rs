@@ -83,7 +83,7 @@ impl BackdoorSearcher {
         max_rho: Option<f64>,
         min_iter: usize,
         pool_limit: Option<usize>,
-    ) -> RunResult {
+    ) -> Option<RunResult> {
         let start_time = Instant::now();
 
         info!("Running EA for {} iterations with backdoor size {}", num_iter, backdoor_size);
@@ -95,7 +95,12 @@ impl BackdoorSearcher {
         // Exclude banned variables from the pool:
         pool.retain(|v| !self.banned_vars.contains(v));
 
-        debug!("pool.len() = {}", pool.len());
+        debug!("Pool size: {}", pool.len());
+        if pool.len() < 2 * backdoor_size {
+            info!("Pool size is too small, skipping the run");
+            return None;
+        }
+
         assert!(
             pool.len() >= backdoor_size,
             "Pool size must be at least {}, but the pool contains only {} elements",
@@ -154,11 +159,11 @@ impl BackdoorSearcher {
 
         // Create an initial instance:
         let mut instance = self.initial_instance(backdoor_size, &pool);
-        info!("Initial instance: {:#}", instance);
+        debug!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
         let mut fitness = self.calculate_fitness(&instance, None);
-        info!("Initial fitness: {:?}", fitness);
+        debug!("Initial fitness: {:?}", fitness);
 
         // Store the best result:
         let mut best_iteration: usize = 0;
@@ -266,13 +271,13 @@ impl BackdoorSearcher {
         let elapsed_time = start_time.elapsed();
         info!("EA done in {:.3} s", elapsed_time.as_secs_f64());
 
-        RunResult {
+        Some(RunResult {
             best_iteration,
             best_instance,
             best_fitness,
             time: elapsed_time,
             records,
-        }
+        })
     }
 
     fn initial_instance(&mut self, size: usize, pool: &[Var]) -> Backdoor {

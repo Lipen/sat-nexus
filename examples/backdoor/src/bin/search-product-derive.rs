@@ -157,14 +157,16 @@ fn main() -> color_eyre::Result<()> {
         info!("Run {}", run_number);
         let time_run = Instant::now();
 
-        let result = searcher.run(
-            args.backdoor_size,
-            args.num_iters,
-            args.stagnation_limit,
-            Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
-            0,
-            args.pool_limit,
-        );
+        let result = searcher
+            .run(
+                args.backdoor_size,
+                args.num_iters,
+                args.stagnation_limit,
+                Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
+                0,
+                args.pool_limit,
+            )
+            .unwrap();
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
