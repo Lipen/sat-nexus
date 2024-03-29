@@ -312,7 +312,7 @@ fn main() -> color_eyre::Result<()> {
 
         // Reset banned used variables:
         if args.reset_used_vars && cubes_product == vec![vec![]] {
-            searcher.pool.extend(searcher.used_vars.drain());
+            searcher.banned_vars.clear();
         }
 
         let result = searcher.run(

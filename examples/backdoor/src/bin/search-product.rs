@@ -304,7 +304,6 @@ fn main() -> color_eyre::Result<()> {
         if cubes_product.len() == 1 {
             info!("Adding {} units to the solver", cubes_product[0].len());
             for &lit in &cubes_product[0] {
-                searcher.pool.retain(|&v| v != lit.var());
                 if all_clauses.insert(vec![lit]) {
                     if let Some(f) = &mut file_derived_clauses {
                         writeln!(f, "{} 0", lit)?;

@@ -17,26 +17,26 @@ use crate::solvers::SatSolver;
 #[derive(Debug)]
 pub struct BackdoorSearcher {
     pub solver: SatSolver,
-    pub pool: Vec<Var>,
+    pub global_pool: Vec<Var>,
+    pub banned_vars: AHashSet<Var>,
     pub rng: StdRng,
     pub cache: AHashMap<Vec<Var>, Fitness>,
     pub cache_hits: usize,
     pub cache_misses: usize,
     pub options: Options,
-    pub used_vars: AHashSet<Var>,
 }
 
 impl BackdoorSearcher {
     pub fn new(solver: SatSolver, pool: Vec<Var>, options: Options) -> Self {
         Self {
             solver,
-            pool,
+            global_pool: pool,
+            banned_vars: AHashSet::new(),
             rng: StdRng::seed_from_u64(options.seed),
             cache: AHashMap::new(),
             cache_hits: 0,
             cache_misses: 0,
             options,
-            used_vars: AHashSet::new(),
         }
     }
 }
@@ -88,26 +88,27 @@ impl BackdoorSearcher {
 
         info!("Running EA for {} iterations with backdoor size {}", num_iter, backdoor_size);
 
-        debug!("solver.vars() = {}", self.solver.num_vars());
-        debug!("pool.len() = {}", self.pool.len());
-
+        // Construct the pool of variables of EA:
+        let mut pool = self.global_pool.clone();
         // Keep only active variables:
-        self.pool.retain(|&v| self.solver.is_active(v));
+        pool.retain(|&v| self.solver.is_active(v));
+        // Exclude banned variables:
+        pool.retain(|v| !self.banned_vars.contains(v));
 
-        debug!("pool.len() = {}", self.pool.len());
+        debug!("pool.len() = {}", pool.len());
         assert!(
-            self.pool.len() >= backdoor_size,
+            pool.len() >= backdoor_size,
             "Pool size must be at least {}, but the pool contains only {} elements",
             backdoor_size,
-            self.pool.len()
+            pool.len()
         );
 
         if let Some(pool_limit) = pool_limit {
-            if self.pool.len() > pool_limit {
+            if pool.len() > pool_limit {
                 debug!("Limiting the pool to {}...", pool_limit);
                 let time_pool_limit = Instant::now();
                 let mut heuristic = AHashMap::new();
-                for &var in self.pool.iter().progress() {
+                for &var in pool.iter().progress() {
                     let pos_lit = Lit::new(var, false);
                     let neg_lit = Lit::new(var, true);
 
@@ -137,7 +138,7 @@ impl BackdoorSearcher {
                 }
                 debug!(
                     "Computed heuristic values for {} vars in {:.3} s",
-                    self.pool.len(),
+                    pool.len(),
                     time_pool_limit.elapsed().as_secs_f64()
                 );
                 let mut hs: Vec<_> = heuristic.values().copied().collect();
@@ -146,13 +147,13 @@ impl BackdoorSearcher {
                 assert!(hs.len() > pool_limit);
                 let limit = hs[pool_limit - 1];
                 debug!("limit = {}", limit);
-                self.pool.retain(|v| heuristic[v] >= limit);
-                debug!("pool.len() = {}", self.pool.len());
+                pool.retain(|v| heuristic[v] >= limit);
+                debug!("pool.len() = {}", pool.len());
             }
         }
 
         // Create an initial instance:
-        let mut instance = self.initial_instance(backdoor_size);
+        let mut instance = self.initial_instance(backdoor_size, &pool);
         info!("Initial instance: {:#}", instance);
 
         // Evaluate the initial instance:
@@ -197,11 +198,11 @@ impl BackdoorSearcher {
                 if need_reinit {
                     // Re-initialize:
                     num_stagnation = 0;
-                    self.initial_instance(backdoor_size)
+                    self.initial_instance(backdoor_size, &pool)
                 } else {
                     // Mutate the instance:
                     let mut mutated_instance = instance.clone();
-                    self.mutate(&mut mutated_instance);
+                    self.mutate(&mut mutated_instance, &pool);
                     mutated_instance
                 }
             };
@@ -256,8 +257,7 @@ impl BackdoorSearcher {
 
         // Ban used variables:
         if self.options.ban_used_variables {
-            self.used_vars.extend(best_instance.variables.iter().cloned());
-            self.pool.retain(|v| !self.used_vars.contains(v));
+            self.banned_vars.extend(best_instance.variables.iter().cloned());
         }
 
         // Clear the cache:
@@ -275,14 +275,8 @@ impl BackdoorSearcher {
         }
     }
 
-    fn initial_instance(&mut self, size: usize) -> Backdoor {
-        Backdoor::new_random(size, &self.pool, &mut self.rng)
-        // let vars: Vec<Var> = [15, 482, 820, 1155, 2072, 2231, 2509, 3579, 4051, 4483]
-        //     .into_iter()
-        //     .map(|v| Var::from_external(v))
-        //     .collect();
-        // assert_eq!(vars.len(), size);
-        // Instance::new(vars)
+    fn initial_instance(&mut self, size: usize, pool: &[Var]) -> Backdoor {
+        Backdoor::new_random(size, pool, &mut self.rng)
     }
 
     fn calculate_fitness(&mut self, instance: &Backdoor, best: Option<&Fitness>) -> Fitness {
@@ -313,7 +307,7 @@ impl BackdoorSearcher {
         }
     }
 
-    fn mutate(&mut self, instance: &mut Backdoor) {
+    fn mutate(&mut self, instance: &mut Backdoor, pool: &[Var]) {
         let n = instance.len();
         let p = 1.0 / n as f64;
         let d = Bernoulli::new(p).unwrap();
@@ -326,7 +320,7 @@ impl BackdoorSearcher {
         }
         // to_replace.len() ~ Bin(1/n)
 
-        let other_vars: Vec<Var> = self.pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
+        let other_vars: Vec<Var> = pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
         let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());
         for (i, &v) in zip_eq(to_replace, substituted) {
             instance.variables[i] = v;
