@@ -51,10 +51,11 @@ struct Cli {
     #[arg(long = "results", value_name = "FILE")]
     path_results: Option<PathBuf>,
 
-    /// Path to a file with model (if the problem is SAT)
-    /// in DIMACS format ("s SATISFIABLE\nv 1 2 ... 0\n").
-    #[arg(long = "model", value_name = "FILE")]
-    path_model: Option<PathBuf>,
+    /// Path to output file in DIMACS format.
+    /// If the problem is SAT, contains two lines: "s SATISFIABLE\nv 1 2 ... 0\n",
+    /// else contains a single line: "s UNSATISFIABLE" or "s INDET".
+    #[arg(short = 'o', long = "output", value_name = "FILE")]
+    path_output: Option<PathBuf>,
 
     /// Random seed.
     #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
@@ -1406,15 +1407,15 @@ fn main() -> color_eyre::Result<()> {
     debug!("Time spent on extracting all clauses: {:.3}s", total_time_extract.as_secs_f64());
 
     let res = if _unsat {
-        if let Some(path_model) = &args.path_model {
-            let mut f = create_line_writer(path_model);
+        if let Some(path) = &args.path_output {
+            let mut f = create_line_writer(path);
             writeln!(f, "s UNSATISFIABLE")?;
         }
         "UNSAT"
     } else if let Some(model) = &final_model {
-        if let Some(path_model) = &args.path_model {
-            debug!("Writing SAT model in '{}'...", path_model.display());
-            let mut f = create_line_writer(path_model);
+        if let Some(path) = &args.path_output {
+            debug!("Writing SAT model in '{}'...", path.display());
+            let mut f = create_line_writer(path);
             writeln!(f, "s SATISFIABLE")?;
             write!(f, "v ")?;
             for (i, &b) in model.iter().enumerate() {
@@ -1426,8 +1427,8 @@ fn main() -> color_eyre::Result<()> {
         }
         "SAT"
     } else {
-        if let Some(path_model) = &args.path_model {
-            let mut f = create_line_writer(path_model);
+        if let Some(path) = &args.path_output {
+            let mut f = create_line_writer(path);
             writeln!(f, "s INDET")?;
         }
         "INDET"
