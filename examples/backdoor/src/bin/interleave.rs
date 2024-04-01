@@ -1223,10 +1223,6 @@ fn main() -> color_eyre::Result<()> {
             writeln!(f, "{},limited,{}", run_number, cubes_product.len())?;
         }
 
-        let num_conflicts = match &mut searcher.solver {
-            SatSolver::SimpleSat(_) => unreachable!(),
-            SatSolver::Cadical(solver) => solver.conflicts() as u64,
-        };
         // Update the budget for filtering:
         budget_filter = (budget_filter as f64 * args.factor_budget_filter) as u64;
 
