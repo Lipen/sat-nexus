@@ -56,8 +56,8 @@ impl SatSolver {
                 solver.add_clause(lits);
             }
             SatSolver::Cadical(solver) => {
-                // solver.add_clause(clause_to_external(lits));
-                solver.add_derived_clause(clause_to_external(lits));
+                solver.add_clause(clause_to_external(lits));
+                // solver.add_derived_clause(clause_to_external(lits));
             }
         }
     }
