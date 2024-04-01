@@ -19,7 +19,7 @@ use backdoor::utils::{
     write_clause,
 };
 use cadical::statik::Cadical;
-use cadical::SolveResponse;
+use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::trie::Trie;
 use simple_sat::utils::{parse_dimacs, DisplaySlice};
@@ -252,7 +252,7 @@ fn main() -> color_eyre::Result<()> {
     let mut total_time_extract = Duration::ZERO;
 
     // Model (if the problem is found to be SAT):
-    let mut final_model: Option<Vec<bool>> = None;
+    let mut final_model: Option<Vec<Lit>> = None;
 
     let mut _unsat = false;
 
@@ -265,7 +265,6 @@ fn main() -> color_eyre::Result<()> {
                 let time_solve = Instant::now();
                 let res = solver.solve().unwrap();
                 let time_solve = time_solve.elapsed();
-                solver.internal_backtrack(0);
                 match res {
                     SolveResponse::Interrupted => {
                         info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
@@ -277,10 +276,19 @@ fn main() -> color_eyre::Result<()> {
                     }
                     SolveResponse::Sat => {
                         info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                        let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                        final_model = Some(model.iter().map(|&v| v.into()).collect());
+                        let model = (1..=solver.vars())
+                            .map(|i| {
+                                let v = Var::from_external(i as u32);
+                                match solver.val(i as i32).unwrap() {
+                                    LitValue::True => Lit::new(v, false),
+                                    LitValue::False => Lit::new(v, true),
+                                }
+                            })
+                            .collect_vec();
+                        final_model = Some(model);
                     }
                 }
+                solver.internal_backtrack(0);
             }
         }
     }
@@ -454,7 +462,6 @@ fn main() -> color_eyre::Result<()> {
                             let time_solve = Instant::now();
                             let res = solver.solve().unwrap();
                             let time_solve = time_solve.elapsed();
-                            solver.internal_backtrack(0);
                             match res {
                                 SolveResponse::Interrupted => {
                                     info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
@@ -467,11 +474,20 @@ fn main() -> color_eyre::Result<()> {
                                 }
                                 SolveResponse::Sat => {
                                     info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                                    let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                                    final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                    let model = (1..=solver.vars())
+                                        .map(|i| {
+                                            let v = Var::from_external(i as u32);
+                                            match solver.val(i as i32).unwrap() {
+                                                LitValue::True => Lit::new(v, false),
+                                                LitValue::False => Lit::new(v, true),
+                                            }
+                                        })
+                                        .collect_vec();
+                                    final_model = Some(model);
                                     break;
                                 }
                             }
+                            solver.internal_backtrack(0);
                         }
                     }
                 }
@@ -710,7 +726,6 @@ fn main() -> color_eyre::Result<()> {
                             let time_solve = Instant::now();
                             let res = solver.solve().unwrap();
                             let time_solve = time_solve.elapsed();
-                            solver.internal_backtrack(0);
                             match res {
                                 SolveResponse::Interrupted => {
                                     info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
@@ -723,11 +738,20 @@ fn main() -> color_eyre::Result<()> {
                                 }
                                 SolveResponse::Sat => {
                                     info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                                    let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                                    final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                    let model = (1..=solver.vars())
+                                        .map(|i| {
+                                            let v = Var::from_external(i as u32);
+                                            match solver.val(i as i32).unwrap() {
+                                                LitValue::True => Lit::new(v, false),
+                                                LitValue::False => Lit::new(v, true),
+                                            }
+                                        })
+                                        .collect_vec();
+                                    final_model = Some(model);
                                     break;
                                 }
                             }
+                            solver.internal_backtrack(0);
                         }
                     }
                 }
@@ -1010,8 +1034,16 @@ fn main() -> color_eyre::Result<()> {
                                             DisplaySlice(&cubes_product[best_cube])
                                         );
                                     }
-                                    let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                                    final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                    let model = (1..=solver.vars())
+                                        .map(|i| {
+                                            let v = Var::from_external(i as u32);
+                                            match solver.val(i as i32).unwrap() {
+                                                LitValue::True => Lit::new(v, false),
+                                                LitValue::False => Lit::new(v, true),
+                                            }
+                                        })
+                                        .collect_vec();
+                                    final_model = Some(model);
                                     break;
                                 }
                             }
@@ -1151,8 +1183,16 @@ fn main() -> color_eyre::Result<()> {
                                 false
                             }
                             SolveResponse::Sat => {
-                                let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                                final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                let model = (1..=solver.vars())
+                                    .map(|i| {
+                                        let v = Var::from_external(i as u32);
+                                        match solver.val(i as i32).unwrap() {
+                                            LitValue::True => Lit::new(v, false),
+                                            LitValue::False => Lit::new(v, true),
+                                        }
+                                    })
+                                    .collect_vec();
+                                final_model = Some(model);
                                 // TODO: break out of the outer loop (currently not possible due to closure in retain)
                                 false
                             }
@@ -1238,7 +1278,6 @@ fn main() -> color_eyre::Result<()> {
                         let time_solve = Instant::now();
                         let res = solver.solve().unwrap();
                         let time_solve = time_solve.elapsed();
-                        solver.internal_backtrack(0);
                         match res {
                             SolveResponse::Interrupted => {
                                 info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
@@ -1251,11 +1290,20 @@ fn main() -> color_eyre::Result<()> {
                             }
                             SolveResponse::Sat => {
                                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                                let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                                final_model = Some(model.iter().map(|&v| v.into()).collect());
+                                let model = (1..=solver.vars())
+                                    .map(|i| {
+                                        let v = Var::from_external(i as u32);
+                                        match solver.val(i as i32).unwrap() {
+                                            LitValue::True => Lit::new(v, false),
+                                            LitValue::False => Lit::new(v, true),
+                                        }
+                                    })
+                                    .collect_vec();
+                                final_model = Some(model);
                                 break;
                             }
                         }
+                        solver.internal_backtrack(0);
                     }
                 }
             }
@@ -1362,7 +1410,6 @@ fn main() -> color_eyre::Result<()> {
                 let time_solve = Instant::now();
                 let res = solver.solve().unwrap();
                 let time_solve = time_solve.elapsed();
-                solver.internal_backtrack(0);
                 match res {
                     SolveResponse::Interrupted => {
                         info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
@@ -1375,11 +1422,20 @@ fn main() -> color_eyre::Result<()> {
                     }
                     SolveResponse::Sat => {
                         info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                        let model = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect_vec();
-                        final_model = Some(model.iter().map(|&v| v.into()).collect());
+                        let model = (1..=solver.vars())
+                            .map(|i| {
+                                let v = Var::from_external(i as u32);
+                                match solver.val(i as i32).unwrap() {
+                                    LitValue::True => Lit::new(v, false),
+                                    LitValue::False => Lit::new(v, true),
+                                }
+                            })
+                            .collect_vec();
+                        final_model = Some(model);
                         break;
                     }
                 }
+                solver.internal_backtrack(0);
             }
         }
         // Update the budget for solving:
@@ -1414,12 +1470,32 @@ fn main() -> color_eyre::Result<()> {
             let mut f = create_line_writer(path);
             writeln!(f, "s SATISFIABLE")?;
             write!(f, "v ")?;
-            for (i, &b) in model.iter().enumerate() {
-                let v = (i + 1) as i32;
-                let lit = if b { v } else { -v };
+            for &lit in model.iter() {
                 write!(f, "{} ", lit)?;
             }
             writeln!(f, "0")?;
+        }
+        {
+            debug!("Checking model...");
+            match &searcher.solver {
+                SatSolver::SimpleSat(_) => unreachable!(),
+                SatSolver::Cadical(solver) => {
+                    for &lit in model.iter() {
+                        if solver.val(lit.to_external()).unwrap() != LitValue::True {
+                            log::warn!("lit {} is inconsistent in model", lit);
+                        }
+                    }
+                    let lits = model.iter().map(|lit| lit.to_external()).collect_vec();
+                    let (res, _) = solver.propcheck(&lits, true, false, true);
+                    if res {
+                        debug!("Model is correct");
+                    } else {
+                        log::error!("Model is incorrect");
+                        let core = solver.propcheck_get_core();
+                        log::error!("core: {:?}", core);
+                    }
+                }
+            }
         }
         "SAT"
     } else {
