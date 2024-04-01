@@ -178,10 +178,16 @@ impl Cadical {
     /// Get value of valid non-zero literal.
     pub fn val(&self, lit: i32) -> Result<LitValue> {
         ensure!(lit != 0, ZeroLiteralSnafu);
-        match unsafe { ccadical_val(self.ptr, lit) } {
-            p if p == lit => Ok(LitValue::True),
-            n if n == -lit => Ok(LitValue::False),
-            invalid => InvalidResponseValSnafu { lit, value: invalid }.fail(),
+        let res = unsafe { ccadical_val(self.ptr, lit) };
+        if res.abs() != lit.abs() {
+            return InvalidResponseValSnafu { lit, value: res }.fail();
+        }
+        if res > 0 {
+            Ok(LitValue::True)
+        } else if res < 0 {
+            Ok(LitValue::False)
+        } else {
+            InvalidResponseValSnafu { lit, value: res }.fail()
         }
     }
 
