@@ -1406,6 +1406,10 @@ fn main() -> color_eyre::Result<()> {
     debug!("Time spent on extracting all clauses: {:.3}s", total_time_extract.as_secs_f64());
 
     let res = if _unsat {
+        if let Some(path_model) = &args.path_model {
+            let mut f = create_line_writer(path_model);
+            writeln!(f, "s UNSATISFIABLE")?;
+        }
         "UNSAT"
     } else if let Some(model) = &final_model {
         if let Some(path_model) = &args.path_model {
@@ -1422,7 +1426,11 @@ fn main() -> color_eyre::Result<()> {
         }
         "SAT"
     } else {
-        "UNKNOWN"
+        if let Some(path_model) = &args.path_model {
+            let mut f = create_line_writer(path_model);
+            writeln!(f, "s INDET")?;
+        }
+        "INDET"
     };
 
     println!("{} in {:.3} s", res, start_time.elapsed().as_secs_f64());
