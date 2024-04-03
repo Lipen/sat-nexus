@@ -35,6 +35,20 @@ struct Cli {
     #[arg(value_name = "CNF")]
     path_cnf: PathBuf,
 
+    /// Path to output file in DIMACS format.
+    /// If the problem is SAT, contains two lines: "s SATISFIABLE\nv 1 2 ... 0\n",
+    /// else contains a single line: "s UNSATISFIABLE" or "s INDET".
+    #[arg(short = 'o', long = "output", value_name = "FILE")]
+    path_output: Option<PathBuf>,
+
+    /// Path to a file with results.
+    #[arg(long = "results", value_name = "FILE")]
+    path_results: Option<PathBuf>,
+
+    /// Random seed.
+    #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
+    seed: u64,
+
     /// Backdoor size.
     #[arg(long, value_name = "INT")]
     backdoor_size: usize,
@@ -43,31 +57,13 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     num_iters: usize,
 
-    /// Number of conflicts.
-    #[arg(long, value_name = "INT", default_value_t = 1000)]
-    num_conflicts: usize,
+    /// Number of stagnated iterations before re-initialization.
+    #[arg(long, value_name = "INT")]
+    stagnation_limit: Option<usize>,
 
-    /// Path to a file with results.
-    #[arg(long = "results", value_name = "FILE")]
-    path_results: Option<PathBuf>,
-
-    /// Path to output file in DIMACS format.
-    /// If the problem is SAT, contains two lines: "s SATISFIABLE\nv 1 2 ... 0\n",
-    /// else contains a single line: "s UNSATISFIABLE" or "s INDET".
-    #[arg(short = 'o', long = "output", value_name = "FILE")]
-    path_output: Option<PathBuf>,
-
-    /// Random seed.
-    #[arg(long, value_name = "INT", default_value_t = DEFAULT_OPTIONS.seed)]
-    seed: u64,
-
-    /// Comma-separated list of allowed variables (1-based indices).
-    #[arg(long = "allow", value_name = "INT...")]
-    allowed_vars: Option<String>,
-
-    /// Comma-separated list of banned variables (1-based indices).
-    #[arg(long = "ban", value_name = "INT...")]
-    banned_vars: Option<String>,
+    /// Daniil's propcheck-based heuristic.
+    #[arg(long, value_name = "INT")]
+    pool_limit: Option<usize>,
 
     /// Do ban variables used in the best backdoors on previous runs?
     #[arg(long)]
@@ -77,15 +73,19 @@ struct Cli {
     #[arg(long)]
     reset_used_vars: bool,
 
-    /// Number of stagnated iterations before re-initialization.
-    #[arg(long, value_name = "INT")]
-    stagnation_limit: Option<usize>,
+    /// Comma-separated list of allowed variables (1-based indices).
+    #[arg(long = "allow", value_name = "INT...")]
+    allowed_vars: Option<String>,
+
+    /// Comma-separated list of banned variables (1-based indices).
+    #[arg(long = "ban", value_name = "INT...")]
+    banned_vars: Option<String>,
 
     /// Freeze variables.
     #[arg(long)]
     freeze: bool,
 
-    /// Do not derive clauses (units and binary).
+    /// Do not derive clauses.
     #[arg(long)]
     no_derive: bool,
 
@@ -97,6 +97,14 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     max_product: usize,
 
+    /// Use novel sorted filtering method.
+    #[arg(long)]
+    use_sorted_filtering: bool,
+
+    /// Number of conflicts (budget per task in filtering).
+    #[arg(long, value_name = "INT", default_value_t = 1000)]
+    num_conflicts: usize,
+
     /// Initial budget (in conflicts) for filtering.
     #[arg(long, value_name = "INT")]
     budget_filter: u64,
@@ -104,10 +112,6 @@ struct Cli {
     /// Multiplicative factor for filtering budget.
     #[arg(long, value_name = "FLOAT", default_value_t = 1.0)]
     factor_budget_filter: f64,
-
-    /// Budget (in conflicts) for pre-solve.
-    #[arg(long, value_name = "INT", default_value_t = 0)]
-    budget_presolve: u64,
 
     /// Initial budget (in conflicts) for solving.
     #[arg(long, value_name = "INT")]
@@ -117,13 +121,9 @@ struct Cli {
     #[arg(long, value_name = "FLOAT", default_value_t = 1.0)]
     factor_budget_solve: f64,
 
-    /// Use novel sorted filtering method.
-    #[arg(long)]
-    use_sorted_filtering: bool,
-
-    /// Daniil's propcheck-based heuristic.
-    #[arg(long, value_name = "INT")]
-    pool_limit: Option<usize>,
+    /// Budget (in conflicts) for pre-solve.
+    #[arg(long, value_name = "INT", default_value_t = 0)]
+    budget_presolve: u64,
 
     /// Path to a file with proof.
     #[arg(long = "proof", value_name = "FILE")]
