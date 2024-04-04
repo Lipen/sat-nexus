@@ -332,12 +332,53 @@ fn main() -> color_eyre::Result<()> {
             0,
             args.pool_limit,
         ) {
-            assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
-
             let backdoor = result.best_instance.get_variables();
             let hard = get_hard_tasks(&backdoor, &mut searcher.solver);
             debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
             assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
+
+            if hard.len() == 0 {
+                info!("Found strong backdoor: {}", DisplaySlice(&backdoor));
+
+                info!("Just solving...");
+                match &mut searcher.solver {
+                    SatSolver::SimpleSat(_) => unreachable!(),
+                    SatSolver::Cadical(solver) => {
+                        solver.reset_assumptions();
+                        let time_solve = Instant::now();
+                        let res = solver.solve().unwrap();
+                        let time_solve = time_solve.elapsed();
+                        match res {
+                            SolveResponse::Interrupted => {
+                                info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                                // do nothing
+                            }
+                            SolveResponse::Unsat => {
+                                info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                                _unsat = true;
+                                break;
+                            }
+                            SolveResponse::Sat => {
+                                info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                                let model = (1..=solver.vars())
+                                    .map(|i| {
+                                        let v = Var::from_external(i as u32);
+                                        match solver.val(i as i32).unwrap() {
+                                            LitValue::True => Lit::new(v, false),
+                                            LitValue::False => Lit::new(v, true),
+                                        }
+                                    })
+                                    .collect_vec();
+                                final_model = Some(model);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                unreachable!();
+                // break;
+            }
 
             // Populate the set of ALL clauses:
             match &mut searcher.solver {
@@ -462,6 +503,7 @@ fn main() -> color_eyre::Result<()> {
                     match &mut searcher.solver {
                         SatSolver::SimpleSat(_) => unreachable!(),
                         SatSolver::Cadical(solver) => {
+                            solver.reset_assumptions();
                             solver.limit("conflicts", budget_solve as i32);
                             let time_solve = Instant::now();
                             let res = solver.solve().unwrap();
@@ -726,6 +768,7 @@ fn main() -> color_eyre::Result<()> {
                     match &mut searcher.solver {
                         SatSolver::SimpleSat(_) => unreachable!(),
                         SatSolver::Cadical(solver) => {
+                            solver.reset_assumptions();
                             solver.limit("conflicts", budget_solve as i32);
                             let time_solve = Instant::now();
                             let res = solver.solve().unwrap();
@@ -950,6 +993,7 @@ fn main() -> color_eyre::Result<()> {
                     match &searcher.solver {
                         SatSolver::SimpleSat(_) => unreachable!(),
                         SatSolver::Cadical(solver) => {
+                            solver.reset_assumptions();
                             for &lit in cubes_product[best_cube].iter() {
                                 solver.assume(lit.to_external()).unwrap();
                             }
@@ -1157,6 +1201,7 @@ fn main() -> color_eyre::Result<()> {
                 match &searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
+                        solver.reset_assumptions();
                         for &lit in cube.iter() {
                             solver.assume(lit.to_external()).unwrap();
                         }
@@ -1278,6 +1323,7 @@ fn main() -> color_eyre::Result<()> {
                 match &mut searcher.solver {
                     SatSolver::SimpleSat(_) => unreachable!(),
                     SatSolver::Cadical(solver) => {
+                        solver.reset_assumptions();
                         solver.limit("conflicts", budget_solve as i32);
                         let time_solve = Instant::now();
                         let res = solver.solve().unwrap();
@@ -1409,8 +1455,8 @@ fn main() -> color_eyre::Result<()> {
         match &mut searcher.solver {
             SatSolver::SimpleSat(_) => unreachable!(),
             SatSolver::Cadical(solver) => {
-                solver.limit("conflicts", budget_solve as i32);
                 solver.reset_assumptions();
+                solver.limit("conflicts", budget_solve as i32);
                 let time_solve = Instant::now();
                 let res = solver.solve().unwrap();
                 let time_solve = time_solve.elapsed();
