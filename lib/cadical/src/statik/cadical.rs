@@ -253,6 +253,10 @@ impl Cadical {
         unsafe { ccadical_print_statistics(self.ptr) }
     }
 
+    pub fn print_resources(&self) {
+        unsafe { ccadical_print_resources(self.ptr) }
+    }
+
     /// Number of variables.
     pub fn vars(&self) -> i64 {
         unsafe { ccadical_vars(self.ptr) }

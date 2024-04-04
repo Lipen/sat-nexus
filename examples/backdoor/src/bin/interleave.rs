@@ -148,6 +148,10 @@ struct Cli {
     /// Comma-separated list of Cadical options ('key=value' pairs, e.g. 'elim=0,ilb=0,check=1').
     #[arg(long)]
     cadical_options: Option<String>,
+
+    /// Do not print solver stats in the end.
+    #[arg(long)]
+    no_stats: bool,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -1458,6 +1462,16 @@ fn main() -> color_eyre::Result<()> {
 
     debug!("Time spent on extracting all clauses: {:.3}s", total_time_extract.as_secs_f64());
 
+    match &searcher.solver {
+        SatSolver::SimpleSat(_) => unreachable!(),
+        SatSolver::Cadical(solver) => {
+            if !args.no_stats {
+                solver.print_statistics();
+                solver.print_resources();
+            }
+        }
+    }
+
     let res = if _unsat {
         if let Some(path) = &args.path_output {
             let mut f = create_line_writer(path);
@@ -1506,6 +1520,6 @@ fn main() -> color_eyre::Result<()> {
         "INDET"
     };
 
-    println!("{} in {:.3} s", res, start_time.elapsed().as_secs_f64());
+    println!("s {} in {:.3} s", res, start_time.elapsed().as_secs_f64());
     Ok(())
 }
