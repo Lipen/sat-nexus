@@ -56,7 +56,7 @@ fn main() -> color_eyre::Result<()> {
 
     info!("Joining...");
     let pb = ProgressBar::new(num_tasks as u64);
-    let results: Vec<_> = pool.join().into_iter().take(num_tasks).progress_with(pb).collect();
+    let results: Vec<_> = pool.join().take(num_tasks).progress_with(pb).collect();
     info!("Got {} results", results.len());
 
     pool.finish();

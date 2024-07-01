@@ -126,11 +126,11 @@ impl SolverPool {
         self.task_sender.send(task).unwrap();
     }
 
-    pub fn results(&self) -> impl IntoIterator<Item = (Task, SolveResponse, Duration)> + '_ {
+    pub fn results(&self) -> impl Iterator<Item = (Task, SolveResponse, Duration)> + '_ {
         self.pool.iter().flat_map(|s| s.result_receiver.try_iter())
     }
 
-    pub fn join(&self) -> impl IntoIterator<Item = (Task, SolveResponse, Duration)> + '_ {
+    pub fn join(&self) -> impl Iterator<Item = (Task, SolveResponse, Duration)> + '_ {
         let receivers: Vec<_> = self.pool.iter().map(|s| &s.result_receiver).collect();
         std::iter::from_fn(move || {
             let mut sel = Select::new();
