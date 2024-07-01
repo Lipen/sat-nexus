@@ -6,7 +6,7 @@ use indicatif::{ProgressBar, ProgressIterator};
 use itertools::zip_eq;
 use log::info;
 
-use backdoor::pool::{SolverPool, Task};
+use backdoor::pool::{CubeTask, SolverPool};
 use backdoor::utils::product_repeat;
 use simple_sat::lit::Lit;
 use simple_sat::var::Var;
@@ -39,13 +39,13 @@ fn main() -> color_eyre::Result<()> {
     let args = Cli::parse();
     info!("args = {:?}", args);
 
-    let pool = SolverPool::new_from(args.num_threads, &args.path_cnf);
+    let pool = SolverPool::<CubeTask>::new_from(args.num_threads, &args.path_cnf, |task, solver| task.solve_with(solver));
     let variables: Vec<Var> = (1..=args.num_vars).map(|i| Var::from_external(i as u32)).collect();
     let mut num_tasks: usize = 0;
-    for cube in product_repeat([true, false].into_iter(), variables.len()) {
+    for (i, cube) in product_repeat([true, false].into_iter(), variables.len()).enumerate() {
         let cube: Vec<Lit> = zip_eq(&variables, cube).map(|(&v, s)| Lit::new(v, s)).collect();
         num_tasks += 1;
-        pool.submit(Task::new(cube));
+        pool.submit(CubeTask::new(i, cube));
     }
     info!("Submitted {} tasks", num_tasks);
 
@@ -58,6 +58,15 @@ fn main() -> color_eyre::Result<()> {
     let pb = ProgressBar::new(num_tasks as u64);
     let results: Vec<_> = pool.join().take(num_tasks).progress_with(pb).collect();
     info!("Got {} results", results.len());
+    // let mut results = results;
+    // results.sort_by_key(|r| r.0.i);
+    // for (task, res, time) in results.iter() {
+    //     info!("{:?} in {:.3}ms for cube = {}", res, time.as_secs_f64(), DisplaySlice(&task.cube));
+    // }
+    info!(
+        "Total CPU time: {:.1}s",
+        results.iter().map(|(_, _, time)| time.as_secs_f64()).sum::<f64>()
+    );
 
     pool.finish();
 
