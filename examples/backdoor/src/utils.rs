@@ -7,14 +7,10 @@ use itertools::{zip_eq, Itertools, MultiProduct};
 use log::{debug, trace};
 
 use cadical::statik::Cadical;
-use cadical::SolveResponse;
 use simple_sat::lit::Lit;
-use simple_sat::solver::Solver;
 use simple_sat::trie::Trie;
 use simple_sat::utils::parse_dimacs;
 use simple_sat::var::Var;
-
-use crate::solvers::SatSolver;
 
 pub fn parse_multiple_comma_separated_intervals_from<P: AsRef<Path>>(path: P) -> Vec<Vec<usize>> {
     let path = path.as_ref();
@@ -56,29 +52,17 @@ pub fn parse_comma_separated_intervals(input: &str) -> Vec<usize> {
     result
 }
 
-pub fn get_hard_tasks(variables: &[Var], solver: &mut SatSolver) -> Vec<Vec<Lit>> {
-    match solver {
-        SatSolver::SimpleSat(solver) => {
-            let (hard, _easy) = partition_tasks(variables, solver);
-            hard
-        }
-        SatSolver::Cadical(solver) => {
-            let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
-            // let res = solver.propcheck_all_tree(&vars_external, 0, true);
-            // let valid = solver.propcheck_all_tree_get_valid();
-            let mut valid = Vec::new();
-            let res = solver.propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut valid), None);
-            assert_eq!(valid.len(), res as usize);
-            valid
-                .into_iter()
-                .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
-                .collect()
-        }
-    }
-}
-
-pub fn partition_tasks(variables: &[Var], solver: &mut Solver) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
-    partition_tasks_with(variables, |cube| solver.propcheck(cube, None, None))
+pub fn get_hard_tasks(variables: &[Var], cadical: &Cadical) -> Vec<Vec<Lit>> {
+    let vars_external: Vec<i32> = variables.iter().map(|var| var.to_external() as i32).collect();
+    // let res = solver.propcheck_all_tree(&vars_external, 0, true);
+    // let valid = solver.propcheck_all_tree_get_valid();
+    let mut valid = Vec::new();
+    let res = cadical.propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut valid), None);
+    assert_eq!(valid.len(), res as usize);
+    valid
+        .into_iter()
+        .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
+        .collect()
 }
 
 pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
@@ -87,27 +71,6 @@ pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<
         // Note: `restore = false` is UNSAFE in general, but since the variables are active, it should be safe.
         let (res, _num_prop) = solver.propcheck(&cube, false, false, false);
         res
-    })
-}
-
-pub fn partition_tasks_cadical_emulated(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
-    partition_tasks_with(variables, |cube| {
-        let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
-        for &lit in cube.iter() {
-            solver.assume(lit).unwrap();
-        }
-        solver.limit("conflicts", 1);
-        match solver.solve().unwrap() {
-            SolveResponse::Sat => unreachable!(),
-            SolveResponse::Unsat => {
-                // log::info!("UNSAT on cube {}", DisplaySlice(&cube));
-                false
-            }
-            SolveResponse::Interrupted => {
-                // log::info!("UNKNOWN on cube {}", DisplaySlice(&cube));
-                true
-            }
-        }
     })
 }
 

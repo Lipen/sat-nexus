@@ -12,11 +12,11 @@ use simple_sat::var::Var;
 
 use crate::backdoor::Backdoor;
 use crate::fitness::Fitness;
-use crate::solvers::SatSolver;
+use crate::solver::Solver;
 
 #[derive(Debug)]
 pub struct BackdoorSearcher {
-    pub solver: SatSolver,
+    pub solver: Solver,
     pub global_pool: Vec<Var>,
     pub banned_vars: AHashSet<Var>,
     pub rng: StdRng,
@@ -27,7 +27,7 @@ pub struct BackdoorSearcher {
 }
 
 impl BackdoorSearcher {
-    pub fn new(solver: SatSolver, pool: Vec<Var>, options: Options) -> Self {
+    pub fn new(solver: Solver, pool: Vec<Var>, options: Options) -> Self {
         Self {
             solver,
             global_pool: pool,
@@ -117,24 +117,8 @@ impl BackdoorSearcher {
                     let pos_lit = Lit::new(var, false);
                     let neg_lit = Lit::new(var, true);
 
-                    let (_pos_res, pos_prop) = match &mut self.solver {
-                        SatSolver::SimpleSat(solver) => {
-                            // let (res, propagated) = solver.propcheck_save_propagated(&[pos_lit]);
-                            // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                            // (res, propagated)
-                            solver.propcheck_num_propagated(&[pos_lit])
-                        }
-                        SatSolver::Cadical(solver) => solver.propcheck(&[pos_lit.to_external()], false, false, false),
-                    };
-                    let (_neg_res, neg_prop) = match &mut self.solver {
-                        SatSolver::SimpleSat(solver) => {
-                            // let (res, propagated) = solver.propcheck_save_propagated(&[neg_lit]);
-                            // let propagated = propagated.into_iter().map(|lit| lit.to_external()).collect();
-                            // (res, propagated)
-                            solver.propcheck_num_propagated(&[neg_lit])
-                        }
-                        SatSolver::Cadical(solver) => solver.propcheck(&[neg_lit.to_external()], false, false, false),
-                    };
+                    let (_pos_res, pos_prop) = self.solver.propcheck(&[pos_lit]);
+                    let (_neg_res, neg_prop) = self.solver.propcheck(&[neg_lit]);
                     let h = pos_prop * neg_prop;
                     // info!("Variable {} (literals {} and {}) has heuristic value: {} * {} = {}", var, pos_lit, neg_lit, pos_prop, neg_prop, h);
                     // debug!("{} => {} => {}", pos_lit, _pos_res, DisplaySlice(&pos_prop));

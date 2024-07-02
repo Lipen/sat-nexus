@@ -3,5 +3,5 @@ pub mod derivation;
 pub mod fitness;
 pub mod pool;
 pub mod searcher;
-pub mod solvers;
+pub mod solver;
 pub mod utils;

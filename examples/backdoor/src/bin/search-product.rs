@@ -10,8 +10,8 @@ use itertools::{iproduct, Itertools};
 use log::{debug, info};
 
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
-use backdoor::solvers::SatSolver;
-use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks};
+use backdoor::solver::Solver;
+use backdoor::utils::{concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks};
 
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
@@ -84,18 +84,18 @@ fn main() -> color_eyre::Result<()> {
     info!("args = {:?}", args);
 
     // Initialize Cadical:
-    let solver = Cadical::new();
+    let cadical = Cadical::new();
     for clause in parse_dimacs(&args.path_cnf) {
-        solver.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+        cadical.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
     if args.freeze {
-        for i in 0..solver.vars() {
+        for i in 0..cadical.vars() {
             let lit = (i + 1) as i32;
-            solver.freeze(lit).unwrap();
+            cadical.freeze(lit).unwrap();
         }
     }
-    solver.limit("conflicts", 0);
-    solver.solve()?;
+    cadical.limit("conflicts", 0);
+    cadical.solve()?;
 
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
@@ -106,7 +106,7 @@ fn main() -> color_eyre::Result<()> {
         ban_used_variables: args.ban_used,
         ..DEFAULT_OPTIONS
     };
-    let mut searcher = BackdoorSearcher::new(SatSolver::new_cadical(solver), pool, options);
+    let mut searcher = BackdoorSearcher::new(Solver::new(cadical), pool, options);
 
     // Create and open the file with derived clauses:
     let mut file_derived_clauses = Some(create_line_writer("derived_clauses.txt"));
@@ -151,7 +151,7 @@ fn main() -> color_eyre::Result<()> {
         assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
-        let hard = get_hard_tasks(&backdoor, &mut searcher.solver);
+        let hard = get_hard_tasks(&backdoor, &searcher.solver.0);
         debug!("Backdoor {} has {} hard tasks", DisplaySlice(&backdoor), hard.len());
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
 
@@ -216,75 +216,72 @@ fn main() -> color_eyre::Result<()> {
         cubes_product.retain(|cube| {
             pb.inc(1);
 
-            match &mut searcher.solver {
-                SatSolver::SimpleSat(_) => unreachable!(),
-                SatSolver::Cadical(solver) => {
-                    for &lit in cube.iter() {
-                        solver.assume(lit.to_external()).unwrap();
-                    }
-                    solver.limit("conflicts", args.num_conflicts as i32);
-                    match solver.solve().unwrap() {
-                        SolveResponse::Interrupted => true,
-                        SolveResponse::Unsat => {
-                            let mut lemma = Vec::new();
-                            for &lit in cube {
-                                if solver.failed(lit.to_external()).unwrap() {
-                                    lemma.push(-lit);
-                                }
-                            }
-                            // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
-                            lemma.sort_by_key(|lit| lit.inner());
-                            if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
-                                pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
-                                if let Some(f) = &mut file_derived_clauses {
-                                    for lit in lemma.iter() {
-                                        write!(f, "{} ", lit).unwrap();
-                                    }
-                                    writeln!(f, "0").unwrap();
-                                }
-                                solver.add_clause(clause_to_external(&lemma));
-                                all_derived_clauses.push(lemma);
-                            }
-                            false
+            for &lit in cube.iter() {
+                searcher.solver.assume(lit);
+            }
+            searcher.solver.0.limit("conflicts", args.num_conflicts as i32);
+            match searcher.solver.solve() {
+                SolveResponse::Interrupted => true,
+                SolveResponse::Unsat => {
+                    let mut lemma = Vec::new();
+                    for &lit in cube {
+                        if searcher.solver.failed(lit) {
+                            lemma.push(-lit);
                         }
-                        SolveResponse::Sat => {
-                            let model: Vec<_> = (1..=solver.vars()).map(|i| solver.val(i as i32).unwrap()).collect();
-                            {
-                                let f = File::create("model.txt").unwrap();
-                                let mut f = BufWriter::new(f);
-                                writeln!(
-                                    f,
-                                    "{}",
-                                    model
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, &value)| {
-                                            let lit = (i + 1) as i32;
-                                            match value {
-                                                LitValue::True => lit,
-                                                LitValue::False => -lit,
-                                            }
-                                        })
-                                        .join(" ")
-                                )
-                                .unwrap();
+                    }
+                    // debug!("UNSAT for cube = {}, lemma = {}", DisplaySlice(&cube), DisplaySlice(&lemma));
+                    lemma.sort_by_key(|lit| lit.inner());
+                    if lemma.len() <= 5 && all_clauses.insert(lemma.clone()) {
+                        pb.println(format!("new lemma from unsat core: {}", DisplaySlice(&lemma)));
+                        if let Some(f) = &mut file_derived_clauses {
+                            for lit in lemma.iter() {
+                                write!(f, "{} ", lit).unwrap();
                             }
-                            {
-                                let f = File::create("model.cnf").unwrap();
-                                let mut f = BufWriter::new(f);
-                                for (i, &value) in model.iter().enumerate() {
+                            writeln!(f, "0").unwrap();
+                        }
+                        searcher.solver.add_clause(&lemma);
+                        all_derived_clauses.push(lemma);
+                    }
+                    false
+                }
+                SolveResponse::Sat => {
+                    let model: Vec<_> = (1..=searcher.solver.0.vars())
+                        .map(|i| searcher.solver.0.val(i as i32).unwrap())
+                        .collect();
+                    {
+                        let f = File::create("model.txt").unwrap();
+                        let mut f = BufWriter::new(f);
+                        writeln!(
+                            f,
+                            "{}",
+                            model
+                                .iter()
+                                .enumerate()
+                                .map(|(i, &value)| {
                                     let lit = (i + 1) as i32;
-                                    let lit = match value {
+                                    match value {
                                         LitValue::True => lit,
                                         LitValue::False => -lit,
-                                    };
-                                    writeln!(f, "{} 0", lit).unwrap();
-                                }
-                            }
-                            panic!("unexpected SAT");
-                            // false
+                                    }
+                                })
+                                .join(" ")
+                        )
+                        .unwrap();
+                    }
+                    {
+                        let f = File::create("model.cnf").unwrap();
+                        let mut f = BufWriter::new(f);
+                        for (i, &value) in model.iter().enumerate() {
+                            let lit = (i + 1) as i32;
+                            let lit = match value {
+                                LitValue::True => lit,
+                                LitValue::False => -lit,
+                            };
+                            writeln!(f, "{} 0", lit).unwrap();
                         }
                     }
+                    panic!("unexpected SAT");
+                    // false
                 }
             }
         });
