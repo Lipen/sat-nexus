@@ -41,12 +41,11 @@ pub trait Solver: Sized {
 
     /// Add a clause to the solver.
     /// The clause is represented by a slice of literals.
-    fn add_clause_<A, L>(&mut self, lits: A)
+    fn add_clause_<L>(&mut self, lits: &[L])
     where
-        A: AsRef<[L]>,
         L: Into<Lit> + Copy,
     {
-        self.add_clause(lits.as_ref())
+        self.add_clause(lits)
     }
 
     /// Add a unit clause to the solver.
@@ -54,7 +53,7 @@ pub trait Solver: Sized {
     where
         L: Into<Lit>,
     {
-        self.add_clause_([lit.into()])
+        self.add_clause_(&[lit.into()])
     }
 
     /// Solve the problem given to the solver and return the result as a [SolveResponse].

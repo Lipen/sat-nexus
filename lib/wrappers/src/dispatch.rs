@@ -125,9 +125,8 @@ impl Solver for DispatchSolver {
         dispatch_delegate!(self, add_clause(lits))
     }
 
-    fn add_clause_<A, L>(&mut self, lits: A)
+    fn add_clause_<L>(&mut self, lits: &[L])
     where
-        A: AsRef<[L]>,
         L: Into<Lit> + Copy,
     {
         dispatch_delegate!(self, add_clause_(lits))
