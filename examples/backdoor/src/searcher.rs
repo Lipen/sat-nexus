@@ -291,77 +291,104 @@ impl BackdoorSearcher {
             fit.clone()
         } else {
             self.cache_misses += 1;
-
-            let vars = instance.get_variables();
-            assert!(vars.len() < 32);
-
-            // Compute rho:
-            // let limit = 0;
-            let limit = best.map_or(0, |b| b.num_hard + 1);
-            let num_hard = self.solver.propcheck_all_tree(&vars, limit);
-            let num_total = 1u64 << vars.len();
-            let rho = 1.0 - (num_hard as f64 / num_total as f64);
-
-            // Calculate the fitness value:
-            let value = 1.0 - rho;
-
-            let fit = Fitness { value, rho, num_hard };
-
+            let fit = calculate_fitness(instance, best, &self.solver);
             self.cache.insert(key, fit.clone());
             fit
         }
     }
 
     fn mutate(&mut self, instance: &mut Backdoor, pool: &[Var]) {
-        assert!(pool.len() >= instance.len());
+        mutate(instance, pool, &mut self.rng);
+    }
+}
 
-        let n = instance.len();
-        let m = pool.len() - n;
-        if m >= n {
-            let p = 1.0 / n as f64;
-            let d = Bernoulli::new(p).unwrap();
+fn calculate_fitness(instance: &Backdoor, best: Option<&Fitness>, solver: &Solver) -> Fitness {
+    let vars = instance.get_variables();
+    assert!(vars.len() < 32);
 
-            let mut to_replace = Vec::new();
-            for i in 0..n {
-                if d.sample(&mut self.rng) {
-                    to_replace.push(i);
-                }
-            }
-            // to_replace.len() ~ Bin(1/n)
-            assert!(to_replace.len() <= n);
+    // Compute rho:
+    // let limit = 0;
+    let limit = best.map_or(0, |b| b.num_hard + 1);
+    let num_hard = solver.propcheck_all_tree(&vars, limit);
+    let num_total = 1u64 << vars.len();
+    let rho = 1.0 - (num_hard as f64 / num_total as f64);
 
-            let other_vars: Vec<Var> = pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
-            assert!(other_vars.len() >= to_replace.len());
-            let substituted = other_vars.choose_multiple(&mut self.rng, to_replace.len());
-            for (i, &v) in zip_eq(to_replace, substituted) {
-                instance.variables[i] = v;
-            }
-        } else {
-            if m == 0 {
-                return;
-            }
-            let p = 1.0 / m as f64;
-            let d = Bernoulli::new(p).unwrap();
+    // Calculate the fitness value:
+    let value = 1.0 - rho;
 
-            let mut to_replace = Vec::new();
-            for &v in pool.iter() {
-                if instance.variables.contains(&v) {
-                    continue;
-                }
-                if d.sample(&mut self.rng) {
-                    to_replace.push(v);
-                }
-            }
-            // to_replace.len() ~ Bin(1/m)
-            assert!(to_replace.len() <= m);
+    Fitness { value, rho, num_hard }
+}
 
-            let substituted = (0..instance.len()).choose_multiple(&mut self.rng, to_replace.len());
-            for (i, v) in zip_eq(substituted, to_replace) {
-                instance.variables[i] = v;
+fn mutate(instance: &mut Backdoor, pool: &[Var], rng: &mut impl Rng) {
+    assert!(pool.len() >= instance.len());
+
+    let n = instance.len();
+    let m = pool.len() - n;
+    if m >= n {
+        let p = 1.0 / n as f64;
+        let d = Bernoulli::new(p).unwrap();
+
+        let mut to_replace = Vec::new();
+        for i in 0..n {
+            if d.sample(rng) {
+                to_replace.push(i);
             }
         }
+        // to_replace.len() ~ Bin(1/n)
+        assert!(to_replace.len() <= n);
 
-        // Instance size should stay the same:
-        assert_eq!(instance.len(), n);
+        let other_vars: Vec<Var> = pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
+        assert!(other_vars.len() >= to_replace.len());
+        let substituted = other_vars.choose_multiple(rng, to_replace.len());
+        for (i, &v) in zip_eq(to_replace, substituted) {
+            instance.variables[i] = v;
+        }
+    } else {
+        if m == 0 {
+            return;
+        }
+        let p = 1.0 / m as f64;
+        let d = Bernoulli::new(p).unwrap();
+
+        let mut to_replace = Vec::new();
+        for &v in pool.iter() {
+            if instance.variables.contains(&v) {
+                continue;
+            }
+            if d.sample(rng) {
+                to_replace.push(v);
+            }
+        }
+        // to_replace.len() ~ Bin(1/m)
+        assert!(to_replace.len() <= m);
+
+        let substituted = (0..instance.len()).choose_multiple(rng, to_replace.len());
+        for (i, v) in zip_eq(substituted, to_replace) {
+            instance.variables[i] = v;
+        }
+    }
+
+    // Instance size must stay the same:
+    assert_eq!(instance.len(), n);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mutate() {
+        let n: usize = 10;
+        for len in 1..=n {
+            let mut rng = StdRng::seed_from_u64(42);
+            let mut pool: Vec<Var> = (0..n).map(|i| Var::from_external(i as u32 + 1)).collect();
+
+            let base = Backdoor::new(pool.choose_multiple(&mut rng, len).copied().collect());
+            assert_eq!(base.len(), len);
+
+            let mut instance = base.clone();
+            mutate(&mut instance, &pool, &mut rng);
+            assert_eq!(instance.len(), len);
+        }
     }
 }
