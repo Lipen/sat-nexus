@@ -72,6 +72,7 @@ pub struct Record {
     pub iteration: usize,
     pub instance: Backdoor,
     pub fitness: Fitness,
+    pub time: Duration,
 }
 
 impl BackdoorSearcher {
@@ -80,6 +81,7 @@ impl BackdoorSearcher {
         backdoor_size: usize,
         num_iter: usize,
         stagnation_limit: Option<usize>,
+        timeout: Option<f64>,
         max_rho: Option<f64>,
         min_iter: usize,
         pool_limit: Option<usize>,
@@ -141,6 +143,8 @@ impl BackdoorSearcher {
             }
         }
 
+        let time_initial = Instant::now();
+
         // Create an initial instance:
         let mut instance = self.initial_instance(backdoor_size, &pool);
         debug!("Initial instance: {:#}", instance);
@@ -154,12 +158,15 @@ impl BackdoorSearcher {
         let mut best_instance = instance.clone();
         let mut best_fitness = fitness.clone();
 
+        let time_initial = time_initial.elapsed();
+
         // Store all results:
         let mut records = Vec::new();
         records.push(Record {
             iteration: 0,
             instance: instance.clone(),
             fitness: fitness.clone(),
+            time: time_initial,
         });
 
         // Count the stagnated iterations:
@@ -167,6 +174,14 @@ impl BackdoorSearcher {
 
         for i in 1..=num_iter {
             let time_iter = Instant::now();
+
+            // Break upon reaching the timeout:
+            if let Some(timeout) = timeout {
+                if start_time.elapsed().as_secs_f64() >= timeout {
+                    debug!("Reached the timeout of {:.1} s", timeout);
+                    break;
+                }
+            }
 
             // Break upon reaching the maximum required rho:
             if let Some(max_rho) = max_rho {
@@ -199,13 +214,6 @@ impl BackdoorSearcher {
             // Evaluate the mutated instance:
             let mutated_fitness = self.calculate_fitness(&mutated_instance, Some(&best_fitness));
 
-            // Save the record about the new instance:
-            records.push(Record {
-                iteration: i,
-                instance: mutated_instance.clone(),
-                fitness: mutated_fitness.clone(),
-            });
-
             let time_iter = time_iter.elapsed();
             if i <= 10 || (i < 1000 && i % 100 == 0) || (i < 10000 && i % 1000 == 0) || i % 10000 == 0 {
                 debug!(
@@ -218,6 +226,14 @@ impl BackdoorSearcher {
                     time_iter.as_secs_f64() * 1000.0
                 );
             }
+
+            // Save the record about the new instance:
+            records.push(Record {
+                iteration: i,
+                instance: mutated_instance.clone(),
+                fitness: mutated_fitness.clone(),
+                time: time_iter,
+            });
 
             // Update the best:
             if mutated_fitness < best_fitness {
@@ -299,8 +315,9 @@ impl BackdoorSearcher {
     fn mutate(&mut self, instance: &mut Backdoor, pool: &[Var]) {
         assert!(pool.len() >= instance.len());
 
-        if pool.len() - instance.len() >= instance.len() {
-            let n = instance.len();
+        let n = instance.len();
+        let m = pool.len() - n;
+        if m >= n {
             let p = 1.0 / n as f64;
             let d = Bernoulli::new(p).unwrap();
 
@@ -319,15 +336,11 @@ impl BackdoorSearcher {
             for (i, &v) in zip_eq(to_replace, substituted) {
                 instance.variables[i] = v;
             }
-
-            // Instance size should stay the same:
-            assert_eq!(instance.len(), n);
         } else {
-            let n = pool.len() - instance.len();
-            if n == 0 {
+            if m == 0 {
                 return;
             }
-            let p = 1.0 / n as f64;
+            let p = 1.0 / m as f64;
             let d = Bernoulli::new(p).unwrap();
 
             let mut to_replace = Vec::new();
@@ -339,16 +352,16 @@ impl BackdoorSearcher {
                     to_replace.push(v);
                 }
             }
-            // to_replace.len() ~ Bin(1/n)
-            assert!(to_replace.len() <= n);
+            // to_replace.len() ~ Bin(1/m)
+            assert!(to_replace.len() <= m);
 
             let substituted = (0..instance.len()).choose_multiple(&mut self.rng, to_replace.len());
             for (i, v) in zip_eq(substituted, to_replace) {
                 instance.variables[i] = v;
             }
-
-            // Instance size should stay the same:
-            assert_eq!(instance.len(), n);
         }
+
+        // Instance size should stay the same:
+        assert_eq!(instance.len(), n);
     }
 }

@@ -1,5 +1,8 @@
 use std::collections::{HashMap, HashSet};
-use std::io::Write;
+use std::fmt::Write as _;
+use std::fs::File;
+use std::io::LineWriter;
+use std::io::Write as _;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -38,8 +41,8 @@ struct Cli {
     /// Path to output file in DIMACS format.
     /// If the problem is SAT, contains two lines: "s SATISFIABLE\nv 1 2 ... 0\n",
     /// else contains a single line: "s UNSATISFIABLE" or "s INDET".
-    #[arg(short = 'o', long = "output", value_name = "FILE")]
-    path_output: Option<PathBuf>,
+    // #[arg(short = 'o', long = "output", value_name = "FILE")]
+    // path_output: Option<PathBuf>,
 
     /// Path to a file with results.
     #[arg(long = "results", value_name = "FILE")]
@@ -60,6 +63,10 @@ struct Cli {
     /// Number of stagnated iterations before re-initialization.
     #[arg(long, value_name = "INT")]
     stagnation_limit: Option<usize>,
+
+    /// Timeout for each EA run.
+    #[arg(long, value_name = "FLOAT")]
+    run_timeout: Option<f64>,
 
     /// Daniil's propcheck-based heuristic.
     #[arg(long, value_name = "INT")]
@@ -154,30 +161,26 @@ struct Cli {
     no_stats: bool,
 }
 
-fn main() -> color_eyre::Result<()> {
-    color_eyre::install()?;
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,backdoor::derivation=info")).init();
+#[allow(dead_code)]
+enum SolveResult {
+    SAT(Vec<Lit>),
+    UNSAT,
+    UNKNOWN,
+}
 
-    let start_time = Instant::now();
-    let args = Cli::parse();
-    info!("args = {:?}", args);
-
-    if args.add_cores && !args.compute_cores {
-        bail!("Cannot add cores (`--add-cores` flag) without computing them (`--compute-cores` flag)");
-    }
-
+fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     // Initialize Cadical:
     let cadical = Cadical::new();
-    // solver.configure("plain");
-    // solver.set_option("elim", 0);
-    // solver.set_option("walk", 0);
-    // solver.set_option("lucky", 0);
-    // solver.set_option("probe", 0);
-    // solver.set_option("ilb", 0);
-    // solver.set_option("subsume", 0);
-    // solver.set_option("vivify", 0);
-    // solver.set_option("inprocessing", 0);
-    // solver.set_option("check", 1);
+    // cadical.configure("plain");
+    // cadical.set_option("elim", 0);
+    // cadical.set_option("walk", 0);
+    // cadical.set_option("lucky", 0);
+    // cadical.set_option("probe", 0);
+    // cadical.set_option("ilb", 0);
+    // cadical.set_option("subsume", 0);
+    // cadical.set_option("vivify", 0);
+    // cadical.set_option("inprocessing", 0);
+    // cadical.set_option("check", 1);
     if let Some(s) = &args.cadical_options {
         for part in s.split(",") {
             let parts: Vec<&str> = part.splitn(2, '=').collect();
@@ -191,8 +194,8 @@ fn main() -> color_eyre::Result<()> {
         if args.proof_no_binary {
             cadical.set_option("binary", 0);
         }
-        // solver.set_option("lrat", 1);
-        // solver.set_option("frat", 1);
+        // cadical.set_option("lrat", 1);
+        // cadical.set_option("frat", 1);
         cadical.trace_proof(path_proof);
     }
     // solver.read_dimacs(&args.path_cnf, 1);
@@ -208,12 +211,12 @@ fn main() -> color_eyre::Result<()> {
     }
     cadical.limit("conflicts", 0);
     cadical.solve()?;
-    debug!("solver.vars() = {}", cadical.vars());
-    debug!("solver.active() = {}", cadical.active());
-    debug!("solver.redundant() = {}", cadical.redundant());
-    debug!("solver.irredundant() = {}", cadical.irredundant());
-    debug!("solver.clauses() = {}", cadical.clauses_iter().count());
-    debug!("solver.all_clauses() = {}", cadical.all_clauses_iter().count());
+    debug!("vars() = {}", cadical.vars());
+    debug!("active() = {}", cadical.active());
+    debug!("redundant() = {}", cadical.redundant());
+    debug!("irredundant() = {}", cadical.irredundant());
+    debug!("clauses() = {}", cadical.clauses_iter().count());
+    debug!("all_clauses() = {}", cadical.all_clauses_iter().count());
 
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
@@ -227,7 +230,8 @@ fn main() -> color_eyre::Result<()> {
     let mut searcher = BackdoorSearcher::new(Solver::new(cadical), pool, options);
 
     // Create and open the file with derived clauses:
-    let mut file_derived_clauses = Some(create_line_writer("derived_clauses.txt"));
+    // let mut file_derived_clauses = Some(create_line_writer("derived_clauses.txt"));
+    let mut file_derived_clauses: Option<LineWriter<File>> = None;
 
     // Create and open the file with results:
     let mut file_results = args.path_results.as_ref().map(create_line_writer);
@@ -248,17 +252,12 @@ fn main() -> color_eyre::Result<()> {
     // Cartesian product of hard tasks:
     let mut cubes_product: Vec<Vec<Lit>> = vec![vec![]];
 
-    let time_runs = Instant::now();
-
     let mut budget_filter = args.budget_filter;
     let mut budget_solve = args.budget_solve;
 
     let mut total_time_extract = Duration::ZERO;
 
-    // Model (if the problem is found to be SAT):
     let mut final_model: Option<Vec<Lit>> = None;
-
-    let mut _unsat = false;
 
     if args.budget_presolve > 0 {
         info!("Pre-solving with {} conflicts budget...", args.budget_presolve);
@@ -273,7 +272,7 @@ fn main() -> color_eyre::Result<()> {
             }
             SolveResponse::Unsat => {
                 info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                _unsat = true;
+                return Ok(SolveResult::UNSAT);
             }
             SolveResponse::Sat => {
                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
@@ -286,7 +285,7 @@ fn main() -> color_eyre::Result<()> {
                         }
                     })
                     .collect_vec();
-                final_model = Some(model);
+                return Ok(SolveResult::SAT(model));
             }
         }
         searcher.solver.0.internal_backtrack(0);
@@ -294,16 +293,6 @@ fn main() -> color_eyre::Result<()> {
 
     let mut run_number = 0;
     loop {
-        // Break if already SAT/UNSAT:
-        {
-            if final_model.is_some() {
-                break;
-            }
-            if _unsat {
-                break;
-            }
-        }
-
         run_number += 1;
         info!("Run {}", run_number);
         let time_run = Instant::now();
@@ -323,6 +312,7 @@ fn main() -> color_eyre::Result<()> {
             args.backdoor_size,
             args.num_iters,
             args.stagnation_limit,
+            args.run_timeout,
             Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
             0,
             args.pool_limit,
@@ -347,8 +337,7 @@ fn main() -> color_eyre::Result<()> {
                     }
                     SolveResponse::Unsat => {
                         info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                        _unsat = true;
-                        break;
+                        return Ok(SolveResult::UNSAT);
                     }
                     SolveResponse::Sat => {
                         info!("SAT in {:.1} s", time_solve.as_secs_f64());
@@ -361,8 +350,7 @@ fn main() -> color_eyre::Result<()> {
                                 }
                             })
                             .collect_vec();
-                        final_model = Some(model);
-                        break;
+                        return Ok(SolveResult::SAT(model));
                     }
                 }
 
@@ -390,11 +378,16 @@ fn main() -> color_eyre::Result<()> {
             );
 
             if args.compute_cores {
-                let vars_external: Vec<i32> = backdoor.iter().map(|var| var.to_external() as i32).collect();
-                for &v in vars_external.iter() {
-                    assert!(searcher.solver.0.is_active(v), "var {} in backdoor is not active", v);
-                }
-                let orig_hard_len = hard.len();
+                let vars_external: Vec<i32> = backdoor
+                    .iter()
+                    .map(|var| var.to_external() as i32)
+                    .filter(|&v| searcher.solver.0.is_active(v))
+                    .collect();
+                debug!("Using vars for cores: {}", DisplaySlice(&vars_external));
+                // for &v in vars_external.iter() {
+                //     assert!(solver.is_active(v), "var {} in backdoor is not active", v);
+                // }
+                // let orig_hard_len = hard.len();
                 let mut hard = Vec::new();
                 let mut easy = Vec::new();
                 let res = searcher
@@ -402,7 +395,7 @@ fn main() -> color_eyre::Result<()> {
                     .0
                     .propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), Some(&mut easy));
                 assert_eq!(hard.len(), res as usize);
-                assert_eq!(hard.len(), orig_hard_len);
+                // assert_eq!(hard.len(), orig_hard_len);
                 let easy: Vec<Vec<Lit>> = easy
                     .into_iter()
                     .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
@@ -463,7 +456,6 @@ fn main() -> color_eyre::Result<()> {
                     }
                     debug!("Added {} new lemmas from cores", num_added);
                 }
-
                 {
                     let res = searcher.solver.0.internal_propagate();
                     assert!(res);
@@ -480,40 +472,36 @@ fn main() -> color_eyre::Result<()> {
             if hard.is_empty() {
                 info!("No more cubes to solve after {} runs", run_number);
 
-                {
-                    info!("Just solving with {} conflicts budget...", budget_solve);
-                    searcher.solver.0.reset_assumptions();
-                    searcher.solver.0.limit("conflicts", budget_solve as i32);
-                    let time_solve = Instant::now();
-                    let res = searcher.solver.solve();
-                    let time_solve = time_solve.elapsed();
-                    match res {
-                        SolveResponse::Interrupted => {
-                            info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
-                            // do nothing
-                        }
-                        SolveResponse::Unsat => {
-                            info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                            _unsat = true;
-                            break;
-                        }
-                        SolveResponse::Sat => {
-                            info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                            let model = (1..=searcher.solver.0.vars())
-                                .map(|i| {
-                                    let v = Var::from_external(i as u32);
-                                    match searcher.solver.0.val(i as i32).unwrap() {
-                                        LitValue::True => Lit::new(v, false),
-                                        LitValue::False => Lit::new(v, true),
-                                    }
-                                })
-                                .collect_vec();
-                            final_model = Some(model);
-                            break;
-                        }
+                info!("Just solving with {} conflicts budget...", budget_solve);
+                searcher.solver.0.reset_assumptions();
+                searcher.solver.0.limit("conflicts", budget_solve as i32);
+                let time_solve = Instant::now();
+                let res = searcher.solver.solve();
+                let time_solve = time_solve.elapsed();
+                match res {
+                    SolveResponse::Interrupted => {
+                        info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                        // do nothing
                     }
-                    searcher.solver.0.internal_backtrack(0);
+                    SolveResponse::Unsat => {
+                        info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                        return Ok(SolveResult::UNSAT);
+                    }
+                    SolveResponse::Sat => {
+                        info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                        let model = (1..=searcher.solver.0.vars())
+                            .map(|i| {
+                                let v = Var::from_external(i as u32);
+                                match searcher.solver.0.val(i as i32).unwrap() {
+                                    LitValue::True => Lit::new(v, false),
+                                    LitValue::False => Lit::new(v, true),
+                                }
+                            })
+                            .collect_vec();
+                        return Ok(SolveResult::SAT(model));
+                    }
                 }
+                searcher.solver.0.internal_backtrack(0);
 
                 unreachable!()
                 // break;
@@ -673,10 +661,7 @@ fn main() -> color_eyre::Result<()> {
                 debug!("Invalid sub-cubes: {}", invalid.len());
                 let mut invalid_cores: HashSet<Vec<Lit>> = HashSet::new();
                 for (i, cube) in invalid.iter().enumerate() {
-                    let (res, _) = searcher
-                        .solver
-                        .0
-                        .propcheck(&cube.iter().map(|lit| lit.to_external()).collect_vec(), false, false, true);
+                    let (res, _) = searcher.solver.propcheck_save_core(&cube);
                     assert!(!res, "Unexpected SAT on cube = {}", DisplaySlice(&cube));
                     let core = searcher
                         .solver
@@ -733,40 +718,36 @@ fn main() -> color_eyre::Result<()> {
             if cubes_product.is_empty() {
                 info!("No more cubes to solve after {} runs", run_number);
 
-                {
-                    info!("Just solving with {} conflicts budget...", budget_solve);
-                    searcher.solver.0.reset_assumptions();
-                    searcher.solver.0.limit("conflicts", budget_solve as i32);
-                    let time_solve = Instant::now();
-                    let res = searcher.solver.solve();
-                    let time_solve = time_solve.elapsed();
-                    match res {
-                        SolveResponse::Interrupted => {
-                            info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
-                            // do nothing
-                        }
-                        SolveResponse::Unsat => {
-                            info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                            _unsat = true;
-                            break;
-                        }
-                        SolveResponse::Sat => {
-                            info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                            let model = (1..=searcher.solver.0.vars())
-                                .map(|i| {
-                                    let v = Var::from_external(i as u32);
-                                    match searcher.solver.0.val(i as i32).unwrap() {
-                                        LitValue::True => Lit::new(v, false),
-                                        LitValue::False => Lit::new(v, true),
-                                    }
-                                })
-                                .collect_vec();
-                            final_model = Some(model);
-                            break;
-                        }
+                info!("Just solving with {} conflicts budget...", budget_solve);
+                searcher.solver.0.reset_assumptions();
+                searcher.solver.0.limit("conflicts", budget_solve as i32);
+                let time_solve = Instant::now();
+                let res = searcher.solver.solve();
+                let time_solve = time_solve.elapsed();
+                match res {
+                    SolveResponse::Interrupted => {
+                        info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                        // do nothing
                     }
-                    searcher.solver.0.internal_backtrack(0);
+                    SolveResponse::Unsat => {
+                        info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                        return Ok(SolveResult::UNSAT);
+                    }
+                    SolveResponse::Sat => {
+                        info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                        let model = (1..=searcher.solver.0.vars())
+                            .map(|i| {
+                                let v = Var::from_external(i as u32);
+                                match searcher.solver.0.val(i as i32).unwrap() {
+                                    LitValue::True => Lit::new(v, false),
+                                    LitValue::False => Lit::new(v, true),
+                                }
+                            })
+                            .collect_vec();
+                        return Ok(SolveResult::SAT(model));
+                    }
                 }
+                searcher.solver.0.internal_backtrack(0);
 
                 unreachable!()
                 // break;
@@ -1057,8 +1038,8 @@ fn main() -> color_eyre::Result<()> {
                 }
             }
 
-            if final_model.is_some() {
-                break;
+            if let Some(model) = final_model {
+                return Ok(SolveResult::SAT(model));
             }
 
             // Populate the set of ALL clauses:
@@ -1192,8 +1173,8 @@ fn main() -> color_eyre::Result<()> {
             });
             pb.finish_and_clear();
 
-            if final_model.is_some() {
-                break;
+            if let Some(model) = final_model {
+                return Ok(SolveResult::SAT(model));
             }
 
             // Populate the set of ALL clauses:
@@ -1254,39 +1235,34 @@ fn main() -> color_eyre::Result<()> {
         if cubes_product.is_empty() {
             info!("No more cubes to solve after {} runs", run_number);
 
-            {
-                info!("Just solving with {} conflicts budget...", budget_solve);
-                searcher.solver.0.reset_assumptions();
-                searcher.solver.0.limit("conflicts", budget_solve as i32);
-                let time_solve = Instant::now();
-                let res = searcher.solver.solve();
-                let time_solve = time_solve.elapsed();
-                match res {
-                    SolveResponse::Interrupted => {
-                        info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
-                        // do nothing
-                    }
-                    SolveResponse::Unsat => {
-                        info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                        _unsat = true;
-                        break;
-                    }
-                    SolveResponse::Sat => {
-                        info!("SAT in {:.1} s", time_solve.as_secs_f64());
-                        let model = (1..=searcher.solver.0.vars())
-                            .map(|i| {
-                                let v = Var::from_external(i as u32);
-                                match searcher.solver.0.val(i as i32).unwrap() {
-                                    LitValue::True => Lit::new(v, false),
-                                    LitValue::False => Lit::new(v, true),
-                                }
-                            })
-                            .collect_vec();
-                        final_model = Some(model);
-                        break;
-                    }
+            info!("Just solving with {} conflicts budget...", budget_solve);
+            searcher.solver.0.reset_assumptions();
+            searcher.solver.0.limit("conflicts", budget_solve as i32);
+            let time_solve = Instant::now();
+            let res = searcher.solver.solve();
+            let time_solve = time_solve.elapsed();
+            match res {
+                SolveResponse::Interrupted => {
+                    info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                    // do nothing
                 }
-                searcher.solver.0.internal_backtrack(0);
+                SolveResponse::Unsat => {
+                    info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                    return Ok(SolveResult::UNSAT);
+                }
+                SolveResponse::Sat => {
+                    info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                    let model = (1..=searcher.solver.0.vars())
+                        .map(|i| {
+                            let v = Var::from_external(i as u32);
+                            match searcher.solver.0.val(i as i32).unwrap() {
+                                LitValue::True => Lit::new(v, false),
+                                LitValue::False => Lit::new(v, true),
+                            }
+                        })
+                        .collect_vec();
+                    return Ok(SolveResult::SAT(model));
+                }
             }
 
             unreachable!()
@@ -1361,32 +1337,11 @@ fn main() -> color_eyre::Result<()> {
             );
         };
 
-        // match &mut searcher.solver {
-        //     SatSolver::SimpleSat(_) => unreachable!(),
-        //     SatSolver::Cadical(solver) => {
-        //         debug!("Retrieving clauses from the solver...");
-        //         let time_all_clauses = Instant::now();
-        //         let mut all_cadical_clauses = HashSet::new();
-        //         for clause in solver.all_clauses_iter() {
-        //             let mut clause = clause.into_iter().map(Lit::from_external).collect_vec();
-        //             clause.sort_by_key(|lit| lit.inner());
-        //             all_cadical_clauses.insert(clause);
-        //         }
-        //         let time_all_clauses = time_all_clauses.elapsed();
-        //         debug!(
-        //             "Retrieved {} clauses from the solver in {:.1}s",
-        //             all_cadical_clauses.len(),
-        //             time_all_clauses.as_secs_f64()
-        //         );
-        //         info!("Solver currently has {} clauses", all_cadical_clauses.len());
-        //     }
-        // };
-
         info!("Just solving with {} conflicts budget...", budget_solve);
         searcher.solver.0.reset_assumptions();
         searcher.solver.0.limit("conflicts", budget_solve as i32);
         let time_solve = Instant::now();
-        let res = searcher.solver.solve();
+        let res = searcher.solver.0.solve().unwrap();
         let time_solve = time_solve.elapsed();
         match res {
             SolveResponse::Interrupted => {
@@ -1395,8 +1350,7 @@ fn main() -> color_eyre::Result<()> {
             }
             SolveResponse::Unsat => {
                 info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
-                _unsat = true;
-                break;
+                return Ok(SolveResult::UNSAT);
             }
             SolveResponse::Sat => {
                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
@@ -1409,79 +1363,57 @@ fn main() -> color_eyre::Result<()> {
                         }
                     })
                     .collect_vec();
-                final_model = Some(model);
-                break;
+                return Ok(SolveResult::SAT(model));
             }
         }
         searcher.solver.0.internal_backtrack(0);
+
         // Update the budget for solving:
         budget_solve = (budget_solve as f64 * args.factor_budget_solve) as u64;
 
         let time_run = time_run.elapsed();
         info!("Done run {} in {:.1}s", run_number, time_run.as_secs_f64());
     }
+}
 
-    let time_runs = time_runs.elapsed();
-    info!("Finished {} runs in {:.1}s", run_number, time_runs.as_secs_f64());
-    info!(
-        "Total derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
-        all_derived_clauses.len(),
-        all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
-        all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
-        all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
-        all_derived_clauses.iter().filter(|c| c.len() > 2).count()
-    );
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,backdoor::derivation=info")).init();
 
-    debug!("Time spent on extracting all clauses: {:.3}s", total_time_extract.as_secs_f64());
+    let start_time = Instant::now();
+    let args = Cli::parse();
+    info!("args = {:?}", args);
 
-    if !args.no_stats {
-        searcher.solver.0.print_statistics();
-        searcher.solver.0.print_resources();
+    if args.add_cores && !args.compute_cores {
+        bail!("Cannot add cores (`--add-cores` flag) without computing them (`--compute-cores` flag)");
     }
 
-    let res = if _unsat {
-        if let Some(path) = &args.path_output {
-            let mut f = create_line_writer(path);
-            writeln!(f, "s UNSATISFIABLE")?;
+    match solve(args)? {
+        SolveResult::UNSAT => {
+            info!("UNSAT in {:.3} s", start_time.elapsed().as_secs_f64());
+            println!("s UNSATISFIABLE");
+            std::process::exit(20);
         }
-        "UNSAT"
-    } else if let Some(model) = &final_model {
-        if let Some(path) = &args.path_output {
-            debug!("Writing SAT model in '{}'...", path.display());
-            let mut f = create_line_writer(path);
-            writeln!(f, "s SATISFIABLE")?;
-            write!(f, "v ")?;
+        SolveResult::SAT(model) => {
+            info!("SAT in {:.3} s", start_time.elapsed().as_secs_f64());
+            println!("s SATISFIABLE");
+            let mut line = "v".to_string();
             for &lit in model.iter() {
-                write!(f, "{} ", lit)?;
-            }
-            writeln!(f, "0")?;
-        }
-        {
-            debug!("Checking model...");
-            for &lit in model.iter() {
-                if searcher.solver.0.val(lit.to_external()).unwrap() != LitValue::True {
-                    log::warn!("lit {} is inconsistent in model", lit);
+                if line.len() + format!(" {}", lit).len() > 100 {
+                    println!("{}", line);
+                    line = "v".to_string();
                 }
+                write!(line, " {}", lit)?;
             }
-            let lits_external = model.iter().map(|lit| lit.to_external()).collect_vec();
-            let (res, _) = searcher.solver.0.propcheck(&lits_external, true, false, true);
-            if res {
-                debug!("Model is correct");
-            } else {
-                log::error!("Model is incorrect");
-                let core = searcher.solver.0.propcheck_get_core();
-                log::error!("core: {:?}", core);
-            }
+            write!(line, " 0")?;
+            println!("{}", line);
+            std::process::exit(10);
         }
-        "SAT"
-    } else {
-        if let Some(path) = &args.path_output {
-            let mut f = create_line_writer(path);
-            writeln!(f, "s INDET")?;
+        SolveResult::UNKNOWN => {
+            info!("INDET in {:.3} s", start_time.elapsed().as_secs_f64());
+            println!("s UNKNOWN");
         }
-        "INDET"
-    };
+    }
 
-    println!("s {} in {:.3} s", res, start_time.elapsed().as_secs_f64());
     Ok(())
 }

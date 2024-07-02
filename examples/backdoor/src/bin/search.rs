@@ -40,6 +40,10 @@ struct Cli {
     #[arg(long, value_name = "INT", default_value_t = 1)]
     num_runs: usize,
 
+    /// Timeout for each EA run.
+    #[arg(long, value_name = "FLOAT")]
+    run_timeout: Option<f64>,
+
     /// Path to a output file with backdoors.
     #[arg(short = 'o', long = "output", value_name = "FILE")]
     path_output: Option<PathBuf>,
@@ -240,6 +244,7 @@ fn main() -> color_eyre::Result<()> {
                 args.backdoor_size,
                 args.num_iters,
                 args.stagnation_limit,
+                args.run_timeout,
                 Some(args.max_rho),
                 args.min_iter,
                 args.pool_limit,

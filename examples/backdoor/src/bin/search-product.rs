@@ -37,6 +37,10 @@ struct Cli {
     #[arg(long, value_name = "INT")]
     num_iters: usize,
 
+    /// Timeout for each EA run.
+    #[arg(long, value_name = "FLOAT")]
+    run_timeout: Option<f64>,
+
     /// Number of conflicts.
     #[arg(long, value_name = "INT", default_value_t = 1000)]
     num_conflicts: usize,
@@ -143,6 +147,7 @@ fn main() -> color_eyre::Result<()> {
                 args.backdoor_size,
                 args.num_iters,
                 args.stagnation_limit,
+                args.run_timeout,
                 Some(((1u64 << args.backdoor_size) - 1) as f64 / (1u64 << args.backdoor_size) as f64),
                 0,
                 args.pool_limit,
