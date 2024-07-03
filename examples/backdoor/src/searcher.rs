@@ -381,7 +381,7 @@ mod tests {
         let n: usize = 10;
         for len in 1..=n {
             let mut rng = StdRng::seed_from_u64(42);
-            let mut pool: Vec<Var> = (0..n).map(|i| Var::from_external(i as u32 + 1)).collect();
+            let pool: Vec<Var> = (0..n).map(|i| Var::from_external(i as u32 + 1)).collect();
 
             let base = Backdoor::new(pool.choose_multiple(&mut rng, len).copied().collect());
             assert_eq!(base.len(), len);
