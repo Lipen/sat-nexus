@@ -11,7 +11,7 @@ static = ["minisat-sys/static"]
 
 [dependencies]
 minisat-sys = { path = "../minisat-sys", optional = true }
-itertools = "0.12"
+itertools = "0.13"
 
 [dev-dependencies]
 color-eyre = "0.6"

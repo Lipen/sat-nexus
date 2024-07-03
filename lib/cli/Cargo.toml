@@ -7,11 +7,11 @@ edition = "2021"
 [dependencies]
 sat-nexus-core = { path = "../core" }
 sat-nexus-wrappers = { path = "../wrappers" }
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
 color-eyre = "0.6"
-itertools = "0.12"
-dimacs = "0.2.0"
-elapsed = "0.1.2"
+itertools = "0.13"
+dimacs = "0.2"
+elapsed = "0.1"
 log = "0.4"
 simplelog = "0.12"
-tynm = "0.1.9"
+tynm = "0.1"

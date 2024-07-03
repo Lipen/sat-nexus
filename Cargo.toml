@@ -39,9 +39,9 @@ cadical = { path = "lib/cadical", features = ["dynamic", "static"] }
 color-eyre = "0.6"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.0.0"
-itertools = "0.12"
+itertools = "0.13"
 ndarray = "0.15"
-criterion = "0.3.5"
+criterion = "0.3"
 once_cell = "1.19"
 
 [[bench]]

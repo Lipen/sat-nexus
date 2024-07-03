@@ -2,7 +2,6 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use clap::AppSettings;
 use clap::Parser;
 use num_format::{Locale, ToFormattedString};
 use serde::Serialize;
@@ -16,61 +15,60 @@ use simple_sat::solver::{SolveResult, Solver};
 const HEADING_RESTART: &str = "RESTART OPTIONS";
 const HEADING_REDUCE_DB: &str = "REDUCE-DB OPTIONS";
 
-#[derive(Parser)]
-#[clap(author, version)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+#[derive(Debug, Parser)]
+#[command(author, version)]
 struct Cli {
     /// Path to input CNF.
-    #[clap(value_name = "PATH")]
+    #[arg(value_name = "PATH")]
     input: PathBuf,
 
     /// Path to output results.
-    #[clap(short, long, value_name = "PATH")]
+    #[arg(short, long, value_name = "PATH")]
     output: Option<PathBuf>,
 
     /// Use Luby restarts.
-    #[clap(help_heading = HEADING_RESTART)]
-    #[clap(long, value_name = "BOOL")]
-    #[clap(action = clap::ArgAction::Set)]
-    // #[clap(default_missing_value = "true")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.is_luby)]
+    #[arg(help_heading = HEADING_RESTART)]
+    #[arg(long, value_name = "BOOL")]
+    #[arg(action = clap::ArgAction::Set)]
+    // #[arg(default_missing_value = "true")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.is_luby)]
     luby: bool,
 
     /// Base number of conflicts between restarts.
-    #[clap(help_heading = HEADING_RESTART)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.restart_init)]
+    #[arg(help_heading = HEADING_RESTART)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.restart_init)]
     restart_init: usize,
 
     /// Increment value for the number of conflicts between restarts.
-    #[clap(help_heading = HEADING_RESTART)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.restart_inc)]
+    #[arg(help_heading = HEADING_RESTART)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.restart_inc)]
     restart_inc: f64,
 
-    #[clap(help_heading = HEADING_REDUCE_DB)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.min_learnts_limit)]
+    #[arg(help_heading = HEADING_REDUCE_DB)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.min_learnts_limit)]
     min_learnts_limit: usize,
 
-    #[clap(help_heading = HEADING_REDUCE_DB)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_factor)]
+    #[arg(help_heading = HEADING_REDUCE_DB)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.learntsize_factor)]
     learntsize_factor: f64,
 
-    #[clap(help_heading = HEADING_REDUCE_DB)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_inc)]
+    #[arg(help_heading = HEADING_REDUCE_DB)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.learntsize_inc)]
     learntsize_inc: f64,
 
-    #[clap(help_heading = HEADING_REDUCE_DB)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_adjust_start)]
+    #[arg(help_heading = HEADING_REDUCE_DB)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.learntsize_adjust_start)]
     learntsize_adjust_start: f64,
 
-    #[clap(help_heading = HEADING_REDUCE_DB)]
-    #[clap(long, value_name = "NUM")]
-    #[clap(default_value_t = DEFAULT_OPTIONS.learntsize_adjust_inc)]
+    #[arg(help_heading = HEADING_REDUCE_DB)]
+    #[arg(long, value_name = "NUM")]
+    #[arg(default_value_t = DEFAULT_OPTIONS.learntsize_adjust_inc)]
     learntsize_adjust_inc: f64,
 }
 

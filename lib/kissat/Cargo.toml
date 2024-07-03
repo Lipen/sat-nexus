@@ -8,7 +8,7 @@ edition = "2021"
 kissat-sys = { path = "../kissat-sys", features = ["dynamic"] }
 ffi-utils = { path = "../ffi-utils" }
 snafu = "0.7"
-itertools = "0.12"
+itertools = "0.13"
 
 [dev-dependencies]
 color-eyre = "0.6"

@@ -8,9 +8,9 @@ use itertools::Itertools;
 use serde::Serialize;
 use serde_with::serde_as;
 use serde_with::DurationSecondsWithFrac;
-use tabled::{Style, Table, Tabled};
-
 use simple_sat::solver::{SolveResult, Solver};
+use tabled::settings::Style;
+use tabled::{Table, Tabled};
 
 #[serde_as]
 #[derive(Debug, Serialize)]
@@ -124,7 +124,8 @@ fn main() -> color_eyre::Result<()> {
         num_restarts: res.num_restarts,
         num_reduces: res.num_reduces,
     });
-    let table = Table::new(data).with(Style::modern());
+    let mut table = Table::new(data);
+    table.with(Style::modern());
     println!("{}", table);
 
     println!("All done in {:?}", time_start.elapsed());

@@ -15,7 +15,7 @@ once_cell = { version = "1.19", optional = true }
 ffi-utils = { path = "../ffi-utils" }
 
 [build-dependencies]
-build_script = "0.2.0"
+build_script = "0.2"
 bindgen = "0.69"
 cc = { version = "1.0", features = ["parallel"], optional = true }
 glob = { version = "0.3", optional = true }

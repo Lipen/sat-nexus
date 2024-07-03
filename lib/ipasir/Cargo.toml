@@ -8,7 +8,7 @@ edition = "2021"
 ipasir-sys = { path = "../ipasir-sys" }
 once_cell = "1.19"
 snafu = "0.7"
-itertools = "0.12"
+itertools = "0.13"
 
 [dev-dependencies]
 color-eyre = "0.6"
