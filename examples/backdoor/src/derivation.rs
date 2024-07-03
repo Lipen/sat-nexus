@@ -1,12 +1,17 @@
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
+pub use _pyeda::*;
 
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
 
-pub use _pyeda::*;
+use bdd_rs::bdd::Bdd;
+use bdd_rs::reference::Ref;
 use simple_sat::lit::Lit;
 use simple_sat::utils::DisplaySlice;
+use simple_sat::var::Var;
 
 #[cfg(feature = "pyeda")]
 mod _pyeda {
@@ -301,5 +306,64 @@ pub fn derive_clauses(hard: &[Vec<Lit>], derive_ternary: bool) -> Vec<Vec<Lit>> 
     // Sort all clauses:
     derived_clauses.sort_by_key(|clause| (clause.len(), clause.iter().map(|lit| lit.inner()).collect_vec()));
 
+    derived_clauses
+}
+
+pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
+    let mut derived_clauses = Vec::new();
+    let n = vars.len();
+
+    for i in 0..n {
+        let a = vars[i];
+        for av in [false, true] {
+            let lit = Lit::new(a, !av);
+            let l = bdd.mk_var(a.to_external());
+            let l = if av { l } else { -l };
+            if bdd.is_implies(bdd_hard, l) {
+                let clause = vec![lit];
+                log::info!("unit {}", DisplaySlice(&clause));
+                derived_clauses.push(clause);
+            }
+        }
+    }
+
+    let mut total_time_stuff = Duration::ZERO;
+    for (i, j) in (0..n).tuple_combinations() {
+        let time_stuff = Instant::now();
+        let a = vars[i];
+        if derived_clauses.contains(&vec![Lit::new(a, false)]) || derived_clauses.contains(&vec![Lit::new(a, true)]) {
+            continue;
+        }
+        let b = vars[j];
+        if derived_clauses.contains(&vec![Lit::new(b, false)]) || derived_clauses.contains(&vec![Lit::new(b, true)]) {
+            continue;
+        }
+        let time_stuff = time_stuff.elapsed();
+        total_time_stuff += time_stuff;
+        for av in [false, true] {
+            for bv in [false, true] {
+                let alit = Lit::new(a, !av);
+                let blit = Lit::new(b, !bv);
+                let time_check = Instant::now();
+                let c = bdd.clause([alit.to_external(), blit.to_external()]);
+                let res = bdd.is_implies(bdd_hard, c);
+                let time_check = time_check.elapsed();
+                debug!(
+                    "implies({}, {}={}) = {}, took {:.3}s",
+                    bdd_hard,
+                    DisplaySlice(&[-alit, -blit]),
+                    c,
+                    res,
+                    time_check.as_secs_f64()
+                );
+                if res {
+                    let clause = vec![alit, blit];
+                    log::info!("derived clause {} in {:.3}s", DisplaySlice(&clause), time_check.as_secs_f64());
+                    derived_clauses.push(clause);
+                }
+            }
+        }
+    }
+    log::info!("total_time_stuff = {:?}", total_time_stuff);
     derived_clauses
 }

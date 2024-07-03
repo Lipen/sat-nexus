@@ -21,6 +21,7 @@ simple-sat = { path = "../../lib/simple-sat" }
 cadical-sys = { path = "../../lib/cadical-sys", features = ["static"] }
 cadical = { path = "../../lib/cadical", features = ["static"] }
 pyeda = { path = "../pyeda", optional = true }
+bdd-rs = { path = "../../../bdd-rs" }
 
 clap = { version = "4.4", features = ["derive"] }
 color-eyre = "0.6"
