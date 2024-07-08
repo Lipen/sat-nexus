@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-pub use _pyeda::*;
-
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
@@ -12,6 +10,8 @@ use bdd_rs::reference::Ref;
 use simple_sat::lit::Lit;
 use simple_sat::utils::DisplaySlice;
 use simple_sat::var::Var;
+
+pub use self::_pyeda::*;
 
 #[cfg(feature = "pyeda")]
 mod _pyeda {
