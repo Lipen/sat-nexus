@@ -18,8 +18,8 @@ use backdoor::derivation::{derive_clauses, derive_via_bdd};
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
 use backdoor::utils::{
-    clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks, propcheck_all_trie_via_internal,
-    write_clause,
+    bdd_tseytin_encode, clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks,
+    propcheck_all_trie_via_internal, write_clause,
 };
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
@@ -404,7 +404,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                         new_clauses.iter().filter(|c| c.len() == 1).count(),
                         new_clauses.iter().filter(|c| c.len() == 2).count(),
                         new_clauses.iter().filter(|c| c.len() == 3).count(),
-                        new_clauses.iter().filter(|c| c.len() > 2).count()
+                        new_clauses.iter().filter(|c| c.len() > 3).count()
                     );
                     debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
                 }
@@ -416,9 +416,47 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     bdd.size(bdd_cubes_product)
                 );
                 info!("bdd = {:?}", bdd);
-                info!("GC...");
-                bdd.collect_garbage(&[bdd_cubes_product]);
-                info!("bdd = {:?}", bdd);
+                // info!("GC...");
+                // bdd.collect_garbage(&[bdd_cubes_product]);
+                // info!("bdd = {:?}", bdd);
+
+                {
+                    let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_cubes_product, &searcher.solver.0);
+                    let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
+                    for mut lemma in bdd_clauses.iter().cloned() {
+                        lemma.sort_by_key(|lit| lit.inner());
+                        if all_clauses.insert(lemma.clone()) {
+                            if let Some(f) = &mut file_derived_clauses {
+                                write_clause(f, &lemma)?;
+                            }
+                            new_clauses.push(lemma.clone());
+                            all_derived_clauses.push(lemma);
+                        }
+                    }
+                    info!(
+                        "Tseytin-encoded {} new clauses ({} units, {} binary, {} ternary, {} other)",
+                        new_clauses.len(),
+                        new_clauses.iter().filter(|c| c.len() == 1).count(),
+                        new_clauses.iter().filter(|c| c.len() == 2).count(),
+                        new_clauses.iter().filter(|c| c.len() == 3).count(),
+                        new_clauses.iter().filter(|c| c.len() > 3).count()
+                    );
+                    // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+
+                    debug!("Adding {} new clauses to the solver...", new_clauses.len());
+                    for lemma in new_clauses {
+                        searcher.solver.add_clause(&lemma);
+                    }
+
+                    debug!(
+                        "So far derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
+                        all_derived_clauses.len(),
+                        all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
+                        all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
+                        all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
+                        all_derived_clauses.iter().filter(|c| c.len() > 3).count()
+                    );
+                }
             }
 
             // BDD-derivation for cubes product
@@ -621,7 +659,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     derived_clauses.iter().filter(|c| c.len() == 1).count(),
                     derived_clauses.iter().filter(|c| c.len() == 2).count(),
                     derived_clauses.iter().filter(|c| c.len() == 3).count(),
-                    derived_clauses.iter().filter(|c| c.len() > 2).count(),
+                    derived_clauses.iter().filter(|c| c.len() > 3).count(),
                     time_derive.as_secs_f64()
                 );
                 // debug!("[{}]", derived_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
@@ -643,7 +681,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     new_clauses.iter().filter(|c| c.len() == 1).count(),
                     new_clauses.iter().filter(|c| c.len() == 2).count(),
                     new_clauses.iter().filter(|c| c.len() == 3).count(),
-                    new_clauses.iter().filter(|c| c.len() > 2).count()
+                    new_clauses.iter().filter(|c| c.len() > 3).count()
                 );
                 debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
@@ -865,7 +903,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     derived_clauses.iter().filter(|c| c.len() == 1).count(),
                     derived_clauses.iter().filter(|c| c.len() == 2).count(),
                     derived_clauses.iter().filter(|c| c.len() == 3).count(),
-                    derived_clauses.iter().filter(|c| c.len() > 2).count(),
+                    derived_clauses.iter().filter(|c| c.len() > 3).count(),
                     cubes_product.len(),
                     time_derive.as_secs_f64()
                 );
@@ -888,7 +926,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     new_clauses.iter().filter(|c| c.len() == 1).count(),
                     new_clauses.iter().filter(|c| c.len() == 2).count(),
                     new_clauses.iter().filter(|c| c.len() == 3).count(),
-                    new_clauses.iter().filter(|c| c.len() > 2).count()
+                    new_clauses.iter().filter(|c| c.len() > 3).count()
                 );
                 debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
@@ -903,7 +941,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
                     all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
                     all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
-                    all_derived_clauses.iter().filter(|c| c.len() > 2).count()
+                    all_derived_clauses.iter().filter(|c| c.len() > 3).count()
                 );
             }
 
@@ -1381,7 +1419,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 derived_clauses.iter().filter(|c| c.len() == 2).count(),
                 derived_clauses.iter().filter(|c| c.len() == 3).count(),
-                derived_clauses.iter().filter(|c| c.len() > 2).count(),
+                derived_clauses.iter().filter(|c| c.len() > 3).count(),
                 cubes_product.len(),
                 time_derive.as_secs_f64()
             );
@@ -1404,7 +1442,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 new_clauses.iter().filter(|c| c.len() == 1).count(),
                 new_clauses.iter().filter(|c| c.len() == 2).count(),
                 new_clauses.iter().filter(|c| c.len() == 3).count(),
-                new_clauses.iter().filter(|c| c.len() > 2).count()
+                new_clauses.iter().filter(|c| c.len() > 3).count()
             );
             debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
 
@@ -1419,7 +1457,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
                 all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
                 all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
-                all_derived_clauses.iter().filter(|c| c.len() > 2).count()
+                all_derived_clauses.iter().filter(|c| c.len() > 3).count()
             );
         };
 

@@ -344,18 +344,24 @@ pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
             for bv in [false, true] {
                 let alit = Lit::new(a, !av);
                 let blit = Lit::new(b, !bv);
+                // let c = bdd.clause([alit.to_external(), blit.to_external()]);
+                // let res = bdd.is_implies(bdd_hard, c);
+                let c = &[-alit.to_external(), blit.to_external()];
                 let time_check = Instant::now();
-                let c = bdd.clause([alit.to_external(), blit.to_external()]);
-                let res = bdd.is_implies(bdd_hard, c);
+                let r = bdd.cofactor_cube(bdd_hard, c);
+                let res = bdd.is_zero(r);
                 let time_check = time_check.elapsed();
-                debug!(
-                    "implies({}, {}={}) = {}, took {:.3}s",
-                    bdd_hard,
-                    DisplaySlice(&[-alit, -blit]),
-                    c,
-                    res,
-                    time_check.as_secs_f64()
-                );
+                if time_check.as_secs_f64() > 0.1 {
+                    log::info!(
+                        "cofactor_cube({} of size {}, {}) = {} of size {}, took {:.3}s",
+                        bdd_hard,
+                        bdd.size(bdd_hard),
+                        DisplaySlice(c),
+                        r,
+                        bdd.size(r),
+                        time_check.as_secs_f64()
+                    );
+                }
                 if res {
                     let clause = vec![alit, blit];
                     log::info!("derived clause {} in {:.3}s", DisplaySlice(&clause), time_check.as_secs_f64());
