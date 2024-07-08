@@ -11,6 +11,12 @@ impl Lit {
     pub const fn new(var: Var, negated: bool) -> Self {
         Lit(var.inner() << 1 | negated as u32)
     }
+    pub const fn positive(var: Var) -> Self {
+        Self::new(var, false)
+    }
+    pub const fn negative(var: Var) -> Self {
+        Self::new(var, true)
+    }
 
     pub const fn inner(self) -> u32 {
         self.0
@@ -25,26 +31,21 @@ impl Lit {
         (self.0 & 1) != 0
     }
 
-    pub const fn sign(self) -> i32 {
+    pub const fn to_external(self) -> i32 {
+        let x = self.var().to_external() as i32;
         if self.negated() {
-            -1
+            -x
         } else {
-            1
+            x
         }
     }
 
-    pub const fn index(self) -> usize {
-        self.0 as usize
-    }
-
-    pub fn to_external(self) -> i32 {
-        self.sign() * (self.var().to_external() as i32)
-    }
-
-    pub fn from_external(lit: i32) -> Self {
+    //noinspection RsAssertEqual (const_assert)
+    pub const fn from_external(lit: i32) -> Self {
+        assert!(lit != 0, "External literal cannot be zero");
         let var = Var::from_external(lit.unsigned_abs());
-        let sign = lit < 0;
-        Self::new(var, sign)
+        let negated = lit < 0;
+        Self::new(var, negated)
     }
 }
 

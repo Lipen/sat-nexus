@@ -4,9 +4,10 @@ use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
 
-pub use _pyeda::*;
 use simple_sat::lit::Lit;
 use simple_sat::utils::DisplaySlice;
+
+pub use self::_pyeda::*;
 
 #[cfg(feature = "pyeda")]
 mod _pyeda {
