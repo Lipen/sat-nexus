@@ -185,7 +185,7 @@ impl Solver {
 
     /// Number of variables.
     pub fn num_vars(&self) -> usize {
-        self.next_var as _
+        self.next_var as usize
     }
     /// Number of free variables.
     pub fn num_free_vars(&self) -> usize {
@@ -334,7 +334,7 @@ impl Solver {
 
         // Auto-create missing variables.
         let max_var = lits.iter().map(|&lit| lit.var()).max().unwrap();
-        for _ in self.num_vars()..=max_var.index() {
+        for _ in (self.num_vars() + 1)..=max_var.to_external() as _ {
             self.new_var();
         }
 
@@ -1597,9 +1597,11 @@ mod tests {
     fn test_auto_create_variables() {
         let mut solver = Solver::default();
 
+        assert_eq!(solver.num_vars(), 0);
         solver.add_clause_external([-1, 2]);
         solver.add_clause_external([1, 2]);
         solver.add_clause_external([-1, -2]);
+        assert_eq!(solver.num_vars(), 2);
 
         let res = solver.solve();
         assert_eq!(res, SolveResult::Sat);

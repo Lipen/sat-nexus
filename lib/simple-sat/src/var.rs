@@ -17,12 +17,13 @@ impl Var {
         self.0 as usize
     }
 
-    pub fn to_external(self) -> u32 {
+    pub const fn to_external(self) -> u32 {
         self.0 + 1
     }
 
-    pub fn from_external(var: u32) -> Self {
-        assert_ne!(var, 0);
+    //noinspection RsAssertEqual (const_assert)
+    pub const fn from_external(var: u32) -> Self {
+        assert!(var != 0, "External variable cannot be zero");
         Self::new(var - 1)
     }
 }

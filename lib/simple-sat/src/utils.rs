@@ -108,14 +108,15 @@ where
     }
 }
 
-pub struct DisplayIter<I>(pub I);
+pub fn display_slice<T: Display>(slice: impl AsRef<[T]>) -> String {
+    format!("[{}]", join(slice.as_ref(), ", "))
+}
 
-impl<I> Display for DisplayIter<I>
+pub fn display_iter_slices<'a, T, I>(iter: I) -> String
 where
-    I: IntoIterator + Copy,
-    I::Item: Display,
+    T: Display + 'a,
+    I: IntoIterator,
+    I::Item: AsRef<[T]>,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}]", join(self.0, ", "))
-    }
+    format!("[{}]", iter.into_iter().map(|x| display_slice(x)).join(", "))
 }
