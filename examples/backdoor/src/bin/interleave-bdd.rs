@@ -18,14 +18,14 @@ use backdoor::derivation::{derive_clauses, derive_via_bdd};
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
 use backdoor::utils::{
-    bdd_tseytin_encode, clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks,
-    propcheck_all_trie_via_internal, write_clause,
+    clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks, propcheck_all_trie_via_internal,
+    write_clause,
 };
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::trie::Trie;
-use simple_sat::utils::{parse_dimacs, DisplaySlice};
+use simple_sat::utils::{display_slice, parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
 
 // Run this example:
@@ -372,42 +372,45 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 let bdd_hard = bdd.apply_or_many(bdd_cubes.iter().copied());
                 info!("bdd_hard of size {} = {}", bdd.size(bdd_hard), bdd_hard);
 
-                let time_derive_bdd = Instant::now();
-                let vars = hard[0].iter().map(|lit| lit.var()).collect_vec();
-                let derived_via_bdd = derive_via_bdd(&bdd, bdd_hard, &vars);
-                let time_derive_bdd = time_derive_bdd.elapsed();
-                info!(
-                    "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for backdoor in {:.1}s",
-                    derived_via_bdd.len(),
-                    derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
-                    derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
-                    derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
-                    derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
-                    time_derive_bdd.as_secs_f64(),
-                );
-
-                {
-                    let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
-                    for mut lemma in derived_via_bdd.iter().cloned() {
-                        lemma.sort_by_key(|lit| lit.inner());
-                        if all_clauses.insert(lemma.clone()) {
-                            if let Some(f) = &mut file_derived_clauses {
-                                write_clause(f, &lemma)?;
-                            }
-                            new_clauses.push(lemma.clone());
-                            all_derived_clauses.push(lemma);
-                        }
-                    }
-                    info!(
-                        "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
-                        new_clauses.len(),
-                        new_clauses.iter().filter(|c| c.len() == 1).count(),
-                        new_clauses.iter().filter(|c| c.len() == 2).count(),
-                        new_clauses.iter().filter(|c| c.len() == 3).count(),
-                        new_clauses.iter().filter(|c| c.len() > 3).count()
-                    );
-                    debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-                }
+                // BDD-derivation for backdoor:
+                // {
+                // let time_derive_bdd = Instant::now();
+                // let vars = hard[0].iter().map(|lit| lit.var()).collect_vec();
+                // let derived_via_bdd = derive_via_bdd(&bdd, bdd_hard, &vars);
+                // let time_derive_bdd = time_derive_bdd.elapsed();
+                // info!(
+                //     "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for backdoor in {:.1}s",
+                //     derived_via_bdd.len(),
+                //     derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
+                //     derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
+                //     derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
+                //     derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
+                //     time_derive_bdd.as_secs_f64(),
+                // );
+                //
+                // {
+                //     let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
+                //     for mut lemma in derived_via_bdd.iter().cloned() {
+                //         lemma.sort_by_key(|lit| lit.inner());
+                //         if all_clauses.insert(lemma.clone()) {
+                //             if let Some(f) = &mut file_derived_clauses {
+                //                 write_clause(f, &lemma)?;
+                //             }
+                //             new_clauses.push(lemma.clone());
+                //             all_derived_clauses.push(lemma);
+                //         }
+                //     }
+                //     info!(
+                //         "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
+                //         new_clauses.len(),
+                //         new_clauses.iter().filter(|c| c.len() == 1).count(),
+                //         new_clauses.iter().filter(|c| c.len() == 2).count(),
+                //         new_clauses.iter().filter(|c| c.len() == 3).count(),
+                //         new_clauses.iter().filter(|c| c.len() > 3).count()
+                //     );
+                //     debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+                // }
+                // }
 
                 bdd_cubes_product = bdd.apply_and(bdd_cubes_product, bdd_hard);
                 info!(
@@ -416,47 +419,9 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     bdd.size(bdd_cubes_product)
                 );
                 info!("bdd = {:?}", bdd);
-                info!("GC...");
-                bdd.collect_garbage(&[bdd_cubes_product]);
-                info!("bdd = {:?}", bdd);
-
-                {
-                    let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_cubes_product, &searcher.solver.0);
-                    let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
-                    for mut lemma in bdd_clauses.iter().cloned() {
-                        lemma.sort_by_key(|lit| lit.inner());
-                        if all_clauses.insert(lemma.clone()) {
-                            if let Some(f) = &mut file_derived_clauses {
-                                write_clause(f, &lemma)?;
-                            }
-                            new_clauses.push(lemma.clone());
-                            all_derived_clauses.push(lemma);
-                        }
-                    }
-                    info!(
-                        "Tseytin-encoded {} new clauses ({} units, {} binary, {} ternary, {} other)",
-                        new_clauses.len(),
-                        new_clauses.iter().filter(|c| c.len() == 1).count(),
-                        new_clauses.iter().filter(|c| c.len() == 2).count(),
-                        new_clauses.iter().filter(|c| c.len() == 3).count(),
-                        new_clauses.iter().filter(|c| c.len() > 3).count()
-                    );
-                    // debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-
-                    debug!("Adding {} new clauses to the solver...", new_clauses.len());
-                    for lemma in new_clauses {
-                        searcher.solver.add_clause(&lemma);
-                    }
-
-                    debug!(
-                        "So far derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
-                        all_derived_clauses.len(),
-                        all_derived_clauses.iter().filter(|c| c.len() == 1).count(),
-                        all_derived_clauses.iter().filter(|c| c.len() == 2).count(),
-                        all_derived_clauses.iter().filter(|c| c.len() == 3).count(),
-                        all_derived_clauses.iter().filter(|c| c.len() > 3).count()
-                    );
-                }
+                // info!("GC...");
+                // bdd.collect_garbage(&[bdd_cubes_product]);
+                // info!("bdd = {:?}", bdd);
             }
 
             // BDD-derivation for cubes product
@@ -481,6 +446,30 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     time_derive_bdd.as_secs_f64(),
                 );
             }
+            // {
+            //     let time_derive_bdd = Instant::now();
+            //     let variables = {
+            //         let mut s = HashSet::new();
+            //         s.extend(cubes_product[0].iter().map(|lit| lit.var()));
+            //         s.extend(backdoor.iter().filter(|&&var| searcher.solver.is_active(var)));
+            //         s.into_iter().sorted().collect_vec()
+            //     };
+            //     info!("Deriving via BDD for cubes product over {} variables...", variables.len());
+            //     info!("variables: {}", display_slice(&variables));
+            //     let micro_bdd = Bdd::new(14);
+            //     let bdd_cubes_product2 = bdd.rebase(bdd_cubes_product, &micro_bdd);
+            //     let derived_via_bdd = derive_via_bdd(&micro_bdd, bdd_cubes_product2, &variables);
+            //     let time_derive_bdd = time_derive_bdd.elapsed();
+            //     info!(
+            //         "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for cubes product in {:.1}s",
+            //         derived_via_bdd.len(),
+            //         derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
+            //         derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
+            //         derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
+            //         derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
+            //         time_derive_bdd.as_secs_f64(),
+            //     );
+            // }
 
             // Populate the set of ALL clauses:
             debug!("Retrieving clauses from the solver...");

@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::LineWriter;
 use std::time::{Duration, Instant};
 
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
@@ -8,7 +10,7 @@ use log::{debug, trace};
 use bdd_rs::bdd::Bdd;
 use bdd_rs::reference::Ref;
 use simple_sat::lit::Lit;
-use simple_sat::utils::DisplaySlice;
+use simple_sat::utils::{display_slice, DisplaySlice};
 use simple_sat::var::Var;
 
 pub use self::_pyeda::*;
@@ -344,11 +346,25 @@ pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
             for bv in [false, true] {
                 let alit = Lit::new(a, !av);
                 let blit = Lit::new(b, !bv);
+
+                // let time_check = Instant::now();
                 // let c = bdd.clause([alit.to_external(), blit.to_external()]);
                 // let res = bdd.is_implies(bdd_hard, c);
-                let c = &[-alit.to_external(), blit.to_external()];
+                // let time_check = time_check.elapsed();
+                // if time_check.as_secs_f64() > 0.1 {
+                //     log::info!(
+                //         "is_implies(bdd_hard={} of size {}, {}) = {}, took {:.3}s",
+                //         bdd_hard,
+                //         bdd.size(bdd_hard),
+                //         DisplaySlice(&[alit, blit]),
+                //         res,
+                //         time_check.as_secs_f64()
+                //     );
+                // }
+
                 let time_check = Instant::now();
-                let r = bdd.cofactor_cube(bdd_hard, c);
+                let c = [-alit.to_external(), -blit.to_external()];
+                let r = bdd.cofactor_cube(bdd_hard, &c);
                 let res = bdd.is_zero(r);
                 let time_check = time_check.elapsed();
                 if time_check.as_secs_f64() > 0.1 {
@@ -356,17 +372,37 @@ pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
                         "cofactor_cube({} of size {}, {}) = {} of size {}, took {:.3}s",
                         bdd_hard,
                         bdd.size(bdd_hard),
-                        DisplaySlice(c),
+                        display_slice(&c),
                         r,
                         bdd.size(r),
                         time_check.as_secs_f64()
                     );
                 }
+                if time_check.as_secs_f64() > 1.0 {
+                    use std::io::Write as _;
+                    let f = File::create("bdd.txt").unwrap();
+                    let mut f = LineWriter::new(f);
+                    for index in bdd.descendants([bdd_hard]) {
+                        if index != bdd.one.index() {
+                            let var = bdd.variable(index);
+                            let low = bdd.low(index);
+                            let high = bdd.high(index);
+                            writeln!(f, "{}: {} {} {}", index, var, low, high).unwrap();
+                        }
+                    }
+                    std::process::exit(42);
+                }
+
                 if res {
                     let clause = vec![alit, blit];
-                    log::info!("derived clause {} in {:.3}s", DisplaySlice(&clause), time_check.as_secs_f64());
+                    log::info!("derived clause {} in {:.3}s", display_slice(&clause), time_check.as_secs_f64());
                     derived_clauses.push(clause);
                 }
+
+                // log::info!("bdd before GC = {:?}", bdd);
+                // log::info!("GC...");
+                // bdd.collect_garbage(&[bdd_hard]);
+                // log::info!("bdd after GC = {:?}", bdd);
             }
         }
     }
