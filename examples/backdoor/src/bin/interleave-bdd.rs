@@ -294,6 +294,31 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     let bdd = Bdd::new(25);
     let mut bdd_cubes_product = bdd.one;
 
+    let mut last_free_var = 1;
+    let mut evar2bdd_map: HashMap<u32, i32> = HashMap::new();
+    let mut elit_to_bddvar = |lit: i32, map: &mut HashMap<u32, i32>| -> i32 {
+        assert_ne!(lit, 0);
+        let var = lit.unsigned_abs();
+        if let Some(&bdd_var) = map.get(&var) {
+            if lit < 0 {
+                -bdd_var
+            } else {
+                bdd_var
+            }
+        } else {
+            let bdd_var = last_free_var;
+            last_free_var += 1;
+            map.insert(var, bdd_var);
+            if lit < 0 {
+                -bdd_var
+            } else {
+                bdd_var
+            }
+        }
+    };
+
+    let mut previous_cubes_products: Vec<Vec<Vec<Lit>>> = Vec::new();
+
     let mut run_number = 0;
     loop {
         run_number += 1;
@@ -305,6 +330,118 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             .into_iter()
             .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
+
+        info!("current cubes_product size: {}", cubes_product.len());
+        info!(
+            "previous cubes_product sizes: {}",
+            display_slice(&previous_cubes_products.iter().map(|c| c.len()).collect_vec())
+        );
+
+        // BDD-related stuff:
+        {
+            let mut bdd_cubes = Vec::new();
+            for cube in cubes_product.iter() {
+                // let bdd_cube = bdd.cube(cube.iter().map(|lit| lit.to_external()));
+                let bdd_cube = bdd.cube(cube.iter().map(|lit| elit_to_bddvar(lit.to_external(), &mut evar2bdd_map)));
+                // debug!("bdd_cube of size {} = {}", bdd.size(bdd_cube), bdd_cube);
+                bdd_cubes.push(bdd_cube);
+            }
+            let bdd_hard = bdd.apply_or_many(bdd_cubes.iter().copied());
+            info!("bdd_hard of size {} = {}", bdd.size(bdd_hard), bdd_hard);
+
+            // BDD-derivation for backdoor:
+            // {
+            // let time_derive_bdd = Instant::now();
+            // let vars = hard[0].iter().map(|lit| lit.var()).collect_vec();
+            // let derived_via_bdd = derive_via_bdd(&bdd, bdd_hard, &vars);
+            // let time_derive_bdd = time_derive_bdd.elapsed();
+            // info!(
+            //     "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for backdoor in {:.1}s",
+            //     derived_via_bdd.len(),
+            //     derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
+            //     derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
+            //     derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
+            //     derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
+            //     time_derive_bdd.as_secs_f64(),
+            // );
+            //
+            // {
+            //     let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
+            //     for mut lemma in derived_via_bdd.iter().cloned() {
+            //         lemma.sort_by_key(|lit| lit.inner());
+            //         if all_clauses.insert(lemma.clone()) {
+            //             if let Some(f) = &mut file_derived_clauses {
+            //                 write_clause(f, &lemma)?;
+            //             }
+            //             new_clauses.push(lemma.clone());
+            //             all_derived_clauses.push(lemma);
+            //         }
+            //     }
+            //     info!(
+            //         "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
+            //         new_clauses.len(),
+            //         new_clauses.iter().filter(|c| c.len() == 1).count(),
+            //         new_clauses.iter().filter(|c| c.len() == 2).count(),
+            //         new_clauses.iter().filter(|c| c.len() == 3).count(),
+            //         new_clauses.iter().filter(|c| c.len() > 3).count()
+            //     );
+            //     debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
+            // }
+            // }
+
+            bdd_cubes_product = bdd.apply_and(bdd_cubes_product, bdd_hard);
+            info!(
+                "new bdd_cubes_product = {} of size {}",
+                bdd_cubes_product,
+                bdd.size(bdd_cubes_product)
+            );
+            info!("bdd = {:?}", bdd);
+            // info!("GC...");
+            // bdd.collect_garbage(&[bdd_cubes_product]);
+            // info!("bdd = {:?}", bdd);
+        }
+
+        // BDD-derivation for cubes product
+        {
+            let time_derive_bdd = Instant::now();
+            let variables = evar2bdd_map.keys().map(|&x| Var::from_external(x)).collect_vec();
+            info!("Deriving via BDD for cubes product over {} variables...", variables.len());
+            let derived_via_bdd = derive_via_bdd(&bdd, bdd_cubes_product, &variables);
+            let time_derive_bdd = time_derive_bdd.elapsed();
+            info!(
+                "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for cubes product in {:.1}s",
+                derived_via_bdd.len(),
+                derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
+                derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
+                derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
+                derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
+                time_derive_bdd.as_secs_f64(),
+            );
+        }
+        // {
+        //     let time_derive_bdd = Instant::now();
+        //     let variables = {
+        //         let mut s = HashSet::new();
+        //         s.extend(cubes_product[0].iter().map(|lit| lit.var()));
+        //         s.extend(backdoor.iter().filter(|&&var| searcher.solver.is_active(var)));
+        //         s.into_iter().sorted().collect_vec()
+        //     };
+        //     info!("Deriving via BDD for cubes product over {} variables...", variables.len());
+        //     info!("variables: {}", display_slice(&variables));
+        //     let micro_bdd = Bdd::new(14);
+        //     let bdd_cubes_product2 = bdd.rebase(bdd_cubes_product, &micro_bdd);
+        //     let derived_via_bdd = derive_via_bdd(&micro_bdd, bdd_cubes_product2, &variables);
+        //     let time_derive_bdd = time_derive_bdd.elapsed();
+        //     info!(
+        //         "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for cubes product in {:.1}s",
+        //         derived_via_bdd.len(),
+        //         derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
+        //         derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
+        //         derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
+        //         derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
+        //         time_derive_bdd.as_secs_f64(),
+        //     );
+        // }
 
         // Reset banned used variables:
         if args.reset_used_vars && cubes_product == vec![vec![]] {
@@ -360,116 +497,6 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 unreachable!();
                 // break;
             }
-
-            // BDD-related stuff:
-            {
-                let mut bdd_cubes = Vec::new();
-                for cube in hard.iter() {
-                    let bdd_cube = bdd.cube(cube.iter().map(|lit| lit.to_external()));
-                    debug!("bdd_cube of size {} = {}", bdd.size(bdd_cube), bdd_cube);
-                    bdd_cubes.push(bdd_cube);
-                }
-                let bdd_hard = bdd.apply_or_many(bdd_cubes.iter().copied());
-                info!("bdd_hard of size {} = {}", bdd.size(bdd_hard), bdd_hard);
-
-                // BDD-derivation for backdoor:
-                // {
-                // let time_derive_bdd = Instant::now();
-                // let vars = hard[0].iter().map(|lit| lit.var()).collect_vec();
-                // let derived_via_bdd = derive_via_bdd(&bdd, bdd_hard, &vars);
-                // let time_derive_bdd = time_derive_bdd.elapsed();
-                // info!(
-                //     "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for backdoor in {:.1}s",
-                //     derived_via_bdd.len(),
-                //     derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
-                //     derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
-                //     derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
-                //     derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
-                //     time_derive_bdd.as_secs_f64(),
-                // );
-                //
-                // {
-                //     let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
-                //     for mut lemma in derived_via_bdd.iter().cloned() {
-                //         lemma.sort_by_key(|lit| lit.inner());
-                //         if all_clauses.insert(lemma.clone()) {
-                //             if let Some(f) = &mut file_derived_clauses {
-                //                 write_clause(f, &lemma)?;
-                //             }
-                //             new_clauses.push(lemma.clone());
-                //             all_derived_clauses.push(lemma);
-                //         }
-                //     }
-                //     info!(
-                //         "Derived {} new clauses ({} units, {} binary, {} ternary, {} other)",
-                //         new_clauses.len(),
-                //         new_clauses.iter().filter(|c| c.len() == 1).count(),
-                //         new_clauses.iter().filter(|c| c.len() == 2).count(),
-                //         new_clauses.iter().filter(|c| c.len() == 3).count(),
-                //         new_clauses.iter().filter(|c| c.len() > 3).count()
-                //     );
-                //     debug!("[{}]", new_clauses.iter().map(|c| DisplaySlice(c)).join(", "));
-                // }
-                // }
-
-                bdd_cubes_product = bdd.apply_and(bdd_cubes_product, bdd_hard);
-                info!(
-                    "new bdd_cubes_product = {} of size {}",
-                    bdd_cubes_product,
-                    bdd.size(bdd_cubes_product)
-                );
-                info!("bdd = {:?}", bdd);
-                // info!("GC...");
-                // bdd.collect_garbage(&[bdd_cubes_product]);
-                // info!("bdd = {:?}", bdd);
-            }
-
-            // BDD-derivation for cubes product
-            {
-                let time_derive_bdd = Instant::now();
-                let variables = {
-                    let mut s = HashSet::new();
-                    s.extend(cubes_product[0].iter().map(|lit| lit.var()));
-                    s.extend(backdoor.iter().filter(|&&var| searcher.solver.is_active(var)));
-                    s.into_iter().sorted().collect_vec()
-                };
-                info!("Deriving via BDD for cubes product over {} variables...", variables.len());
-                let derived_via_bdd = derive_via_bdd(&bdd, bdd_cubes_product, &variables);
-                let time_derive_bdd = time_derive_bdd.elapsed();
-                info!(
-                    "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for cubes product in {:.1}s",
-                    derived_via_bdd.len(),
-                    derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
-                    derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
-                    derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
-                    derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
-                    time_derive_bdd.as_secs_f64(),
-                );
-            }
-            // {
-            //     let time_derive_bdd = Instant::now();
-            //     let variables = {
-            //         let mut s = HashSet::new();
-            //         s.extend(cubes_product[0].iter().map(|lit| lit.var()));
-            //         s.extend(backdoor.iter().filter(|&&var| searcher.solver.is_active(var)));
-            //         s.into_iter().sorted().collect_vec()
-            //     };
-            //     info!("Deriving via BDD for cubes product over {} variables...", variables.len());
-            //     info!("variables: {}", display_slice(&variables));
-            //     let micro_bdd = Bdd::new(14);
-            //     let bdd_cubes_product2 = bdd.rebase(bdd_cubes_product, &micro_bdd);
-            //     let derived_via_bdd = derive_via_bdd(&micro_bdd, bdd_cubes_product2, &variables);
-            //     let time_derive_bdd = time_derive_bdd.elapsed();
-            //     info!(
-            //         "Derived {} clauses via BDD ({} units, {} binary, {} ternary, {} other) for cubes product in {:.1}s",
-            //         derived_via_bdd.len(),
-            //         derived_via_bdd.iter().filter(|c| c.len() == 1).count(),
-            //         derived_via_bdd.iter().filter(|c| c.len() == 2).count(),
-            //         derived_via_bdd.iter().filter(|c| c.len() == 3).count(),
-            //         derived_via_bdd.iter().filter(|c| c.len() > 3).count(),
-            //         time_derive_bdd.as_secs_f64(),
-            //     );
-            // }
 
             // Populate the set of ALL clauses:
             debug!("Retrieving clauses from the solver...");
@@ -630,6 +657,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                         all_derived_clauses.push(vec![lit]);
                     }
                 }
+                previous_cubes_products.push(cubes_product);
                 cubes_product = vec![vec![]];
                 continue;
             }
@@ -876,6 +904,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                         all_derived_clauses.push(vec![lit]);
                     }
                 }
+                previous_cubes_products.push(cubes_product);
                 cubes_product = vec![vec![]];
                 continue;
             }
@@ -940,6 +969,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     cubes_product.len(),
                     args.max_product
                 );
+                previous_cubes_products.push(cubes_product);
                 cubes_product = vec![vec![]];
                 continue;
             }
@@ -1392,6 +1422,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     all_derived_clauses.push(vec![lit]);
                 }
             }
+            previous_cubes_products.push(cubes_product);
             cubes_product = vec![vec![]];
             continue;
         }

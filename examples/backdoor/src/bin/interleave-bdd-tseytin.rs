@@ -1,19 +1,3 @@
-use bdd_rs::bdd::Bdd;
-use clap::Parser;
-use color_eyre::eyre::bail;
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
-use itertools::{iproduct, zip_eq, Itertools};
-use log::{debug, info};
-use ordered_float::OrderedFloat;
-use rand::prelude::*;
-use std::collections::{HashMap, HashSet};
-use std::fmt::Write as _;
-use std::fs::File;
-use std::io::LineWriter;
-use std::io::Write as _;
-use std::path::PathBuf;
-use std::time::{Duration, Instant};
-
 use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
@@ -21,12 +5,28 @@ use backdoor::utils::{
     bdd_tseytin_encode, clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks,
     propcheck_all_trie_via_internal, write_clause,
 };
+use bdd_rs::bdd::Bdd;
+use bdd_rs::reference::Ref;
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
+use clap::Parser;
+use color_eyre::eyre::bail;
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use itertools::{iproduct, zip_eq, Itertools};
+use log::{debug, info};
+use ordered_float::OrderedFloat;
+use rand::prelude::*;
 use simple_sat::lit::Lit;
 use simple_sat::trie::Trie;
 use simple_sat::utils::{display_slice, parse_dimacs, DisplaySlice};
 use simple_sat::var::Var;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Write as _;
+use std::fs::File;
+use std::io::LineWriter;
+use std::io::Write as _;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 // Run this example:
 // cargo run -p backdoor --bin interleave -- data/mult/lec_CvK_12.cnf --backdoor-size 10 --num-iters 10000
@@ -294,7 +294,31 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     let bdd = Bdd::new(25);
     let mut bdd_cubes_product = bdd.one;
 
+    let mut last_free_var = 1;
+    let mut evar2bdd_map: HashMap<u32, i32> = HashMap::new();
+    let mut elit_to_bddvar = |lit: i32, map: &mut HashMap<u32, i32>| -> i32 {
+        assert_ne!(lit, 0);
+        let var = lit.unsigned_abs();
+        if let Some(&bdd_var) = map.get(&var) {
+            if lit < 0 {
+                -bdd_var
+            } else {
+                bdd_var
+            }
+        } else {
+            let bdd_var = last_free_var;
+            last_free_var += 1;
+            map.insert(var, bdd_var);
+            if lit < 0 {
+                -bdd_var
+            } else {
+                bdd_var
+            }
+        }
+    };
+
     let mut previous_cubes_products: Vec<Vec<Vec<Lit>>> = Vec::new();
+    let mut previous_bdd_hard: Vec<Ref> = Vec::new();
 
     let time_total = Instant::now();
 
@@ -310,11 +334,18 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             .map(|cube| cube.into_iter().filter(|&lit| searcher.solver.is_active(lit.var())).collect())
             .collect();
 
+        info!("current cubes_product size: {}", cubes_product.len());
+        info!(
+            "previous cubes_product sizes: {}",
+            display_slice(&previous_cubes_products.iter().map(|c| c.len()).collect_vec())
+        );
+
         // BDD-related stuff:
         {
             let mut bdd_cubes = Vec::new();
             for cube in cubes_product.iter() {
                 let bdd_cube = bdd.cube(cube.iter().map(|lit| lit.to_external()));
+                // let bdd_cube = bdd.cube(cube.iter().map(|lit| elit_to_bddvar(lit.to_external(), &mut evar2bdd_map)));
                 // debug!("bdd_cube of size {} = {} for cube of length {}", bdd.size(bdd_cube), bdd_cube, cube.len());
                 bdd_cubes.push(bdd_cube);
             }
@@ -333,19 +364,20 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 bdd.size(bdd_cubes_product)
             );
             info!("bdd = {:?}", bdd);
-            // info!("GC...");
-            // bdd.collect_garbage(&[bdd_cubes_product]);
-            // info!("bdd = {:?}", bdd);
+            info!("GC...");
+            bdd.collect_garbage(&[bdd_cubes_product]);
+            info!("bdd = {:?}", bdd);
 
-            if time_total.elapsed().as_secs_f64() > 200.0 {
-                let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_cubes_product, &searcher.solver.0);
+            if time_total.elapsed().as_secs_f64() > 500.0 {
+                let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_cubes_product, searcher.solver.0.vars() as u64);
                 info!(
                     "Tseytin-encoded BDD into {} clauses with {} aux vars",
                     bdd_clauses.len(),
                     _extra_vars.len()
                 );
-                debug!("Writing...");
-                let mut f = create_line_writer("clauses.txt");
+                let path = format!("clauses_{}.txt", args.path_cnf.file_name().unwrap().to_str().unwrap());
+                debug!("Writing clauses to '{}'...", path);
+                let mut f = create_line_writer(path);
                 for clause in bdd_clauses {
                     write_clause(&mut f, &clause)?;
                 }
@@ -409,11 +441,11 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 // break;
             }
 
-            info!("current cubes_product size: {}", cubes_product.len());
-            info!(
-                "previous cubes_product sizes: {}",
-                display_slice(&previous_cubes_products.iter().map(|c| c.len()).collect_vec())
-            );
+            // info!("current cubes_product size: {}", cubes_product.len());
+            // info!(
+            //     "previous cubes_product sizes: {}",
+            //     display_slice(&previous_cubes_products.iter().map(|c| c.len()).collect_vec())
+            // );
 
             // // BDD-related stuff:
             // {

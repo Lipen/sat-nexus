@@ -381,10 +381,9 @@ pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
 }
 
 // Returns (clauses, extra_vars)
-pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Var>) {
+pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
     let mut clauses = Vec::new();
     let mut extra_vars = Vec::new();
-    let mut num_vars = solver.vars();
 
     let mut visited = HashSet::new();
     visited.insert(bdd.one.index());
@@ -600,7 +599,7 @@ mod tests {
         let f = bdd.cube([1, 2, 3]);
         println!("f = {} of size {} = {}", f, bdd.size(f), bdd.to_bracket_string(f));
 
-        let (clauses, extra_vars) = bdd_tseytin_encode(&bdd, f, &solver);
+        let (clauses, extra_vars) = bdd_tseytin_encode(&bdd, f, solver.vars() as u64);
         println!("clauses = {}", display_iter_slices(&clauses));
         println!("extra_vars = {}", display_slice(&extra_vars));
 

@@ -315,33 +315,33 @@ pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
     let mut derived_clauses = Vec::new();
     let n = vars.len();
 
-    for i in 0..n {
-        let a = vars[i];
-        for av in [false, true] {
-            let lit = Lit::new(a, !av);
-            let l = bdd.mk_var(a.to_external());
-            let l = if av { l } else { -l };
-            if bdd.is_implies(bdd_hard, l) {
-                let clause = vec![lit];
-                log::info!("unit {}", DisplaySlice(&clause));
-                derived_clauses.push(clause);
-            }
-        }
-    }
+    // for i in 0..n {
+    //     let a = vars[i];
+    //     for av in [false, true] {
+    //         let lit = Lit::new(a, !av);
+    //         let l = bdd.mk_var(a.to_external());
+    //         let l = if av { l } else { -l };
+    //         if bdd.is_implies(bdd_hard, l) {
+    //             let clause = vec![lit];
+    //             log::info!("unit {}", DisplaySlice(&clause));
+    //             derived_clauses.push(clause);
+    //         }
+    //     }
+    // }
 
-    let mut total_time_stuff = Duration::ZERO;
+    // let mut total_time_stuff = Duration::ZERO;
     for (i, j) in (0..n).tuple_combinations() {
-        let time_stuff = Instant::now();
+        // let time_stuff = Instant::now();
         let a = vars[i];
-        if derived_clauses.contains(&vec![Lit::new(a, false)]) || derived_clauses.contains(&vec![Lit::new(a, true)]) {
-            continue;
-        }
+        // if derived_clauses.contains(&vec![Lit::new(a, false)]) || derived_clauses.contains(&vec![Lit::new(a, true)]) {
+        //     continue;
+        // }
         let b = vars[j];
-        if derived_clauses.contains(&vec![Lit::new(b, false)]) || derived_clauses.contains(&vec![Lit::new(b, true)]) {
-            continue;
-        }
-        let time_stuff = time_stuff.elapsed();
-        total_time_stuff += time_stuff;
+        // if derived_clauses.contains(&vec![Lit::new(b, false)]) || derived_clauses.contains(&vec![Lit::new(b, true)]) {
+        //     continue;
+        // }
+        // let time_stuff = time_stuff.elapsed();
+        // total_time_stuff += time_stuff;
         for av in [false, true] {
             for bv in [false, true] {
                 let alit = Lit::new(a, !av);
@@ -378,7 +378,7 @@ pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
                         time_check.as_secs_f64()
                     );
                 }
-                if time_check.as_secs_f64() > 1.0 {
+                if time_check.as_secs_f64() > 3.0 {
                     use std::io::Write as _;
                     let f = File::create("bdd.txt").unwrap();
                     let mut f = LineWriter::new(f);
@@ -406,6 +406,6 @@ pub fn derive_via_bdd(bdd: &Bdd, bdd_hard: Ref, vars: &[Var]) -> Vec<Vec<Lit>> {
             }
         }
     }
-    log::info!("total_time_stuff = {:?}", total_time_stuff);
+    // log::info!("total_time_stuff = {:?}", total_time_stuff);
     derived_clauses
 }
