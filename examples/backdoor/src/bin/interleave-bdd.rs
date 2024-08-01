@@ -429,7 +429,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
         //     info!("Deriving via BDD for cubes product over {} variables...", variables.len());
         //     info!("variables: {}", display_slice(&variables));
         //     let micro_bdd = Bdd::new(14);
-        //     let bdd_cubes_product2 = bdd.rebase(bdd_cubes_product, &micro_bdd);
+        //     let bdd_cubes_product2 = bdd_rebase(&bdd, bdd_cubes_product, &micro_bdd);
         //     let derived_via_bdd = derive_via_bdd(&micro_bdd, bdd_cubes_product2, &variables);
         //     let time_derive_bdd = time_derive_bdd.elapsed();
         //     info!(

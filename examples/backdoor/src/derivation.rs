@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::LineWriter;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use itertools::{zip_eq, Itertools};

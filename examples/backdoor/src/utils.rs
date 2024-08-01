@@ -380,8 +380,44 @@ pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
     writeln!(f, "0")
 }
 
+pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
+    bdd_tseytin_encode_ite(bdd, f, num_vars)
+}
+
+// pub fn bdd_tseytin_encode_backward(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
+//     let mut clauses = Vec::new();
+//     let mut extra_vars = Vec::new();
+//
+//     let mut visited = HashSet::new();
+//     // visited.insert(bdd.one.index());
+//     let mut queue = VecDeque::from([f]);
+//     let mut topo = Vec::new(); // BFS order
+//
+//     while let Some(node) = queue.pop_front() {
+//         let i = node.index();
+//         if visited.insert(i) {
+//             topo.push(i);
+//             queue.push_back(bdd.low(i));
+//             queue.push_back(bdd.high(i));
+//         }
+//     }
+//
+//     // node index to its aux variable
+//     let mut index2var: HashMap<u32, Var> = HashMap::new();
+//     for &index in topo.iter() {
+//         num_vars += 1;
+//         let var = Var::from_external(num_vars as u32);
+//         extra_vars.push(var);
+//         index2var.insert(index, var);
+//     }
+//
+//     let node2lit = |node: Ref| -> Lit { Lit::new(index2var[&node.index()], node.is_negated()) };
+//
+//     (clauses, extra_vars)
+// }
+
 // Returns (clauses, extra_vars)
-pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
+pub fn bdd_tseytin_encode_ite(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
     let mut clauses = Vec::new();
     let mut extra_vars = Vec::new();
 
@@ -407,16 +443,17 @@ pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>
         index2var.insert(index, var);
     }
 
-    let node2lit = |node: Ref| -> Lit { Lit::from_external(index2var[&node.index()].to_external() as i32) };
+    let node2lit = |node: Ref| -> Lit { Lit::new(index2var[&node.index()], node.is_negated()) };
 
     for &index in topo.iter() {
         let aux = Lit::positive(index2var[&index]);
         let var = bdd.variable(index);
         let low = bdd.low(index);
         let high = bdd.high(index);
-        let x = Lit::from_external(var as i32);
+        let x = Lit::positive(Var::from_external(var));
 
         if bdd.is_zero(high) && bdd.is_zero(low) {
+            unreachable!();
             // ITE(x, 0, 0) = 0
             // aux <=> 0
             clauses.push(vec![-aux]);
@@ -431,6 +468,7 @@ pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>
             clauses.push(vec![-aux, x]);
             clauses.push(vec![aux, -x]);
         } else if bdd.is_one(high) && bdd.is_one(low) {
+            unreachable!();
             // ITE(x, 1, 1) = 1
             // aux <=> 1
             clauses.push(vec![aux]);
@@ -452,7 +490,7 @@ pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>
             clauses.push(vec![aux, -low_lit]);
         } else if bdd.is_one(low) {
             assert!(!bdd.is_terminal(high));
-            // ITE(x, high, 1) = x IMPLY high
+            // ITE(x, high, 1) = -x OR high
             // aux <=> -x | high
             let high_lit = node2lit(high);
             clauses.push(vec![-aux, -x, high_lit]);
@@ -467,13 +505,9 @@ pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>
             clauses.push(vec![-aux, -x]);
             clauses.push(vec![-aux, low_lit]);
         } else {
+            assert!(!bdd.is_terminal(low));
+            assert!(!bdd.is_terminal(high));
             // aux <=> ITE(x, high, low)
-            if !index2var.contains_key(&low.index()) {
-                println!("no var for low={}", bdd.to_bracket_string(low))
-            }
-            if !index2var.contains_key(&high.index()) {
-                println!("no var for high={}", bdd.to_bracket_string(high))
-            }
             let low_lit = node2lit(low);
             let high_lit = node2lit(high);
             // aux <=> ITE(x, high, low)
@@ -482,12 +516,44 @@ pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>
             clauses.push(vec![-aux, -x, high_lit]);
             clauses.push(vec![-aux, x, low_lit]);
             // extra redundant clauses:
-            clauses.push(vec![aux, -high_lit, -low_lit]);
-            clauses.push(vec![-aux, high_lit, low_lit]);
+            // clauses.push(vec![aux, -high_lit, -low_lit]);
+            // clauses.push(vec![-aux, high_lit, low_lit]);
         }
     }
 
+    clauses.push(vec![node2lit(f)]);
+
     (clauses, extra_vars)
+}
+
+pub fn bdd_cnf_encode(bdd: &Bdd, f: Ref) -> Vec<Vec<Lit>> {
+    bdd.paths(-f)
+        .map(|path| path.into_iter().map(|i| -Lit::from_external(i)).collect())
+        .collect()
+}
+
+pub fn bdd_rebase(bdd: &Bdd, f: Ref, other: &Bdd) -> Ref {
+    let mut cache = HashMap::new();
+    bdd_rebase_(bdd, f, other, &mut cache)
+}
+
+fn bdd_rebase_(bdd: &Bdd, f: Ref, other: &Bdd, cache: &mut HashMap<Ref, Ref>) -> Ref {
+    if bdd.is_zero(f) {
+        return other.zero;
+    } else if bdd.is_one(f) {
+        return other.one;
+    }
+
+    if let Some(&res) = cache.get(&f) {
+        return res;
+    }
+
+    let var = bdd.variable(f.index());
+    let low = bdd_rebase_(bdd, bdd.low_node(f), other, cache);
+    let high = bdd_rebase_(bdd, bdd.high_node(f), other, cache);
+    let res = other.mk_node(var, low, high);
+    cache.insert(f, res);
+    res
 }
 
 #[cfg(test)]

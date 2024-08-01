@@ -2,7 +2,7 @@ use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
 use backdoor::utils::{
-    bdd_tseytin_encode, clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks,
+    bdd_cnf_encode, bdd_tseytin_encode, clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks,
     propcheck_all_trie_via_internal, write_clause,
 };
 use bdd_rs::bdd::Bdd;
@@ -292,33 +292,34 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     }
 
     let bdd = Bdd::new(25);
-    let mut bdd_cubes_product = bdd.one;
 
-    let mut last_free_var = 1;
-    let mut evar2bdd_map: HashMap<u32, i32> = HashMap::new();
-    let mut elit_to_bddvar = |lit: i32, map: &mut HashMap<u32, i32>| -> i32 {
-        assert_ne!(lit, 0);
-        let var = lit.unsigned_abs();
-        if let Some(&bdd_var) = map.get(&var) {
-            if lit < 0 {
-                -bdd_var
-            } else {
-                bdd_var
-            }
-        } else {
-            let bdd_var = last_free_var;
-            last_free_var += 1;
-            map.insert(var, bdd_var);
-            if lit < 0 {
-                -bdd_var
-            } else {
-                bdd_var
-            }
-        }
-    };
+    // let mut last_free_var = 1;
+    // let mut evar2bdd_map: HashMap<u32, i32> = HashMap::new();
+    // let mut elit_to_bddvar = |lit: i32, map: &mut HashMap<u32, i32>| -> i32 {
+    //     assert_ne!(lit, 0);
+    //     let var = lit.unsigned_abs();
+    //     if let Some(&bdd_var) = map.get(&var) {
+    //         if lit < 0 {
+    //             -bdd_var
+    //         } else {
+    //             bdd_var
+    //         }
+    //     } else {
+    //         let bdd_var = last_free_var;
+    //         last_free_var += 1;
+    //         map.insert(var, bdd_var);
+    //         if lit < 0 {
+    //             -bdd_var
+    //         } else {
+    //             bdd_var
+    //         }
+    //     }
+    // };
 
     let mut previous_cubes_products: Vec<Vec<Vec<Lit>>> = Vec::new();
     let mut previous_bdd_hard: Vec<Ref> = Vec::new();
+
+    let mut num_vars = searcher.solver.0.vars() as u64;
 
     let time_total = Instant::now();
 
@@ -340,51 +341,51 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             display_slice(&previous_cubes_products.iter().map(|c| c.len()).collect_vec())
         );
 
-        // BDD-related stuff:
-        {
-            let mut bdd_cubes = Vec::new();
-            for cube in cubes_product.iter() {
-                let bdd_cube = bdd.cube(cube.iter().map(|lit| lit.to_external()));
-                // let bdd_cube = bdd.cube(cube.iter().map(|lit| elit_to_bddvar(lit.to_external(), &mut evar2bdd_map)));
-                // debug!("bdd_cube of size {} = {} for cube of length {}", bdd.size(bdd_cube), bdd_cube, cube.len());
-                bdd_cubes.push(bdd_cube);
-            }
-            let bdd_hard = bdd.apply_or_many(bdd_cubes.iter().copied());
-            info!("bdd_hard of size {} = {}", bdd.size(bdd_hard), bdd_hard);
-
-            info!(
-                "old bdd_cubes_product = {} of size {}",
-                bdd_cubes_product,
-                bdd.size(bdd_cubes_product)
-            );
-            bdd_cubes_product = bdd.apply_and(bdd_cubes_product, bdd_hard);
-            info!(
-                "new bdd_cubes_product = {} of size {}",
-                bdd_cubes_product,
-                bdd.size(bdd_cubes_product)
-            );
-            info!("bdd = {:?}", bdd);
-            info!("GC...");
-            bdd.collect_garbage(&[bdd_cubes_product]);
-            info!("bdd = {:?}", bdd);
-
-            if time_total.elapsed().as_secs_f64() > 500.0 {
-                let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_cubes_product, searcher.solver.0.vars() as u64);
-                info!(
-                    "Tseytin-encoded BDD into {} clauses with {} aux vars",
-                    bdd_clauses.len(),
-                    _extra_vars.len()
-                );
-                let path = format!("clauses_{}.txt", args.path_cnf.file_name().unwrap().to_str().unwrap());
-                debug!("Writing clauses to '{}'...", path);
-                let mut f = create_line_writer(path);
-                for clause in bdd_clauses {
-                    write_clause(&mut f, &clause)?;
-                }
-                debug!("Done writing.");
-                return Ok(SolveResult::UNKNOWN);
-            }
-        }
+        // // BDD-related stuff:
+        // {
+        //     let mut bdd_cubes = Vec::new();
+        //     for cube in cubes_product.iter() {
+        //         let bdd_cube = bdd.cube(cube.iter().map(|lit| lit.to_external()));
+        //         // let bdd_cube = bdd.cube(cube.iter().map(|lit| elit_to_bddvar(lit.to_external(), &mut evar2bdd_map)));
+        //         // debug!("bdd_cube of size {} = {} for cube of length {}", bdd.size(bdd_cube), bdd_cube, cube.len());
+        //         bdd_cubes.push(bdd_cube);
+        //     }
+        //     let bdd_hard = bdd.apply_or_many(bdd_cubes.iter().copied());
+        //     info!("bdd_hard of size {} = {}", bdd.size(bdd_hard), bdd_hard);
+        //
+        //     info!(
+        //         "old bdd_cubes_product = {} of size {}",
+        //         bdd_cubes_product,
+        //         bdd.size(bdd_cubes_product)
+        //     );
+        //     bdd_cubes_product = bdd.apply_and(bdd_cubes_product, bdd_hard);
+        //     info!(
+        //         "new bdd_cubes_product = {} of size {}",
+        //         bdd_cubes_product,
+        //         bdd.size(bdd_cubes_product)
+        //     );
+        //     info!("bdd = {:?}", bdd);
+        //     info!("GC...");
+        //     bdd.collect_garbage(&[bdd_cubes_product]);
+        //     info!("bdd = {:?}", bdd);
+        //
+        //     if time_total.elapsed().as_secs_f64() > 500.0 {
+        //         let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_cubes_product, searcher.solver.0.vars() as u64);
+        //         info!(
+        //             "Tseytin-encoded BDD into {} clauses with {} aux vars",
+        //             bdd_clauses.len(),
+        //             _extra_vars.len()
+        //         );
+        //         let path = format!("clauses_{}.txt", args.path_cnf.file_name().unwrap().to_str().unwrap());
+        //         debug!("Writing clauses to '{}'...", path);
+        //         let mut f = create_line_writer(path);
+        //         for clause in bdd_clauses {
+        //             write_clause(&mut f, &clause)?;
+        //         }
+        //         debug!("Done writing.");
+        //         return Ok(SolveResult::UNKNOWN);
+        //     }
+        // }
 
         // Reset banned used variables:
         if args.reset_used_vars && cubes_product == vec![vec![]] {
@@ -645,8 +646,8 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                         all_derived_clauses.push(vec![lit]);
                     }
                 }
-                previous_cubes_products.push(cubes_product);
-                cubes_product = vec![vec![]];
+                // previous_cubes_products.push(cubes_product);
+                // cubes_product = vec![vec![]];
                 continue;
             }
 
@@ -892,8 +893,8 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                         all_derived_clauses.push(vec![lit]);
                     }
                 }
-                previous_cubes_products.push(cubes_product);
-                cubes_product = vec![vec![]];
+                // previous_cubes_products.push(cubes_product);
+                // cubes_product = vec![vec![]];
                 continue;
             }
 
@@ -951,13 +952,149 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 );
             }
 
+            // {
+            //     let path = format!(
+            //         "hard_cubes_{}_run{}.txt",
+            //         args.path_cnf.file_name().unwrap().to_str().unwrap(),
+            //         run_number
+            //     );
+            //     debug!("Writing {} hard cubes to '{}'...", cubes_product.len(), path);
+            //     let mut f = create_line_writer(path);
+            //     for clause in cubes_product.iter() {
+            //         write_clause(&mut f, clause)?;
+            //     }
+            //     debug!("Done writing.");
+            // }
+
             if cubes_product.len() > args.max_product {
                 info!(
                     "Too many cubes in the product ({} > {}), restarting",
                     cubes_product.len(),
                     args.max_product
                 );
+                // BDD-related:
+                {
+                    let var_count: HashMap<Var, (u64, u64)> = (0..cubes_product[0].len())
+                        .map(|i| {
+                            let mut pos = 0;
+                            let mut neg = 0;
+                            for cube in cubes_product.iter() {
+                                if cube[i].negated() {
+                                    neg += 1;
+                                } else {
+                                    pos += 1;
+                                }
+                            }
+                            (cubes_product[0][i].var(), (pos, neg))
+                        })
+                        .collect();
+                    let var_disbalance: HashMap<Var, f64> = var_count
+                        .iter()
+                        .map(|(&var, &(pos, neg))| {
+                            let ratio = (0.5 - pos as f64 / (pos as f64 + neg as f64)).abs();
+                            (var, ratio)
+                        })
+                        .collect();
+                    info!("Variable disbalance: {:?}", var_disbalance);
+                    let vars_sorted = cubes_product[0]
+                        .iter()
+                        .map(|lit| lit.var())
+                        .sorted_by_key(|var| OrderedFloat(var_disbalance[var]))
+                        .collect_vec();
+                    info!("Variable order: {}", display_slice(&vars_sorted));
+
+                    info!(
+                        "Var/pos/neg/dis: [{}]",
+                        vars_sorted
+                            .iter()
+                            .map(|var| format!("{}/{}/{}/{:.2}", var, var_count[var].0, var_count[var].1, var_disbalance[var]))
+                            .join(", ")
+                    );
+
+                    let mut last_free_bddvar = 1;
+                    let mut evar2bdd_map: HashMap<u32, u32> = HashMap::new();
+                    for var in vars_sorted.iter() {
+                        evar2bdd_map.insert(var.to_external(), last_free_bddvar);
+                        last_free_bddvar += 1;
+                    }
+                    let mut elit_to_bddvar = |lit: i32| -> i32 {
+                        assert_ne!(lit, 0);
+                        let var = lit.unsigned_abs();
+                        let bdd_var = evar2bdd_map[&var] as i32;
+                        if lit < 0 {
+                            -bdd_var
+                        } else {
+                            bdd_var
+                        }
+                    };
+
+                    let mut bdd_cubes = Vec::new();
+                    for cube in cubes_product.iter() {
+                        let bdd_cube = bdd.cube(cube.iter().map(|lit| lit.to_external()));
+                        // let bdd_cube = bdd.cube(cube.iter().map(|lit| elit_to_bddvar(lit.to_external())));
+                        // debug!("bdd_cube = {} of size {} for cube of length {}", bdd_cube, bdd.size(bdd_cube), cube.len());
+                        bdd_cubes.push(bdd_cube);
+                    }
+                    let bdd_hard = bdd.apply_or_many(bdd_cubes.iter().copied());
+                    info!(
+                        "bdd_hard = {} of size {} for {} cubes",
+                        bdd_hard,
+                        bdd.size(bdd_hard),
+                        cubes_product.len()
+                    );
+                    previous_bdd_hard.push(bdd_hard);
+
+                    {
+                        info!(
+                            "Tseytin-encoding BDD of size {} for {} hard tasks...",
+                            bdd.size(bdd_hard),
+                            cubes_product.len()
+                        );
+                        let (bdd_clauses, _extra_vars) = bdd_tseytin_encode(&bdd, bdd_hard, num_vars);
+                        num_vars += _extra_vars.len() as u64;
+                        info!(
+                            "Tseytin-encoded BDD into {} clauses with {} aux vars",
+                            bdd_clauses.len(),
+                            _extra_vars.len()
+                        );
+                        let path = format!(
+                            "clauses_bdd_tseytin_{}_run{}.txt",
+                            args.path_cnf.file_name().unwrap().to_str().unwrap(),
+                            run_number
+                        );
+                        debug!("Writing clauses to '{}'...", path);
+                        let mut f = create_line_writer(path);
+                        for clause in bdd_clauses {
+                            write_clause(&mut f, &clause)?;
+                        }
+                        debug!("Done writing.");
+                    }
+                    {
+                        info!(
+                            "Encoding to CNF the BDD of size {} for {} hard tasks...",
+                            bdd.size(bdd_hard),
+                            cubes_product.len()
+                        );
+                        let bdd_clauses = bdd_cnf_encode(&bdd, bdd_hard);
+                        info!("Encoded BDD into {} clauses", bdd_clauses.len());
+                        let path = format!(
+                            "clauses_bdd_cnf_{}_run{}.txt",
+                            args.path_cnf.file_name().unwrap().to_str().unwrap(),
+                            run_number
+                        );
+                        debug!("Writing clauses to '{}'...", path);
+                        let mut f = create_line_writer(path);
+                        for clause in bdd_clauses {
+                            write_clause(&mut f, &clause)?;
+                        }
+                        debug!("Done writing.");
+                    }
+                }
                 previous_cubes_products.push(cubes_product);
+                if previous_cubes_products.len() >= 3 {
+                    info!("Too many restarts ({}), stopping", previous_cubes_products.len());
+                    return Ok(SolveResult::UNKNOWN);
+                }
                 cubes_product = vec![vec![]];
                 continue;
             }
@@ -1410,8 +1547,8 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     all_derived_clauses.push(vec![lit]);
                 }
             }
-            previous_cubes_products.push(cubes_product);
-            cubes_product = vec![vec![]];
+            // previous_cubes_products.push(cubes_product);
+            // cubes_product = vec![vec![]];
             continue;
         }
 
