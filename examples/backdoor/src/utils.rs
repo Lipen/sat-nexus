@@ -453,7 +453,7 @@ pub fn bdd_tseytin_encode_ite(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<
         let x = Lit::positive(Var::from_external(var));
 
         if bdd.is_zero(high) && bdd.is_zero(low) {
-            unreachable!();
+            // unreachable!();
             // ITE(x, 0, 0) = 0
             // aux <=> 0
             clauses.push(vec![-aux]);
@@ -468,7 +468,7 @@ pub fn bdd_tseytin_encode_ite(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<
             clauses.push(vec![-aux, x]);
             clauses.push(vec![aux, -x]);
         } else if bdd.is_one(high) && bdd.is_one(low) {
-            unreachable!();
+            // unreachable!();
             // ITE(x, 1, 1) = 1
             // aux <=> 1
             clauses.push(vec![aux]);
