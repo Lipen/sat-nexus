@@ -163,6 +163,9 @@ fn read_cubes(path: impl AsRef<Path>) -> Vec<Vec<Lit>> {
 
     for line in reader.lines() {
         let line = line.expect("Unable to read line").trim().to_string();
+        if line.starts_with("c") {
+            continue;
+        }
         if line.starts_with("a") {
             let mut cube: Vec<i32> = line
                 .split_whitespace()
