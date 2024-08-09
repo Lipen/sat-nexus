@@ -198,10 +198,6 @@ pub fn create_line_writer<P: AsRef<Path>>(path: P) -> LineWriter<File> {
     f
 }
 
-pub fn maybe_create<P: AsRef<Path>>(path: &Option<P>) -> Option<LineWriter<File>> {
-    path.as_ref().map(create_line_writer)
-}
-
 pub fn clause_to_external<'a, I>(lits: I) -> impl Iterator<Item = i32> + 'a
 where
     I: IntoIterator<Item = &'a Lit>,
@@ -215,6 +211,13 @@ where
     I: IntoIterator<Item = i32>,
 {
     lits.into_iter().map(Lit::from_external).collect_vec()
+}
+
+pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
+    for lit in lits.iter() {
+        write!(f, "{} ", lit)?;
+    }
+    writeln!(f, "0")
 }
 
 pub fn propcheck_all_trie_via_internal(
@@ -373,13 +376,6 @@ pub fn propcheck_all_trie_via_internal(
     total_count
 }
 
-pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
-    for lit in lits.iter() {
-        write!(f, "{} ", lit)?;
-    }
-    writeln!(f, "0")
-}
-
 pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
     bdd_tseytin_encode_ite(bdd, f, num_vars)
 }
@@ -527,6 +523,10 @@ pub fn bdd_tseytin_encode_ite(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<
 }
 
 pub fn bdd_cnf_encode(bdd: &Bdd, f: Ref) -> Vec<Vec<Lit>> {
+    // Note: both `f` and each `Lit` are negated here,
+    //       because `paths` returns paths to 1, and each path is a cube.
+    // - In order to enumerate all paths to 0, we first negate the function `f`.
+    // - In order to obtain the clauses, we negate the resulting cubes.
     bdd.paths(-f)
         .map(|path| path.into_iter().map(|i| -Lit::from_external(i)).collect())
         .collect()
