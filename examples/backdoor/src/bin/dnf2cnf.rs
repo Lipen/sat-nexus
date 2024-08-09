@@ -147,6 +147,8 @@ fn main() -> color_eyre::Result<()> {
             }
             writeln!(&mut file, "0")?;
         }
+    } else {
+        info!("If you want to save the resulting CNF, use `--clauses <FILE>` option!");
     }
 
     let total_time = start_time.elapsed();
