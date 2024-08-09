@@ -3,7 +3,7 @@ use cadical::{FixedResponse, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::var::Var;
 
-use crate::utils::clause_to_external;
+use crate::utils::lits_to_external;
 
 #[derive(Debug)]
 pub struct Solver(pub Cadical);
@@ -34,7 +34,7 @@ impl Solver {
     }
 
     pub fn add_clause(&mut self, lits: &[Lit]) {
-        self.0.add_clause(clause_to_external(lits));
+        self.0.add_clause(lits_to_external(lits));
         // solver.add_derived_clause(clause_to_external(lits));
     }
 

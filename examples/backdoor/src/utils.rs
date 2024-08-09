@@ -198,7 +198,7 @@ pub fn create_line_writer<P: AsRef<Path>>(path: P) -> LineWriter<File> {
     f
 }
 
-pub fn clause_to_external<'a, I>(lits: I) -> impl Iterator<Item = i32> + 'a
+pub fn lits_to_external<'a, I>(lits: I) -> impl Iterator<Item = i32> + 'a
 where
     I: IntoIterator<Item = &'a Lit>,
     <I as IntoIterator>::IntoIter: 'a,
@@ -206,7 +206,7 @@ where
     lits.into_iter().map(|lit| lit.to_external())
 }
 
-pub fn clause_from_external<I>(lits: I) -> Vec<Lit>
+pub fn lits_from_external<I>(lits: I) -> Vec<Lit>
 where
     I: IntoIterator<Item = i32>,
 {

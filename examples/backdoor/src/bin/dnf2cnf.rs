@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use backdoor::utils::{bdd_cnf_encode, bdd_tseytin_encode_ite, clause_to_external};
+use backdoor::utils::{bdd_cnf_encode, bdd_tseytin_encode_ite, lits_to_external};
 
 use bdd_rs::bdd::Bdd;
 use simple_sat::lit::Lit;
@@ -92,7 +92,7 @@ fn main() -> color_eyre::Result<()> {
             let mut cubes_bdd = Vec::new();
             info!("Building BDDs for {} cubes...", cubes.len());
             for cube in cubes.iter() {
-                let c = bdd.cube(clause_to_external(cube));
+                let c = bdd.cube(lits_to_external(cube));
                 cubes_bdd.push(c);
             }
             debug!("bdd = {:?}", bdd);
@@ -120,7 +120,7 @@ fn main() -> color_eyre::Result<()> {
             let mut cubes_bdd = Vec::new();
             info!("Building BDDs for {} cubes...", cubes.len());
             for cube in cubes.iter() {
-                let c = bdd.cube(clause_to_external(cube));
+                let c = bdd.cube(lits_to_external(cube));
                 cubes_bdd.push(c);
             }
             debug!("bdd = {:?}", bdd);

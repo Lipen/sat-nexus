@@ -2,7 +2,7 @@ use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
 use backdoor::utils::{
-    bdd_cnf_encode, bdd_tseytin_encode, clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks,
+    bdd_cnf_encode, bdd_tseytin_encode, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks, lits_from_external,
     propcheck_all_trie_via_internal, write_clause,
 };
 use bdd_rs::bdd::Bdd;
@@ -492,7 +492,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let time_extract = Instant::now();
             let mut num_new = 0;
             for clause in searcher.solver.0.all_clauses_iter() {
-                let mut clause = clause_from_external(clause);
+                let mut clause = lits_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 all_clauses.insert(clause);
                 num_new += 1;
@@ -1315,7 +1315,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let time_extract = Instant::now();
             let mut num_new = 0;
             for clause in searcher.solver.0.all_clauses_iter() {
-                let mut clause = clause_from_external(clause);
+                let mut clause = lits_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 (&mut all_clauses).insert(clause);
                 num_new += 1;
@@ -1450,7 +1450,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let time_extract = Instant::now();
             let mut num_new = 0;
             for clause in searcher.solver.0.all_clauses_iter() {
-                let mut clause = clause_from_external(clause);
+                let mut clause = lits_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 all_clauses.insert(clause);
                 num_new += 1;

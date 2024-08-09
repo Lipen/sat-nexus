@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use backdoor::derivation::derive_clauses;
 use backdoor::pool::{CubeTask, SolverPool};
-use backdoor::utils::{bdd_cnf_encode, clause_to_external, write_clause};
+use backdoor::utils::{bdd_cnf_encode, lits_to_external, write_clause};
 
 use bdd_rs::bdd::Bdd;
 use cadical::statik::Cadical;
@@ -152,7 +152,7 @@ fn main() -> color_eyre::Result<()> {
         let solver = Cadical::new();
 
         for clause in clauses.iter() {
-            solver.add_clause(clause_to_external(clause));
+            solver.add_clause(lits_to_external(clause));
         }
 
         let num_conflicts = 1000000;

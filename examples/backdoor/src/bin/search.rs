@@ -10,7 +10,7 @@ use log::{debug, info};
 use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
-use backdoor::utils::{clause_from_external, clause_to_external, create_line_writer, determine_vars_pool, get_hard_tasks, write_clause};
+use backdoor::utils::{create_line_writer, determine_vars_pool, get_hard_tasks, lits_from_external, lits_to_external, write_clause};
 
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
@@ -341,7 +341,7 @@ fn main() -> color_eyre::Result<()> {
             } else {
                 let core = searcher.solver.0.propcheck_get_core();
                 assert!(!core.is_empty());
-                let mut core = clause_from_external(core);
+                let mut core = lits_from_external(core);
                 core.sort_by_key(|lit| lit.inner());
                 debug!(
                     "{}/{}: core = {} for cube = {}",
@@ -367,7 +367,7 @@ fn main() -> color_eyre::Result<()> {
                     let res = searcher.solver.0.internal_propagate();
                     assert!(res);
 
-                    let lits = clause_to_external(lits).collect_vec();
+                    let lits = lits_to_external(lits).collect_vec();
                     if lits.len() >= 2 {
                         for lit in lits {
                             assert!(searcher.solver.0.is_active(lit), "lit {} is not active", lit);
@@ -398,7 +398,7 @@ fn main() -> color_eyre::Result<()> {
             debug!("[{}/{}]: {}", i + 1, easy_cores.len(), DisplaySlice(core));
 
             let lemma = core.iter().map(|&lit| -lit).collect_vec();
-            searcher.solver.0.add_derived_clause(clause_to_external(&lemma));
+            searcher.solver.0.add_derived_clause(lits_to_external(&lemma));
         }
 
         let hard: Vec<Vec<Lit>> = hard
