@@ -75,12 +75,16 @@ fn main() -> color_eyre::Result<()> {
 
             let mut clauses = Vec::new();
             info!("Building CNF via Tseytin-encoding...");
+            let mut aux_vars = Vec::new();
             for cube in cubes.iter() {
                 num_vars += 1;
                 let aux = Lit::from_external(num_vars as i32);
-                clauses.extend(encode_clause_tseytin(aux, cube));
+                aux_vars.push(aux);
+                clauses.extend(encode_cube_tseytin(aux, cube));
             }
-            info!("Total {} clauses and {} new vars", clauses.len(), num_vars - num_vars_original);
+            // Add clause (aux1, aux2, ..., auxN)
+            clauses.push(aux_vars.iter().copied().collect());
+            info!("Total {} clauses and {} new vars", clauses.len(), aux_vars.len());
             encoded_clauses = clauses;
         }
 
@@ -181,16 +185,16 @@ fn read_cubes(path: impl AsRef<Path>) -> Vec<Vec<Lit>> {
     cubes
 }
 
-fn encode_clause_tseytin(aux: Lit, clause: &Vec<Lit>) -> Vec<Vec<Lit>> {
-    let mut clauses = Vec::with_capacity(clause.len() + 1);
+fn encode_cube_tseytin(aux: Lit, cube: &Vec<Lit>) -> Vec<Vec<Lit>> {
+    let mut clauses = Vec::with_capacity(cube.len() + 1);
 
-    // Binary clauses (-lit, aux)
-    for &lit in clause {
-        clauses.push(vec![-lit, aux]);
+    // Binary clauses (lit, -aux)
+    for &lit in cube {
+        clauses.push(vec![lit, -aux]);
     }
 
-    // Long clause (lit1, lit2, ..., litN, -aux)
-    clauses.push(clause.iter().copied().chain([-aux]).collect());
+    // Clause (-lit1, -lit2, ..., -litN, aux)
+    clauses.push(cube.iter().map(|&lit| -lit).chain([aux]).collect());
 
     clauses
 }
