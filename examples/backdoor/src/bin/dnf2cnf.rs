@@ -36,8 +36,8 @@ struct Cli {
     num_vars: Option<u64>,
 
     /// Number of bits to use for storage in BDD.
-    #[arg(long, value_name = "INT")]
-    storage_bits: Option<usize>,
+    #[arg(long, value_name = "INT", default_value_t = 20)]
+    storage_bits: usize,
 }
 
 #[derive(ValueEnum, Debug, Copy, Clone)]
@@ -87,7 +87,7 @@ fn main() -> color_eyre::Result<()> {
         Encoding::BddPaths => {
             info!("Using BDD-paths method");
 
-            let bdd = Bdd::new(args.storage_bits.unwrap_or(20));
+            let bdd = Bdd::new(args.storage_bits);
 
             let mut cubes_bdd = Vec::new();
             info!("Building BDDs for {} cubes...", cubes.len());
@@ -115,7 +115,7 @@ fn main() -> color_eyre::Result<()> {
                 "Number of variables in the original CNF must be provided (via `--num-vars <INT>`) when using BDD-Tseytin encoding",
             );
 
-            let bdd = Bdd::new(args.storage_bits.unwrap_or(20));
+            let bdd = Bdd::new(args.storage_bits);
 
             let mut cubes_bdd = Vec::new();
             info!("Building BDDs for {} cubes...", cubes.len());
