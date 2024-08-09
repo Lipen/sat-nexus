@@ -1,12 +1,11 @@
 use std::fs::File;
-use std::io::Write;
-use std::io::{BufRead, BufReader, BufWriter};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 use std::time::Instant;
 
 use backdoor::derivation::derive_clauses;
 use backdoor::pool::{CubeTask, SolverPool};
-use backdoor::utils::{bdd_cnf_encode, lits_to_external, write_clause};
+use backdoor::utils::{bdd_cnf_encode, bdd_tseytin_encode_ite, create_line_writer, lits_to_external, write_clause};
 
 use bdd_rs::bdd::Bdd;
 use cadical::statik::Cadical;
@@ -23,6 +22,12 @@ fn main() -> color_eyre::Result<()> {
 
     let start_time = Instant::now();
 
+    let do_derive1 = true;
+    let do_derive2 = true;
+    let use_tseytin = true;
+    let use_bdd_paths = false;
+    let use_bdd_tseytin = false;
+
     let path_original = "data/2024-08-07/original.cnf";
     println!("Reading original CNF from '{}'", path_original);
     let clauses_original = simple_sat::utils::parse_dimacs(path_original).collect_vec();
@@ -30,10 +35,16 @@ fn main() -> color_eyre::Result<()> {
     let max_var = clauses_original
         .iter()
         .flat_map(|c| c.iter())
-        .map(|l| l.to_external().abs())
+        .map(|l| l.var().to_external())
         .max()
         .unwrap();
     println!("Number of variables: {}", max_var);
+
+    let path_results = Some("results.csv");
+    let mut file_results = path_results.as_ref().map(create_line_writer);
+    if let Some(f) = &mut file_results {
+        writeln!(f, "index,result,time,conflicts")?;
+    }
 
     let path_hard1 = "data/2024-08-07/cubes1.txt";
     let hard1_cubes = read_cubes(path_hard1);
@@ -45,23 +56,25 @@ fn main() -> color_eyre::Result<()> {
     );
 
     let mut clauses = clauses_original.clone();
-    let mut num_vars = max_var;
+    let mut num_vars = max_var as u64;
 
-    println!("Deriving clauses from hard cubes in the first part...");
-    let time_derive = Instant::now();
-    let derived1 = derive_clauses(&hard1_cubes, false);
-    let time_derive = time_derive.elapsed();
-    println!(
-        "Derived {} clauses ({} units, {} binary, {} ternary, {} other) for {} cubes in {:.1}s",
-        derived1.len(),
-        derived1.iter().filter(|c| c.len() == 1).count(),
-        derived1.iter().filter(|c| c.len() == 2).count(),
-        derived1.iter().filter(|c| c.len() == 3).count(),
-        derived1.iter().filter(|c| c.len() > 2).count(),
-        hard1_cubes.len(),
-        time_derive.as_secs_f64()
-    );
-    clauses.extend(derived1);
+    if do_derive1 {
+        println!("Deriving clauses from hard cubes in the first part...");
+        let time_derive = Instant::now();
+        let derived1 = derive_clauses(&hard1_cubes, false);
+        let time_derive = time_derive.elapsed();
+        println!(
+            "Derived {} clauses ({} units, {} binary, {} ternary, {} other) for {} cubes in {:.1}s",
+            derived1.len(),
+            derived1.iter().filter(|c| c.len() == 1).count(),
+            derived1.iter().filter(|c| c.len() == 2).count(),
+            derived1.iter().filter(|c| c.len() == 3).count(),
+            derived1.iter().filter(|c| c.len() > 2).count(),
+            hard1_cubes.len(),
+            time_derive.as_secs_f64()
+        );
+        clauses.extend(derived1);
+    }
 
     let path_hard2 = "data/2024-08-07/cubes2.txt";
     let hard2_cubes = read_cubes(path_hard2);
@@ -72,41 +85,45 @@ fn main() -> color_eyre::Result<()> {
         hard2_cubes[0].iter().map(|lit| lit.var()).join(", ")
     );
 
-    if false {
+    if do_derive2 {
+        println!("Deriving clauses from hard cubes in the second part...");
+        let time_derive = Instant::now();
+        let derived2 = derive_clauses(&hard2_cubes, false);
+        let time_derive = time_derive.elapsed();
+        println!(
+            "Derived {} clauses ({} units, {} binary, {} ternary, {} other) for {} cubes in {:.1}s",
+            derived2.len(),
+            derived2.iter().filter(|c| c.len() == 1).count(),
+            derived2.iter().filter(|c| c.len() == 2).count(),
+            derived2.iter().filter(|c| c.len() == 3).count(),
+            derived2.iter().filter(|c| c.len() > 2).count(),
+            hard2_cubes.len(),
+            time_derive.as_secs_f64()
+        );
+        clauses.extend(derived2);
+    }
+
+    if use_tseytin {
         let mut hard2_clauses = Vec::new();
+        let mut aux_vars = Vec::new();
         for cube in hard2_cubes.iter() {
             num_vars += 1;
-            let aux = Lit::from_external(num_vars);
-            hard2_clauses.extend(encode_clause_tseytin(aux, cube));
+            let aux = Lit::from_external(num_vars as i32);
+            hard2_clauses.extend(encode_cube_tseytin(aux, cube));
+            aux_vars.push(aux);
         }
+        // Add clause (aux1, aux2, ..., auxN)
+        clauses.push(aux_vars.iter().copied().collect());
         println!(
             "Tseytin-encoded {} hard cubes in the second part into {} clauses with {} aux vars",
             hard2_cubes.len(),
             hard2_clauses.len(),
-            num_vars - max_var
+            aux_vars.len()
         );
         clauses.extend(hard2_clauses);
     }
-    if false {
-        let path_output = "data/2024-08-07/out_orig_with_cubes2_tseytin.cnf";
-        println!(
-            "Writing CNF with {} vars and {} clauses to '{}'",
-            num_vars,
-            clauses.len(),
-            path_output
-        );
-        let file = File::create(path_output)?;
-        let mut writer = BufWriter::new(&file);
-        writeln!(writer, "p cnf {} {}", num_vars, clauses.len())?;
-        for clause in clauses.iter() {
-            for &lit in clause.iter() {
-                write!(writer, "{} ", lit)?;
-            }
-            writeln!(writer, "0")?;
-        }
-    }
 
-    if true {
+    if use_bdd_paths {
         let bdd = Bdd::new(24);
         let mut hard2_cubes_bdds = Vec::new();
         for cube in hard2_cubes.iter() {
@@ -124,8 +141,27 @@ fn main() -> color_eyre::Result<()> {
         clauses.extend(hard2_clauses);
     }
 
+    if use_bdd_tseytin {
+        let bdd = Bdd::new(24);
+        let mut hard2_cubes_bdds = Vec::new();
+        for cube in hard2_cubes.iter() {
+            let c = bdd.cube(cube.iter().map(|lit| lit.to_external()));
+            hard2_cubes_bdds.push(c);
+        }
+        let f = bdd.apply_or_many(hard2_cubes_bdds.iter().copied());
+        println!("f = {} of size {}", f, bdd.size(f));
+        let (hard2_clauses, extra_vars) = bdd_tseytin_encode_ite(&bdd, f, num_vars);
+        println!(
+            "BDD-Tseytin-encoded {} hard cubes in the second part into {} clauses with {} aux vars",
+            hard2_cubes.len(),
+            hard2_clauses.len(),
+            extra_vars.len()
+        );
+        clauses.extend(hard2_clauses);
+    }
+
     let path_output = "data/2024-08-07/out.cnf";
-    if true {
+    if false {
         println!(
             "Writing CNF with {} vars and {} clauses to '{}'",
             num_vars,
@@ -140,9 +176,9 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    // let path_cubes1 = "data/2024-08-07/cubes1_inv1.txt";
-    // let cubes1 = read_cubes(path_cubes1);
-    let cubes1 = hard1_cubes;
+    let path_cubes1 = "data/2024-08-07/cubes1_inv1.txt";
+    let cubes1 = read_cubes(path_cubes1);
+    // let cubes1 = hard1_cubes;
     println!("cubes1.len() = {}", cubes1.len());
 
     let is_parallel = false;
@@ -163,7 +199,7 @@ fn main() -> color_eyre::Result<()> {
         );
         let mut total_unsat = 0;
         let mut total_unknown = 0;
-        for (i, cube) in cubes1.iter().enumerate() {
+        for (i, cube) in cubes1.iter().enumerate().take(1000) {
             // println!("Checking hard cube {}/{}: {}", i+1, hard1_cubes.len(), display_slice(cube));
             solver.reset_assumptions();
             for &lit in cube.iter() {
@@ -191,6 +227,9 @@ fn main() -> color_eyre::Result<()> {
                 total_unsat,
                 total_unknown
             );
+            if let Some(f) = &mut file_results {
+                writeln!(f, "{},{},{:.3},{:?}", i, res2str(res), time_solve.as_secs_f64(), num_conflicts)?;
+            }
         }
         println!("Checked {} cubes, {} UNSAT, {} UNKNOWN", cubes1.len(), total_unsat, total_unknown);
     }
@@ -241,12 +280,17 @@ fn read_cubes(path: impl AsRef<Path>) -> Vec<Vec<Lit>> {
     cubes
 }
 
-fn encode_clause_tseytin(aux: Lit, clause: &Vec<Lit>) -> Vec<Vec<Lit>> {
-    let mut clauses = Vec::with_capacity(clause.len() + 1);
-    for &lit in clause {
-        clauses.push(vec![-lit, aux]);
+fn encode_cube_tseytin(aux: Lit, cube: &Vec<Lit>) -> Vec<Vec<Lit>> {
+    let mut clauses = Vec::with_capacity(cube.len() + 1);
+
+    // Binary clauses (lit, -aux)
+    for &lit in cube {
+        clauses.push(vec![lit, -aux]);
     }
-    clauses.push(clause.iter().copied().chain([-aux]).collect());
+
+    // Clause (-lit1, -lit2, ..., -litN, aux)
+    clauses.push(cube.iter().map(|&lit| -lit).chain([aux]).collect());
+
     clauses
 }
 
