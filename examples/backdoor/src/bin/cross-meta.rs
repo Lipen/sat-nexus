@@ -199,7 +199,7 @@ fn main() -> color_eyre::Result<()> {
         );
         let mut total_unsat = 0;
         let mut total_unknown = 0;
-        for (i, cube) in cubes1.iter().enumerate().take(1000) {
+        for (i, cube) in cubes1.iter().enumerate().take(100) {
             // println!("Checking hard cube {}/{}: {}", i+1, hard1_cubes.len(), display_slice(cube));
             solver.reset_assumptions();
             for &lit in cube.iter() {
