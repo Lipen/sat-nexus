@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
-use itertools::Itertools;
+use itertools::{join, Itertools};
 use log::{debug, info};
 
 use backdoor::derivation::derive_clauses;
@@ -13,7 +13,7 @@ use backdoor::solver::Solver;
 use backdoor::utils::{clause_from_external, clause_to_external, create_line_writer, determine_vars_pool, get_hard_tasks, write_clause};
 
 use cadical::statik::Cadical;
-use cadical::SolveResponse;
+use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::utils::{display_slice, parse_dimacs};
 use simple_sat::var::Var;
@@ -148,6 +148,7 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     let options = Options {
         seed: args.seed,
         ban_used_variables: args.ban_used,
+        num_conflicts: Some(1000),
         ..DEFAULT_OPTIONS
     };
     let mut searcher = BackdoorSearcher::new(Solver::new(cadical), pool, options);
@@ -254,12 +255,48 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 args.pool_limit,
             )
             .unwrap();
-        assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
+        // assert!(result.best_fitness.num_hard > 0, "Found strong backdoor?!..");
 
         let backdoor = result.best_instance.get_variables();
         let hard = get_hard_tasks(&backdoor, &searcher.solver.0);
         info!("Found backdoor: {} with {} hard tasks", display_slice(&backdoor), hard.len());
         assert_eq!(hard.len() as u64, result.best_fitness.num_hard);
+
+        if hard.len() == 0 {
+            info!("Found strong backdoor: {}", display_slice(&backdoor));
+
+            info!("Just solving...");
+            searcher.solver.0.reset_assumptions();
+            let time_solve = Instant::now();
+            let res = searcher.solver.solve();
+            let time_solve = time_solve.elapsed();
+            match res {
+                SolveResponse::Interrupted => {
+                    info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
+                    // do nothing
+                }
+                SolveResponse::Unsat => {
+                    info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
+                    return Ok(());
+                }
+                SolveResponse::Sat => {
+                    info!("SAT in {:.1} s", time_solve.as_secs_f64());
+                    let model = (1..=searcher.solver.0.vars())
+                        .map(|i| {
+                            let v = Var::from_external(i as u32);
+                            match searcher.solver.0.val(i as i32).unwrap() {
+                                LitValue::True => Lit::new(v, false),
+                                LitValue::False => Lit::new(v, true),
+                            }
+                        })
+                        .collect_vec();
+                    info!("Model: {}", join(model, ", "));
+                    return Ok(());
+                }
+            }
+
+            unreachable!();
+        }
 
         // Probe the backdoor variables:
         if args.probe_backdoor {

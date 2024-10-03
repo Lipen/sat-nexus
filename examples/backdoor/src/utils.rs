@@ -59,15 +59,12 @@ pub fn get_hard_tasks(variables: &[Var], cadical: &Cadical) -> Vec<Vec<Lit>> {
     let mut valid = Vec::new();
     let res = cadical.propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut valid), None);
     assert_eq!(valid.len(), res as usize);
-    valid
-        .into_iter()
-        .map(|cube| cube.into_iter().map(|i| Lit::from_external(i)).collect())
-        .collect()
+    valid.into_iter().map(clause_from_external).collect()
 }
 
 pub fn partition_tasks_cadical(variables: &[Var], solver: &Cadical) -> (Vec<Vec<Lit>>, Vec<Vec<Lit>>) {
     partition_tasks_with(variables, |cube| {
-        let cube: Vec<i32> = cube.iter().map(|lit| lit.to_external()).collect();
+        let cube: Vec<i32> = clause_to_external(cube).collect();
         // Note: `restore = false` is UNSAFE in general, but since the variables are active, it should be safe.
         let (res, _num_prop) = solver.propcheck(&cube, false, false, false);
         res

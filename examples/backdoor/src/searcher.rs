@@ -7,7 +7,9 @@ use log::{debug, info, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::prelude::*;
 
+use cadical::SolveResponse;
 use simple_sat::lit::Lit;
+use simple_sat::utils::display_slice;
 use simple_sat::var::Var;
 
 use crate::backdoor::Backdoor;
@@ -45,11 +47,13 @@ impl BackdoorSearcher {
 pub struct Options {
     pub seed: u64,
     pub ban_used_variables: bool,
+    pub num_conflicts: Option<usize>,
 }
 
 pub const DEFAULT_OPTIONS: Options = Options {
     seed: 42,
     ban_used_variables: false,
+    num_conflicts: None,
 };
 
 impl Default for Options {
@@ -291,7 +295,11 @@ impl BackdoorSearcher {
             fit.clone()
         } else {
             self.cache_misses += 1;
-            let fit = calculate_fitness(instance, best, &self.solver);
+            let fit = if let Some(num_conflicts) = self.options.num_conflicts {
+                calculate_fitness_limited(instance, best, &self.solver, num_conflicts)
+            } else {
+                calculate_fitness(instance, best, &self.solver)
+            };
             self.cache.insert(key, fit.clone());
             fit
         }
@@ -316,6 +324,55 @@ fn calculate_fitness(instance: &Backdoor, best: Option<&Fitness>, solver: &Solve
     // Calculate the fitness value:
     let value = 1.0 - rho;
 
+    Fitness { value, rho, num_hard }
+}
+
+fn calculate_fitness_limited(instance: &Backdoor, best: Option<&Fitness>, solver: &Solver, num_conflicts: usize) -> Fitness {
+    let vars = instance.get_variables();
+    assert!(vars.len() < 32);
+
+    // let limit = 0;
+    let limit = best.map_or(0, |b| b.num_hard + 1);
+    let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
+    let mut hard = Vec::new();
+    let num_hard = solver
+        .0
+        .propcheck_all_tree_via_internal(&vars_external, limit, Some(&mut hard), None);
+    assert_eq!(hard.len(), num_hard as usize);
+
+    let mut semihard = Vec::new();
+    if hard.len() < 100 {
+        for cube in hard.iter() {
+            solver.0.reset_assumptions();
+            debug!("Checking the cube: {}", display_slice(cube));
+            for &lit in cube.iter() {
+                solver.0.assume(lit).unwrap();
+            }
+            solver.0.limit("conflicts", num_conflicts as i32);
+            match solver.solve() {
+                SolveResponse::Sat => panic!("Unexpected SAT"),
+                SolveResponse::Unsat => {
+                    info!("Found a semi-hard cube: {}", display_slice(cube));
+                    let lemma: Vec<i32> = cube.iter().filter(|&&lit| solver.0.failed(lit).unwrap()).map(|&lit| -lit).collect();
+                    info!("Adding lemma: {}", display_slice(&lemma));
+                    solver.0.add_clause(lemma);
+                    semihard.push(cube.clone());
+                }
+                SolveResponse::Interrupted => {
+                    // do nothing
+                }
+            }
+        }
+    }
+
+    let num_hard = (hard.len() - semihard.len()) as u64;
+    let num_total = 1u64 << vars.len();
+    let rho = 1.0 - (num_hard as f64 / num_total as f64);
+
+    // Calculate the fitness value:
+    let value = 1.0 - rho;
+
+    debug!("Fitness: value={}, rho={}, num_hard={}", value, rho, num_hard);
     Fitness { value, rho, num_hard }
 }
 
