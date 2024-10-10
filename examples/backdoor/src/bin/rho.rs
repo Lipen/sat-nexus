@@ -107,6 +107,11 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
         }
     }
 
+    // Ensure all variables are active:
+    for &v in vars.iter() {
+        assert!(solver.is_active(v), "var {} is not active", v);
+    }
+
     // Compute rho:
     info!("Computing rho for {} vars: {}", vars.len(), display_slice(&vars));
     let num_total = 1u64 << vars.len();
