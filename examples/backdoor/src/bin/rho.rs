@@ -6,7 +6,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 
 use backdoor::solver::Solver;
-use backdoor::utils::parse_comma_separated_intervals;
+use backdoor::utils::{clause_to_external, parse_comma_separated_intervals};
 
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
@@ -58,7 +58,7 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     info!("Initializing SAT solver...");
     let cadical = Cadical::new();
     for clause in parse_dimacs(&args.path_cnf) {
-        cadical.add_clause(clause.into_iter().map(|lit| lit.to_external()));
+        cadical.add_clause(clause_to_external(&clause));
     }
     if args.freeze_all {
         info!("Freezing all {} variables...", cadical.vars());
