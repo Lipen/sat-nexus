@@ -39,11 +39,16 @@ struct Cli {
     // /// Derive ternary clauses.
     // #[arg(long)]
     // derive_ternary: bool,
-
+    //
     // /// Do probe variables?
     // #[arg(long)]
     // probe: bool,
-    /// Freeze variables.
+    //
+    /// Freeze all variables.
+    #[arg(long)]
+    freeze_all: bool,
+
+    /// Freeze backdoor variables.
     #[arg(long)]
     freeze: bool,
 
@@ -70,10 +75,16 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     for clause in parse_dimacs(&args.path_cnf) {
         cadical.add_clause(clause.into_iter().map(|lit| lit.to_external()));
     }
-    if args.freeze {
-        info!("Freezing {} variables...", cadical.vars());
+    if args.freeze_all {
+        info!("Freezing all {} variables...", cadical.vars());
         for i in 0..cadical.vars() {
             let lit = (i + 1) as i32;
+            cadical.freeze(lit)?;
+        }
+    } else if args.freeze {
+        info!("Freezing {} backdoor variables...", vars.len());
+        for var in vars.iter() {
+            let lit = var.to_external() as i32;
             cadical.freeze(lit)?;
         }
     }
