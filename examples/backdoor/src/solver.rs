@@ -29,11 +29,11 @@ impl Solver {
         self.0.is_active(lit)
     }
 
-    pub fn assume(&mut self, lit: Lit) {
+    pub fn assume(&self, lit: Lit) {
         self.0.assume(lit.to_external()).unwrap();
     }
 
-    pub fn add_clause(&mut self, lits: &[Lit]) {
+    pub fn add_clause(&self, lits: &[Lit]) {
         self.0.add_clause(clause_to_external(lits));
         // solver.add_derived_clause(clause_to_external(lits));
     }
