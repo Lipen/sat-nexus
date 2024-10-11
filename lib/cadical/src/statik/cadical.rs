@@ -343,6 +343,8 @@ impl Cadical {
     }
 }
 
+type Callback<R> = unsafe extern "C" fn(*mut c_void, R);
+
 unsafe extern "C" fn trampoline<F, R>(state: *mut c_void, data: R)
 where
     F: FnMut(R),
@@ -351,7 +353,7 @@ where
     cb(data);
 }
 
-pub fn get_trampoline<F, R>(_closure: &F) -> unsafe extern "C" fn(*mut c_void, R)
+pub fn get_trampoline<F, R>(_closure: &F) -> Callback<R>
 where
     F: FnMut(R),
 {
