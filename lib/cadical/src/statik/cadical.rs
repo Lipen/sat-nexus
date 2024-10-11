@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{c_int, c_void, CString};
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 
@@ -331,6 +331,34 @@ impl Cadical {
         Ok(())
     }
 
+    pub fn set_learn<F>(&self, learn: F)
+    where
+        F: FnMut(*mut c_int),
+    {
+        unsafe {
+            let mut closure = learn;
+            let cb = get_trampoline(&closure);
+            ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, 0, Some(cb));
+        }
+    }
+}
+
+unsafe extern "C" fn trampoline<F, R>(state: *mut c_void, data: R)
+where
+    F: FnMut(R),
+{
+    let cb = &mut *(state as *mut F);
+    cb(data);
+}
+
+pub fn get_trampoline<F, R>(_closure: &F) -> unsafe extern "C" fn(*mut c_void, R)
+where
+    F: FnMut(R),
+{
+    trampoline::<F, R>
+}
+
+impl Cadical {
     pub fn internal_propagate(&self) -> bool {
         unsafe { ccadical_internal_propagate(self.ptr) }
     }
@@ -360,7 +388,9 @@ impl Cadical {
             ccadical_internal_backtrack(self.ptr, new_level as i32);
         }
     }
+}
 
+impl Cadical {
     pub fn propcheck(&self, lits: &[i32], restore: bool, save_propagated: bool, save_core: bool) -> (bool, u64) {
         unsafe {
             ccadical_propcheck_begin(self.ptr);
@@ -419,7 +449,9 @@ impl Cadical {
             valid
         }
     }
+}
 
+impl Cadical {
     pub fn clauses_iter(&self) -> ClausesIter {
         unsafe { ClausesIter::new(self.ptr, false) }
     }

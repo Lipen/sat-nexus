@@ -81,3 +81,35 @@ fn test_simple_unsat() -> color_eyre::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_learner() {
+    let solver = Cadical::new();
+    println!("solver = {:?}", solver);
+
+    solver.set_option("otfs", 0);
+
+    solver.set_learn(|mut lits| unsafe {
+        let mut clause = Vec::new();
+        while *lits != 0 {
+            clause.push(*lits);
+            lits = lits.offset(1);
+        }
+        println!("learned clause: {:?}", clause);
+    });
+
+    for r in [-1, 1].iter() {
+        for s in [-1, 1].iter() {
+            for t in [-1, 1].iter() {
+                solver.add_clause([r * 1, s * 2, t * 3]);
+            }
+        }
+    }
+
+    println!("vars: {}", solver.vars());
+    println!("clauses: {}", solver.clauses_iter().count());
+
+    println!("Solving...");
+    let res = solver.solve();
+    println!("res = {:?}", res);
+}
