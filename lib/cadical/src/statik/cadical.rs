@@ -338,22 +338,23 @@ impl Cadical {
         unsafe {
             let mut closure = learn;
             let cb = get_trampoline(&closure);
-            ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, 0, Some(cb));
+            let max_length = 0; // 0 means no limit
+            ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, max_length, Some(cb));
         }
     }
 }
 
 type Callback<R> = unsafe extern "C" fn(*mut c_void, R);
 
-unsafe extern "C" fn trampoline<F, R>(state: *mut c_void, data: R)
+unsafe extern "C" fn trampoline<F, R>(user_data: *mut c_void, result: R)
 where
     F: FnMut(R),
 {
-    let cb = &mut *(state as *mut F);
-    cb(data);
+    let cb = &mut *(user_data as *mut F);
+    cb(result);
 }
 
-pub fn get_trampoline<F, R>(_closure: &F) -> Callback<R>
+fn get_trampoline<F, R>(_closure: &F) -> Callback<R>
 where
     F: FnMut(R),
 {
