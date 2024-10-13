@@ -90,7 +90,7 @@ fn test_learner() {
     solver.set_option("otfs", 0);
 
     let mut learnts: Vec<Vec<i32>> = Vec::new();
-    println!("learnts: {:?}", learnts);
+
     println!("Setting learner...");
     solver.set_learn(|mut lits| unsafe {
         let mut clause = Vec::new();
@@ -99,7 +99,7 @@ fn test_learner() {
             lits = lits.offset(1);
         }
         println!("learned clause: {:?}", clause);
-        learnts.push(clause.clone());
+        learnts.push(clause);
     });
 
     println!("Adding clauses...");

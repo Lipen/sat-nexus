@@ -335,30 +335,32 @@ impl Cadical {
     where
         F: FnMut(*mut c_int),
     {
+        let mut closure = learn;
+        let cb = trampoline::<F>;
         unsafe {
-            let mut closure = learn;
-            let cb = get_trampoline(&closure);
-            let max_length = 0; // 0 means no limit
-            ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, max_length, Some(cb));
+            ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, 0, Some(cb));
+        }
+
+        // Note: using `get_trampoline(&closure)` leads to SIGSEGV (can't reproduce outside cadical).
+        //       Do not try to revert it! I've spent 2 days debugging it, everything have fixed
+        //       only after deleting `get_trampoline` and using `trampoline::<F>` directly.
+        //       Boxing and fat pointers are also not the problem!
+        //
+        // fn get_trampoline<F>(_closure: &F) -> unsafe extern "C" fn(*mut c_void, *mut c_int)
+        // where
+        //     F: FnMut(*mut c_int),
+        // {
+        //     trampoline::<F>
+        // }
+        //
+        unsafe extern "C" fn trampoline<F>(user_data: *mut c_void, clause: *mut c_int)
+        where
+            F: FnMut(*mut c_int),
+        {
+            let cb = &mut *(user_data as *mut F);
+            cb(clause);
         }
     }
-}
-
-type Callback<R> = unsafe extern "C" fn(*mut c_void, R);
-
-unsafe extern "C" fn trampoline<F, R>(user_data: *mut c_void, result: R)
-where
-    F: FnMut(R),
-{
-    let cb = &mut *(user_data as *mut F);
-    cb(result);
-}
-
-fn get_trampoline<F, R>(_closure: &F) -> Callback<R>
-where
-    F: FnMut(R),
-{
-    trampoline::<F, R>
 }
 
 impl Cadical {
