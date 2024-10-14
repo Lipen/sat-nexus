@@ -466,8 +466,8 @@ impl Cadical {
         where
             F: FnMut(&[c_int]) -> bool,
         {
-            let cb = &mut *(user_data as *mut F);
             let clause = slice::from_raw_parts(lits, size);
+            let cb = &mut *(user_data as *mut F);
             cb(clause)
         }
 
