@@ -458,16 +458,10 @@ impl Cadical {
 }
 
 impl Cadical {
-    pub fn traverse_clauses<F>(&self, callback: F)
+    pub fn traverse_clauses<F>(&self, callback: F) -> bool
     where
         F: FnMut(&[c_int]) -> bool,
     {
-        let mut closure = callback;
-        let cb = trampoline::<F>;
-        unsafe {
-            ccadical_traverse_clauses(self.ptr, Some(cb), &mut closure as *mut _ as *mut c_void);
-        }
-
         unsafe extern "C" fn trampoline<F>(lits: *const c_int, size: usize, user_data: *mut c_void) -> bool
         where
             F: FnMut(&[c_int]) -> bool,
@@ -476,6 +470,10 @@ impl Cadical {
             let clause = std::slice::from_raw_parts(lits, size);
             cb(clause)
         }
+
+        let mut closure = callback;
+        let cb = trampoline::<F>;
+        unsafe { ccadical_traverse_clauses(self.ptr, Some(cb), &mut closure as *mut _ as *mut c_void) }
     }
 }
 

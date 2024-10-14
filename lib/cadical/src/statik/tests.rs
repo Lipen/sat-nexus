@@ -132,12 +132,13 @@ fn test_traverse_clauses() {
     solver.add_clause([5, -6, -7]);
 
     let mut clauses = Vec::new();
-    solver.traverse_clauses(|clause| {
+    let res = solver.traverse_clauses(|clause| {
         let clause = clause.to_vec();
         println!("clause: {:?}", clause);
         clauses.push(clause);
         true
     });
+    println!("res = {:?}", res);
 
     println!("Total {} clauses: {:?}", clauses.len(), clauses);
     assert_eq!(clauses.len(), 3);
