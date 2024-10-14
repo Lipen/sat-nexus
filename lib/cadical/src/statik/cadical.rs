@@ -458,6 +458,27 @@ impl Cadical {
 }
 
 impl Cadical {
+    pub fn traverse_clauses<F>(&self, callback: F)
+    where
+        F: FnMut(*const c_int, usize) -> bool,
+    {
+        let mut closure = callback;
+        let cb = trampoline::<F>;
+        unsafe {
+            ccadical_traverse_clauses(self.ptr, Some(cb), &mut closure as *mut _ as *mut c_void);
+        }
+
+        unsafe extern "C" fn trampoline<F>(lits: *const c_int, size: usize, user_data: *mut c_void) -> bool
+        where
+            F: FnMut(*const c_int, usize) -> bool,
+        {
+            let cb = &mut *(user_data as *mut F);
+            cb(lits, size)
+        }
+    }
+}
+
+impl Cadical {
     pub fn clauses_iter(&self) -> ClausesIter {
         unsafe { ClausesIter::new(self.ptr, false) }
     }
@@ -475,7 +496,7 @@ pub struct ClausesIter {
 
 impl ClausesIter {
     pub unsafe fn new(ptr: CCadicalPtr, redundant: bool) -> Self {
-        let length = ccadical_traverse_clauses(ptr, redundant);
+        let length = ccadical_traverse_clauses_clone(ptr, redundant);
         Self { ptr, length, index: 0 }
     }
 }

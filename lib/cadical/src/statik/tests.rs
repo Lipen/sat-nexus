@@ -121,3 +121,24 @@ fn test_learner() {
 
     println!("learnts: {:?}", learnts);
 }
+
+#[test]
+fn test_traverse_clauses() {
+    let solver = Cadical::new();
+    println!("solver = {:?}", solver);
+
+    solver.add_clause([1, -2]);
+    solver.add_clause([-3, 4]);
+    solver.add_clause([5, -6, -7]);
+
+    let mut clauses = Vec::new();
+    solver.traverse_clauses(|lits, size| unsafe {
+        let clause = std::slice::from_raw_parts(lits, size).to_vec();
+        println!("clause: {:?}", clause);
+        clauses.push(clause);
+        true
+    });
+
+    println!("Total {} clauses: {:?}", clauses.len(), clauses);
+    assert_eq!(clauses.len(), 3);
+}
