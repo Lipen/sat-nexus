@@ -1,6 +1,7 @@
 use std::ffi::{c_int, c_void, CString};
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
+use std::slice;
 
 use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
@@ -466,7 +467,7 @@ impl Cadical {
             F: FnMut(&[c_int]) -> bool,
         {
             let cb = &mut *(user_data as *mut F);
-            let clause = std::slice::from_raw_parts(lits, size);
+            let clause = slice::from_raw_parts(lits, size);
             cb(clause)
         }
 
