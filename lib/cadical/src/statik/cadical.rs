@@ -341,6 +341,14 @@ impl Cadical {
             ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, 0, Some(cb));
         }
 
+        unsafe extern "C" fn trampoline<F>(user_data: *mut c_void, clause: *mut c_int)
+        where
+            F: FnMut(*mut c_int),
+        {
+            let cb = &mut *(user_data as *mut F);
+            cb(clause);
+        }
+
         // Note: using `get_trampoline(&closure)` leads to SIGSEGV (can't reproduce outside cadical).
         //       Do not try to revert it! I've spent 2 days debugging it, everything have fixed
         //       only after deleting `get_trampoline` and using `trampoline::<F>` directly.
@@ -353,13 +361,6 @@ impl Cadical {
         //     trampoline::<F>
         // }
         //
-        unsafe extern "C" fn trampoline<F>(user_data: *mut c_void, clause: *mut c_int)
-        where
-            F: FnMut(*mut c_int),
-        {
-            let cb = &mut *(user_data as *mut F);
-            cb(clause);
-        }
     }
 }
 
