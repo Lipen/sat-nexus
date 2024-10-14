@@ -132,8 +132,8 @@ fn test_traverse_clauses() {
     solver.add_clause([5, -6, -7]);
 
     let mut clauses = Vec::new();
-    solver.traverse_clauses(|lits, size| unsafe {
-        let clause = std::slice::from_raw_parts(lits, size).to_vec();
+    solver.traverse_clauses(|clause| {
+        let clause = clause.to_vec();
         println!("clause: {:?}", clause);
         clauses.push(clause);
         true
