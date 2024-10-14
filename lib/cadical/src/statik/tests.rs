@@ -92,12 +92,7 @@ fn test_learner() {
     let mut learnts: Vec<Vec<i32>> = Vec::new();
 
     println!("Setting learner...");
-    solver.set_learn(|mut lits| unsafe {
-        let mut clause = Vec::new();
-        while *lits != 0 {
-            clause.push(*lits as i32);
-            lits = lits.offset(1);
-        }
+    solver.set_learn(|clause| {
         println!("learned clause: {:?}", clause);
         learnts.push(clause);
     });

@@ -334,12 +334,24 @@ impl Cadical {
 
     pub fn set_learn<F>(&self, learn: F)
     where
-        F: FnMut(*mut c_int),
+        F: FnMut(Vec<c_int>),
     {
         unsafe extern "C" fn trampoline<F>(user_data: *mut c_void, clause: *mut c_int)
         where
-            F: FnMut(*mut c_int),
+            F: FnMut(Vec<c_int>),
         {
+            let mut lits = clause;
+            let mut clause = Vec::new();
+            // Note: `loop` is better than `while *lits != 0 { ... clause.push(*lits) ... }`
+            //   because `loop` contains only *one* dereference `*lits`.
+            loop {
+                let lit = *lits;
+                if lit == 0 {
+                    break;
+                }
+                clause.push(lit);
+                lits = lits.add(1);
+            }
             let cb = &mut *(user_data as *mut F);
             cb(clause);
         }
