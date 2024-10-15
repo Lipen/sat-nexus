@@ -356,10 +356,10 @@ impl Cadical {
             cb(clause);
         }
 
-        let mut closure = learn;
+        let closure = Box::new(learn);
         let cb = trampoline::<F>;
         unsafe {
-            ccadical_set_learn(self.ptr, &mut closure as *mut _ as *mut c_void, 0, Some(cb));
+            ccadical_set_learn(self.ptr, Box::into_raw(closure) as *mut c_void, 0, Some(cb));
         }
 
         // Note: using `get_trampoline(&closure)` leads to SIGSEGV (can't reproduce outside cadical).
