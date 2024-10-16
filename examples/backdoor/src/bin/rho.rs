@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
+use color_eyre::eyre::bail;
 use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use log::{debug, info};
@@ -60,6 +61,10 @@ struct Cli {
     /// Show easy cubes.
     #[arg(long)]
     show_easy: bool,
+
+    /// Do not store easy cubes.
+    #[arg(long)]
+    no_easy: bool,
 }
 
 fn _main(args: &Cli) -> color_eyre::Result<()> {
@@ -86,8 +91,6 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     } else {
         vars
     };
-
-    assert!(vars.len() < 64, "too many variables");
 
     // Initialize SAT solver:
     info!("Initializing SAT solver...");
@@ -148,38 +151,43 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     let num_hard = if args.tree {
         info!("Using tree-based propcheck");
         let vars_external = vars_to_external(&vars);
-        let mut hard = Vec::new();
-        let mut easy = Vec::new();
+        let mut hard: Vec<Vec<i32>> = Vec::new();
+        let mut easy: Option<Vec<Vec<i32>>> = if args.no_easy { None } else { Some(Vec::new()) };
+
         let num_hard = solver
             .0
-            .propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), Some(&mut easy));
+            .propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), easy.as_mut());
         info!("hard = {}", hard.len());
+
         if args.show_hard {
             for (i, cube) in hard.iter().enumerate() {
                 info!("hard {}/{} = {}", i + 1, hard.len(), display_slice(&cube));
             }
         }
-        info!("easy = {}", easy.len());
-        if args.show_easy {
-            for (i, cube) in easy.iter().enumerate() {
-                solver.0.propcheck(&cube, false, false, true);
-                let core = solver.0.propcheck_get_core();
-                info!(
-                    "easy {}/{} = {}, core = {}",
-                    i + 1,
-                    easy.len(),
-                    display_slice(&cube),
-                    display_slice(&core)
-                );
+        if let Some(easy) = &easy {
+            info!("easy = {}", easy.len());
+            if args.show_easy {
+                for (i, cube) in easy.iter().enumerate() {
+                    solver.0.propcheck(&cube, false, false, true);
+                    let core = solver.0.propcheck_get_core();
+                    info!(
+                        "easy {}/{} = {}, core = {}",
+                        i + 1,
+                        easy.len(),
+                        display_slice(&cube),
+                        display_slice(&core)
+                    );
+                }
             }
         }
+
         assert_eq!(num_hard, hard.len() as u64);
         num_hard
     } else {
         info!("Using naive propcheck");
 
-        let mut hard = Vec::new();
-        let mut easy = Vec::new();
+        let mut hard: Vec<Vec<Lit>> = Vec::new();
+        let mut easy: Option<Vec<Vec<Lit>>> = if args.no_easy { None } else { Some(Vec::new()) };
 
         let pb = ProgressBar::new(num_total);
         pb.set_style(
@@ -204,7 +212,9 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 hard.push(cube);
             } else {
                 // pb.println(format!("easy cube: {}", display_slice(&cube)));
-                easy.push(cube);
+                if let Some(easy) = &mut easy {
+                    easy.push(cube);
+                }
             }
         }
         pb.finish_and_clear();
@@ -215,18 +225,20 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 info!("hard {}/{} = {}", i + 1, hard.len(), display_slice(&cube));
             }
         }
-        info!("easy = {}", easy.len());
-        if args.show_easy {
-            for (i, cube) in easy.iter().enumerate() {
-                solver.propcheck_save_core(&cube);
-                let core = solver.0.propcheck_get_core();
-                info!(
-                    "easy {}/{} = {}, core = {}",
-                    i + 1,
-                    easy.len(),
-                    display_slice(&cube),
-                    display_slice(&core)
-                );
+        if let Some(easy) = &easy {
+            info!("easy = {}", easy.len());
+            if args.show_easy {
+                for (i, cube) in easy.iter().enumerate() {
+                    solver.propcheck_save_core(&cube);
+                    let core = solver.0.propcheck_get_core();
+                    info!(
+                        "easy {}/{} = {}, core = {}",
+                        i + 1,
+                        easy.len(),
+                        display_slice(&cube),
+                        display_slice(&core)
+                    );
+                }
             }
         }
         hard.len() as u64
@@ -244,6 +256,10 @@ fn main() -> color_eyre::Result<()> {
     let start_time = Instant::now();
     let args = Cli::parse();
     info!("args = {:?}", args);
+
+    if args.show_easy && args.no_easy {
+        bail!("Cannot show easy cubes without storing them (flags --show-easy and --no-easy are mutually exclusive)");
+    }
 
     _main(&args)?;
 
