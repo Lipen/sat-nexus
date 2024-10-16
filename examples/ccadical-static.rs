@@ -97,10 +97,8 @@ fn main() -> color_eyre::Result<()> {
         ccadical_add(ptr, 2);
         ccadical_add(ptr, 0);
 
-        ccadical_propcheck_all_tree_begin(ptr);
-        ccadical_propcheck_all_tree_add(ptr, 1);
-        ccadical_propcheck_all_tree_add(ptr, 2);
-        let count = ccadical_propcheck_all_tree(ptr, 0, false);
+        let vars = vec![1, 2];
+        let count = ccadical_propcheck_all_tree(ptr, vars.as_ptr(), vars.len(), 0, None, std::ptr::null_mut());
         println!("count = {}", count);
 
         ccadical_release(ptr);
