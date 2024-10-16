@@ -92,9 +92,11 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     // Initialize SAT solver:
     info!("Initializing SAT solver...");
     let cadical = Cadical::new();
+    info!("Reading CNF from '{}'...", args.path_cnf.display());
     for clause in parse_dimacs(&args.path_cnf) {
         cadical.add_clause(lits_to_external(&clause));
     }
+    info!("vars = {}, clauses = {}", cadical.vars(), cadical.irredundant());
     if args.freeze_all {
         info!("Freezing all {} variables...", cadical.vars());
         for i in 0..cadical.vars() {
@@ -108,8 +110,6 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
             cadical.freeze(lit)?;
         }
     }
-    cadical.limit("conflicts", 0);
-    cadical.solve()?;
 
     let solver = Solver::new(cadical);
     debug!("solver = {:?}", solver);
@@ -120,11 +120,11 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
         let time_solve = Instant::now();
         let res = solver.0.solve()?;
         let time_solve = time_solve.elapsed();
-        solver.0.internal_backtrack(0);
         match res {
             SolveResponse::Interrupted => {
                 info!("UNKNOWN in {:.1} s", time_solve.as_secs_f64());
-                // do nothing
+                solver.0.internal_backtrack(0);
+                // do nothing more
             }
             SolveResponse::Unsat => {
                 info!("UNSAT in {:.1} s", time_solve.as_secs_f64());
@@ -134,11 +134,6 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 info!("SAT in {:.1} s", time_solve.as_secs_f64());
                 panic!("Unexpected SAT during pre-solve");
             }
-        }
-
-        {
-            let res = solver.0.internal_propagate();
-            assert!(res);
         }
     }
 
@@ -158,13 +153,13 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
         let num_hard = solver
             .0
             .propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), Some(&mut easy));
-        info!("hard: {}", hard.len());
+        info!("hard = {}", hard.len());
         if args.show_hard {
             for (i, cube) in hard.iter().enumerate() {
                 info!("hard {}/{} = {}", i + 1, hard.len(), display_slice(&cube));
             }
         }
-        info!("easy: {}", easy.len());
+        info!("easy = {}", easy.len());
         if args.show_easy {
             for (i, cube) in easy.iter().enumerate() {
                 solver.0.propcheck(&cube, false, false, true);
@@ -214,13 +209,13 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
         }
         pb.finish_and_clear();
 
-        info!("hard: {}", hard.len());
+        info!("hard = {}", hard.len());
         if args.show_hard {
             for (i, cube) in hard.iter().enumerate() {
                 info!("hard {}/{} = {}", i + 1, hard.len(), display_slice(&cube));
             }
         }
-        info!("easy: {}", easy.len());
+        info!("easy = {}", easy.len());
         if args.show_easy {
             for (i, cube) in easy.iter().enumerate() {
                 solver.propcheck_save_core(&cube);
