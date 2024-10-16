@@ -452,12 +452,18 @@ impl Cadical {
             cb(res)
         }
 
+        fn get_trampoline<F>(_closure: &F) -> unsafe extern "C" fn(*const c_int, usize, *mut c_void)
+        where
+            F: FnMut(&[i32]),
+        {
+            trampoline::<F>
+        }
+
         if let Some(valid) = valid {
             let mut closure = |lits: &[i32]| {
-                println!("GOT VALID: ${:?}", lits);
                 valid.push(lits.to_vec());
             };
-            let cb = trampoline::<fn(&[i32])>;
+            let cb = get_trampoline(&closure);
             unsafe {
                 ccadical_propcheck_all_tree(
                     self.ptr,
