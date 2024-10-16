@@ -333,7 +333,7 @@ impl Cadical {
         Ok(())
     }
 
-    pub fn set_learn<F>(&self, learn: F)
+    pub fn set_learn<F>(&self, max_length: usize, learn: F)
     where
         F: FnMut(Vec<c_int>),
     {
@@ -361,7 +361,7 @@ impl Cadical {
         assert_eq!(size_of_val(&closure), size_of::<usize>());
         let cb = trampoline::<F>;
         unsafe {
-            ccadical_set_learn(self.ptr, Box::into_raw(closure) as *mut c_void, 0, Some(cb));
+            ccadical_set_learn(self.ptr, Box::into_raw(closure) as *mut c_void, max_length as i32, Some(cb));
         }
     }
 }
