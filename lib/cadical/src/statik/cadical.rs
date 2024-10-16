@@ -358,6 +358,7 @@ impl Cadical {
         }
 
         let closure = Box::new(learn);
+        assert_eq!(size_of_val(&closure), size_of::<usize>());
         let cb = trampoline::<F>;
         unsafe {
             ccadical_set_learn(self.ptr, Box::into_raw(closure) as *mut c_void, 0, Some(cb));
@@ -451,6 +452,7 @@ impl Cadical {
             let mut closure = |lits: &[i32]| {
                 valid.push(lits.to_vec());
             };
+            assert_eq!(size_of_val(&&mut closure), size_of::<usize>());
             let cb = get_trampoline(&closure);
             unsafe {
                 ccadical_propcheck_all_tree(
@@ -483,6 +485,7 @@ impl Cadical {
         }
 
         let mut closure = callback;
+        assert_eq!(size_of_val(&&mut closure), size_of::<usize>());
         let cb = trampoline::<F>;
         unsafe { ccadical_traverse_clauses(self.ptr, redundant, Some(cb), &mut closure as *mut _ as *mut c_void) }
     }
