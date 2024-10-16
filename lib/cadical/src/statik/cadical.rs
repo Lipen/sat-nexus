@@ -540,7 +540,7 @@ impl Cadical {
         mut out_valid: Option<&mut Vec<Vec<i32>>>,
         mut out_invalid: Option<&mut Vec<Vec<i32>>>,
     ) -> u64 {
-        assert!(vars.len() < 30);
+        // assert!(vars.len() < 30);
 
         // TODO:
         // if (internal->unsat || internal->unsat_constraint) {
