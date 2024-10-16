@@ -335,11 +335,11 @@ impl Cadical {
 
     pub fn set_learn<F>(&self, max_length: usize, learn: F)
     where
-        F: FnMut(Vec<c_int>),
+        F: FnMut(Vec<i32>),
     {
         unsafe extern "C" fn trampoline<F>(user_data: *mut c_void, clause: *mut c_int)
         where
-            F: FnMut(Vec<c_int>),
+            F: FnMut(Vec<i32>),
         {
             let mut lits = clause;
             let mut clause = Vec::new();
@@ -477,7 +477,7 @@ impl Cadical {
     {
         unsafe extern "C" fn trampoline<F>(lits: *const c_int, size: usize, user_data: *mut c_void) -> bool
         where
-            F: FnMut(&[c_int]) -> bool,
+            F: FnMut(&[i32]) -> bool,
         {
             let clause = slice::from_raw_parts(lits, size);
             let cb = &mut *(user_data as *mut F);
