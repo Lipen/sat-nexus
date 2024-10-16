@@ -17,10 +17,8 @@ use rand::prelude::*;
 use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
-use backdoor::utils::{
-    clause_from_external, concat_cubes, create_line_writer, determine_vars_pool, get_hard_tasks, propcheck_all_trie_via_internal,
-    write_clause,
-};
+use backdoor::utils::*;
+
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
 use simple_sat::lit::Lit;
@@ -363,7 +361,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let time_extract = Instant::now();
             let mut num_new = 0;
             for clause in searcher.solver.0.extract_clauses(true) {
-                let mut clause = clause_from_external(clause);
+                let mut clause = lits_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 all_clauses.insert(clause);
                 num_new += 1;
@@ -1047,7 +1045,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let time_extract = Instant::now();
             let mut num_new = 0;
             for clause in searcher.solver.0.extract_clauses(true) {
-                let mut clause = clause_from_external(clause);
+                let mut clause = lits_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 (&mut all_clauses).insert(clause);
                 num_new += 1;
@@ -1182,7 +1180,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let time_extract = Instant::now();
             let mut num_new = 0;
             for clause in searcher.solver.0.extract_clauses(true) {
-                let mut clause = clause_from_external(clause);
+                let mut clause = lits_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 all_clauses.insert(clause);
                 num_new += 1;

@@ -13,7 +13,7 @@ use cadical::SolveResponse;
 use simple_sat::lit::Lit;
 use simple_sat::utils::parse_dimacs;
 
-use crate::utils::clause_to_external;
+use crate::utils::lits_to_external;
 
 #[derive(Debug)]
 pub struct CubeTask {
@@ -129,7 +129,7 @@ where
             move |_| {
                 let solver = Cadical::new();
                 for clause in clauses.iter() {
-                    solver.add_clause(clause_to_external(clause));
+                    solver.add_clause(lits_to_external(clause));
                 }
                 solver
             },

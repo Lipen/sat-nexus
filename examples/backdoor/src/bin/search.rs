@@ -10,7 +10,7 @@ use log::{debug, info};
 use backdoor::derivation::derive_clauses;
 use backdoor::searcher::{BackdoorSearcher, Options, DEFAULT_OPTIONS};
 use backdoor::solver::Solver;
-use backdoor::utils::{clause_from_external, clause_to_external, create_line_writer, determine_vars_pool, get_hard_tasks, write_clause};
+use backdoor::utils::*;
 
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
@@ -333,13 +333,13 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 .propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), Some(&mut easy));
             assert_eq!(hard.len(), res as usize);
 
-            let hard: Vec<Vec<Lit>> = hard.into_iter().map(clause_from_external).collect();
+            let hard: Vec<Vec<Lit>> = hard.into_iter().map(lits_from_external).collect();
             debug!("Hard tasks: {}", hard.len());
             for (i, cube) in hard.iter().enumerate() {
                 debug!("[{}/{}]: {}", i + 1, hard.len(), display_slice(cube));
             }
 
-            let easy: Vec<Vec<Lit>> = easy.into_iter().map(clause_from_external).collect();
+            let easy: Vec<Vec<Lit>> = easy.into_iter().map(lits_from_external).collect();
             debug!("Easy tasks: {}", easy.len());
 
             let mut easy_cores: Vec<Vec<Lit>> = Vec::new();
@@ -350,7 +350,7 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 } else {
                     let core = searcher.solver.0.propcheck_get_core();
                     assert!(!core.is_empty());
-                    let mut core = clause_from_external(core);
+                    let mut core = lits_from_external(core);
                     core.sort_by_key(|lit| lit.inner());
                     debug!(
                         "{}/{}: core = {} for cube = {}",
@@ -369,22 +369,21 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
 
                     if false {
                         let lemma = core.iter().map(|&lit| -lit).collect_vec();
-                        let lits = &lemma;
 
                         searcher.solver.0.internal_backtrack(0);
 
                         let res = searcher.solver.0.internal_propagate();
                         assert!(res);
 
-                        let lits = clause_to_external(lits).collect_vec();
-                        if lits.len() >= 2 {
-                            for lit in lits {
+                        let lemma = lits_to_external(&lemma);
+                        if lemma.len() >= 2 {
+                            for lit in lemma {
                                 assert!(searcher.solver.0.is_active(lit), "lit {} is not active", lit);
                                 searcher.solver.0.add_derived(lit);
                             }
                             searcher.solver.0.add_derived(0);
                         } else {
-                            let lit = lits[0];
+                            let lit = lemma[0];
                             if searcher.solver.0.is_active(lit) {
                                 searcher.solver.0.add_unit_clause(lit);
                                 assert!(!searcher.solver.0.is_active(lit));
@@ -410,7 +409,7 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
                 info!("Adding lemmas from {} cores...", easy_cores.len());
                 for core in easy_cores.iter() {
                     let lemma = core.iter().map(|&lit| -lit).collect_vec();
-                    searcher.solver.0.add_derived_clause(clause_to_external(&lemma));
+                    searcher.solver.0.add_derived_clause(lits_to_external(&lemma));
                 }
             }
         }

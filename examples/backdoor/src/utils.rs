@@ -196,23 +196,34 @@ pub fn create_line_writer<P: AsRef<Path>>(path: P) -> LineWriter<File> {
     f
 }
 
-pub fn maybe_create<P: AsRef<Path>>(path: &Option<P>) -> Option<LineWriter<File>> {
-    path.as_ref().map(create_line_writer)
-}
-
-pub fn clause_to_external<'a, I>(lits: I) -> impl Iterator<Item = i32> + 'a
+pub fn lits_to_external<'a, I>(lits: I) -> Vec<i32>
 where
     I: IntoIterator<Item = &'a Lit>,
-    <I as IntoIterator>::IntoIter: 'a,
 {
-    lits.into_iter().map(|lit| lit.to_external())
+    lits.into_iter().map(|lit| lit.to_external()).collect()
 }
 
-pub fn clause_from_external<I>(lits: I) -> Vec<Lit>
+pub fn lits_from_external<I>(lits: I) -> Vec<Lit>
 where
-    I: IntoIterator<Item = i32>,
+    I: IntoIterator,
+    I::Item: Into<i32>,
 {
-    lits.into_iter().map(Lit::from_external).collect_vec()
+    lits.into_iter().map(|lit| Lit::from_external(lit.into())).collect()
+}
+
+pub fn vars_to_external<'a, I>(vars: I) -> Vec<i32>
+where
+    I: IntoIterator<Item = &'a Var>,
+{
+    vars.into_iter().map(|v| v.to_external() as i32).collect()
+}
+
+pub fn vars_from_external<I>(vars: I) -> Vec<Var>
+where
+    I: IntoIterator,
+    I::Item: Into<i32>,
+{
+    vars.into_iter().map(|v| Var::from_external(v.into() as u32)).collect()
 }
 
 pub fn propcheck_all_trie_via_internal(

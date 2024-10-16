@@ -3,7 +3,7 @@ use cadical::{FixedResponse, SolveResponse};
 use simple_sat::lit::Lit;
 use simple_sat::var::Var;
 
-use crate::utils::clause_to_external;
+use crate::utils::{lits_to_external, vars_to_external};
 
 #[derive(Debug)]
 pub struct Solver(pub Cadical);
@@ -34,8 +34,8 @@ impl Solver {
     }
 
     pub fn add_clause(&self, lits: &[Lit]) {
-        self.0.add_clause(clause_to_external(lits));
-        // solver.add_derived_clause(clause_to_external(lits));
+        self.0.add_clause(lits_to_external(lits));
+        // solver.add_derived_clause(lits_to_external(lits));
     }
 
     pub fn solve(&mut self) -> SolveResponse {
@@ -47,17 +47,17 @@ impl Solver {
     }
 
     pub fn propcheck(&self, lits: &[Lit]) -> (bool, u64) {
-        let lits_external: Vec<i32> = lits.iter().map(|lit| lit.to_external()).collect();
+        let lits_external = lits_to_external(lits);
         self.0.propcheck(&lits_external, false, false, false)
     }
 
     pub fn propcheck_save_core(&self, lits: &[Lit]) -> (bool, u64) {
-        let lits_external: Vec<i32> = lits.iter().map(|lit| lit.to_external()).collect();
+        let lits_external = lits_to_external(lits);
         self.0.propcheck(&lits_external, false, false, true)
     }
 
     pub fn propcheck_all_tree(&self, vars: &[Var], limit: u64) -> u64 {
-        let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
+        let vars_external = vars_to_external(vars);
         // self.0.propcheck_all_tree(&vars_external, limit, None)
         self.0.propcheck_all_tree_via_internal(&vars_external, limit, None, None)
     }

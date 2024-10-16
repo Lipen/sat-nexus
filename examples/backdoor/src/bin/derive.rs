@@ -11,9 +11,7 @@ use log::{debug, info};
 use rand::prelude::*;
 
 use backdoor::derivation::derive_clauses;
-use backdoor::utils::parse_multiple_comma_separated_intervals;
-use backdoor::utils::parse_multiple_comma_separated_intervals_from;
-use backdoor::utils::{clause_to_external, concat_cubes, create_line_writer, partition_tasks_cadical};
+use backdoor::utils::*;
 
 use cadical::statik::Cadical;
 use cadical::{LitValue, SolveResponse};
@@ -404,7 +402,7 @@ fn main() -> color_eyre::Result<()> {
                     }
                     writeln!(f, "0")?;
                 }
-                solver.add_clause(clause_to_external(&clause));
+                solver.add_clause(lits_to_external(&clause));
                 new_derived_clauses.push(clause.clone());
                 all_derived_clauses.push(clause);
             }
