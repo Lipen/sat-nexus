@@ -58,7 +58,7 @@ impl Solver {
 
     pub fn propcheck_all_tree(&self, vars: &[Var], limit: u64) -> u64 {
         let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
-        // self.0.propcheck_all_tree(&vars_external, limit, false)
+        // self.0.propcheck_all_tree(&vars_external, limit, None)
         self.0.propcheck_all_tree_via_internal(&vars_external, limit, None, None)
     }
 }

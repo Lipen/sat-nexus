@@ -215,8 +215,8 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     debug!("active() = {}", cadical.active());
     debug!("redundant() = {}", cadical.redundant());
     debug!("irredundant() = {}", cadical.irredundant());
-    debug!("clauses() = {}", cadical.clauses_iter().count());
-    debug!("all_clauses() = {}", cadical.all_clauses_iter().count());
+    debug!("clauses() = {}", cadical.extract_clauses(false).len());
+    debug!("all_clauses() = {}", cadical.extract_clauses(true).len());
 
     // Create the pool of variables available for EA:
     let pool: Vec<Var> = determine_vars_pool(&args.path_cnf, &args.allowed_vars, &args.banned_vars);
@@ -362,7 +362,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             debug!("Retrieving clauses from the solver...");
             let time_extract = Instant::now();
             let mut num_new = 0;
-            for clause in searcher.solver.0.all_clauses_iter() {
+            for clause in searcher.solver.0.extract_clauses(true) {
                 let mut clause = clause_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 all_clauses.insert(clause);
@@ -1046,7 +1046,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             debug!("Retrieving clauses from the solver...");
             let time_extract = Instant::now();
             let mut num_new = 0;
-            for clause in searcher.solver.0.all_clauses_iter() {
+            for clause in searcher.solver.0.extract_clauses(true) {
                 let mut clause = clause_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 (&mut all_clauses).insert(clause);
@@ -1181,7 +1181,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             debug!("Retrieving clauses from the solver...");
             let time_extract = Instant::now();
             let mut num_new = 0;
-            for clause in searcher.solver.0.all_clauses_iter() {
+            for clause in searcher.solver.0.extract_clauses(true) {
                 let mut clause = clause_from_external(clause);
                 clause.sort_by_key(|lit| lit.inner());
                 all_clauses.insert(clause);

@@ -107,14 +107,14 @@ fn test_learner() {
     }
 
     println!("vars: {}", solver.vars());
-    println!("clauses: {}", solver.clauses_iter().count());
-    println!("learnts: {:?}", learnts);
+    println!("clauses: {}", solver.irredundant());
+    println!("learnts = {:?}", learnts);
 
     println!("Solving...");
     let res = solver.solve();
     println!("res = {:?}", res);
 
-    println!("learnts: {:?}", learnts);
+    println!("learnts = {:?}", learnts);
 }
 
 #[test]
@@ -127,13 +127,13 @@ fn test_traverse_clauses() {
     solver.add_clause([5, -6, -7]);
 
     let mut clauses = Vec::new();
-    let res = solver.traverse_clauses(|clause| {
+    let res = solver.traverse_clauses(false, |clause| {
         let clause = clause.to_vec();
         println!("clause: {:?}", clause);
         clauses.push(clause);
         true
     });
-    println!("res = {:?}", res);
+    assert!(res);
 
     println!("Total {} clauses: {:?}", clauses.len(), clauses);
     assert_eq!(clauses.len(), 3);

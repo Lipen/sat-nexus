@@ -1,6 +1,7 @@
 use std::ffi::{c_int, c_void, CString};
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
+use std::ptr;
 use std::slice;
 
 use itertools::{zip_eq, Itertools};
@@ -411,68 +412,72 @@ impl Cadical {
 impl Cadical {
     pub fn propcheck(&self, lits: &[i32], restore: bool, save_propagated: bool, save_core: bool) -> (bool, u64) {
         unsafe {
-            ccadical_propcheck_begin(self.ptr);
-            for &lit in lits {
-                assert_ne!(lit, 0);
-                ccadical_propcheck_add(self.ptr, lit);
-            }
             let mut num_propagated = 0;
-            let res = ccadical_propcheck(self.ptr, restore, &mut num_propagated, save_propagated, save_core);
+            let res = ccadical_propcheck(
+                self.ptr,
+                lits.as_ptr(),
+                lits.len(),
+                restore,
+                &mut num_propagated,
+                save_propagated,
+                save_core,
+            );
             (res, num_propagated)
         }
     }
 
     pub fn propcheck_get_propagated(&self) -> Vec<i32> {
         unsafe {
-            let propagated_length = ccadical_propcheck_get_propagated_length(self.ptr);
-            let mut propagated = Vec::with_capacity(propagated_length);
-            ccadical_propcheck_get_propagated(self.ptr, propagated.as_mut_ptr());
-            propagated.set_len(propagated_length);
-            propagated
+            let mut size = 0;
+            let ptr = ccadical_propcheck_get_propagated(self.ptr, &mut size);
+            slice::from_raw_parts(ptr, size).to_vec()
         }
     }
 
     pub fn propcheck_get_core(&self) -> Vec<i32> {
         unsafe {
-            let core_length = ccadical_propcheck_get_core_length(self.ptr);
-            let mut core = Vec::with_capacity(core_length);
-            ccadical_propcheck_get_core(self.ptr, core.as_mut_ptr());
-            core.set_len(core_length);
-            core
+            let mut size = 0;
+            let data = ccadical_propcheck_get_core(self.ptr, &mut size);
+            slice::from_raw_parts(data, size).to_vec()
         }
     }
 
-    pub fn propcheck_all_tree(&self, vars: &[i32], limit: u64, save: bool) -> u64 {
-        unsafe {
-            ccadical_propcheck_all_tree_begin(self.ptr);
-            for &v in vars {
-                assert!(v > 0);
-                ccadical_propcheck_all_tree_add(self.ptr, v);
-            }
-            ccadical_propcheck_all_tree(self.ptr, limit, save)
+    pub fn propcheck_all_tree(&self, vars: &[i32], limit: u64, valid: Option<&mut Vec<Vec<i32>>>) -> u64 {
+        unsafe extern "C" fn trampoline<F>(lits: *const c_int, size: usize, user_data: *mut c_void)
+        where
+            F: FnMut(&[i32]),
+        {
+            let res = slice::from_raw_parts(lits, size);
+            let cb = &mut *(user_data as *mut F);
+            cb(res)
         }
-    }
 
-    pub fn propcheck_all_tree_get_valid(&self) -> Vec<Vec<i32>> {
-        unsafe {
-            let valid_length = ccadical_propcheck_all_tree_get_valid_length(self.ptr);
-            let mut valid = Vec::with_capacity(valid_length);
-            for i in 0..valid_length {
-                let cube_length = ccadical_propcheck_all_tree_get_cube_length(self.ptr, i);
-                let mut cube = Vec::with_capacity(cube_length);
-                ccadical_propcheck_all_tree_get_cube(self.ptr, i, cube.as_mut_ptr());
-                cube.set_len(cube_length);
-                valid.push(cube);
+        if let Some(valid) = valid {
+            let mut closure = |lits: &[i32]| {
+                println!("GOT VALID: ${:?}", lits);
+                valid.push(lits.to_vec());
+            };
+            let cb = trampoline::<fn(&[i32])>;
+            unsafe {
+                ccadical_propcheck_all_tree(
+                    self.ptr,
+                    vars.as_ptr(),
+                    vars.len(),
+                    limit,
+                    Some(cb),
+                    &mut closure as *mut _ as *mut c_void,
+                )
             }
-            valid
+        } else {
+            unsafe { ccadical_propcheck_all_tree(self.ptr, vars.as_ptr(), vars.len(), limit, None, ptr::null_mut()) }
         }
     }
 }
 
 impl Cadical {
-    pub fn traverse_clauses<F>(&self, callback: F) -> bool
+    pub fn traverse_clauses<F>(&self, redundant: bool, callback: F) -> bool
     where
-        F: FnMut(&[c_int]) -> bool,
+        F: FnMut(&[i32]) -> bool,
     {
         unsafe extern "C" fn trampoline<F>(lits: *const c_int, size: usize, user_data: *mut c_void) -> bool
         where
@@ -485,66 +490,18 @@ impl Cadical {
 
         let mut closure = callback;
         let cb = trampoline::<F>;
-        unsafe { ccadical_traverse_clauses(self.ptr, Some(cb), &mut closure as *mut _ as *mut c_void) }
-    }
-}
-
-impl Cadical {
-    pub fn clauses_iter(&self) -> ClausesIter {
-        unsafe { ClausesIter::new(self.ptr, false) }
+        unsafe { ccadical_traverse_clauses(self.ptr, redundant, Some(cb), &mut closure as *mut _ as *mut c_void) }
     }
 
-    pub fn all_clauses_iter(&self) -> ClausesIter {
-        unsafe { ClausesIter::new(self.ptr, true) }
-    }
-}
-
-pub struct ClausesIter {
-    ptr: CCadicalPtr,
-    length: usize,
-    index: usize,
-}
-
-impl ClausesIter {
-    pub unsafe fn new(ptr: CCadicalPtr, redundant: bool) -> Self {
-        let length = ccadical_traverse_clauses_clone(ptr, redundant);
-        Self { ptr, length, index: 0 }
-    }
-}
-
-impl Drop for ClausesIter {
-    fn drop(&mut self) {
-        unsafe { ccadical_clear_clauses(self.ptr) }
-    }
-}
-
-impl Iterator for ClausesIter {
-    type Item = Vec<i32>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.length {
-            unsafe {
-                let clause_length = ccadical_get_clause_length(self.ptr, self.index);
-                let mut clause = Vec::with_capacity(clause_length);
-                ccadical_get_clause(self.ptr, self.index, clause.as_mut_ptr());
-                clause.set_len(clause_length);
-                self.index += 1;
-                Some(clause)
-            }
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.length - self.index;
-        (remaining, Some(remaining))
-    }
-}
-
-impl ExactSizeIterator for ClausesIter {
-    fn len(&self) -> usize {
-        self.length
+    pub fn extract_clauses(&self, redundant: bool) -> Vec<Vec<i32>> {
+        let mut clauses = Vec::new();
+        // Note: `traverse_clauses` can return `false` when the traversal is interrupted.
+        // We simply ignore this case here, since it should not happen in practice.
+        self.traverse_clauses(redundant, |lits| {
+            clauses.push(lits.to_vec());
+            true
+        });
+        clauses
     }
 }
 

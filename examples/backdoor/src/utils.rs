@@ -440,7 +440,7 @@ mod tests {
         // Forbid (x1 AND ~x2)
         solver.add_clause([-x1, x2]);
 
-        info!("vars = {}, clauses = {}", solver.vars(), solver.clauses_iter().count());
+        info!("vars = {}, clauses = {}", solver.vars(), solver.irredundant());
 
         // Problem is satisfiable.
         // let res = solver.solve();
@@ -449,14 +449,16 @@ mod tests {
         let vars = vec![x1, x2];
 
         info!("----------------------");
-        let count_tree = solver.propcheck_all_tree(&vars, 0, false);
+        let mut valid_tree = Vec::new();
+        let count_tree = solver.propcheck_all_tree(&vars, 0, Some(&mut valid_tree));
         info!("count_tree = {}", count_tree);
+        assert_eq!(count_tree, valid_tree.len() as u64);
 
         info!("----------------------");
-        let mut valid_tree = Vec::new();
-        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0, Some(&mut valid_tree), None);
+        let mut valid_tree_internal = Vec::new();
+        let count_tree_internal = solver.propcheck_all_tree_via_internal(&vars, 0, Some(&mut valid_tree_internal), None);
         info!("count_tree_internal = {}", count_tree_internal);
-        assert_eq!(count_tree_internal, valid_tree.len() as u64);
+        assert_eq!(count_tree_internal, valid_tree_internal.len() as u64);
 
         assert_eq!(count_tree, count_tree_internal);
 
