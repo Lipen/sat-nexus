@@ -3,6 +3,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
+use itertools::Itertools;
 use log::{debug, info};
 
 use backdoor::solver::Solver;
@@ -28,6 +29,14 @@ struct Cli {
     #[arg(long = "vars", value_name = "INT...")]
     vars_str: String,
 
+    /// Deduplicate input variables.
+    #[arg(long)]
+    dedup: bool,
+
+    /// Sort input variables.
+    #[arg(long)]
+    sort: bool,
+
     /// Use tree-based propcheck.
     #[arg(long)]
     tree: bool,
@@ -43,6 +52,14 @@ struct Cli {
     /// Budget (in conflicts) for pre-solve.
     #[arg(long, value_name = "INT", default_value_t = 0)]
     budget_presolve: u64,
+
+    /// Show hard cubes.
+    #[arg(long)]
+    show_hard: bool,
+
+    /// Show easy cubes.
+    #[arg(long)]
+    show_easy: bool,
 }
 
 fn _main(args: &Cli) -> color_eyre::Result<()> {
@@ -51,7 +68,25 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     let vars: Vec<Var> = vars.into_iter().map(|i| Var::from_external(i as u32)).collect();
     info!("Got {} variables: {}", vars.len(), display_slice(&vars));
 
-    assert!(!vars.is_empty());
+    assert!(!vars.is_empty(), "no variables");
+
+    // Deduplicate variables:
+    let vars = if args.dedup {
+        vars.into_iter().unique().collect()
+    } else {
+        assert!(vars.iter().all_unique(), "duplicate variables");
+        vars
+    };
+
+    // Sort variables:
+    let vars = if args.sort {
+        let mut vars = vars;
+        vars.sort();
+        vars
+    } else {
+        vars
+    };
+
     assert!(vars.len() < 64, "too many variables");
 
     // Initialize SAT solver:
@@ -117,14 +152,32 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
     let num_total = 1u64 << vars.len();
     let num_hard = if args.tree {
         info!("Using tree-based propcheck");
-        let vars_external: Vec<i32> = vars.iter().map(|var| var.to_external() as i32).collect();
+        let vars_external = vars_to_external(&vars);
         let mut hard = Vec::new();
         let mut easy = Vec::new();
         let num_hard = solver
             .0
             .propcheck_all_tree_via_internal(&vars_external, 0, Some(&mut hard), Some(&mut easy));
-        info!("hard = {}", hard.len());
-        info!("easy = {}", easy.len());
+        info!("hard: {}", hard.len());
+        if args.show_hard {
+            for (i, cube) in hard.iter().enumerate() {
+                info!("hard {}/{} = {}", i + 1, hard.len(), display_slice(&cube));
+            }
+        }
+        info!("easy: {}", easy.len());
+        if args.show_easy {
+            for (i, cube) in easy.iter().enumerate() {
+                solver.0.propcheck(&cube, false, false, true);
+                let core = solver.0.propcheck_get_core();
+                info!(
+                    "easy {}/{} = {}, core = {}",
+                    i + 1,
+                    easy.len(),
+                    display_slice(&cube),
+                    display_slice(&core)
+                );
+            }
+        }
         assert_eq!(num_hard, hard.len() as u64);
         num_hard
     } else {
@@ -161,8 +214,26 @@ fn _main(args: &Cli) -> color_eyre::Result<()> {
         }
         pb.finish_and_clear();
 
-        info!("hard = {}", hard.len());
-        info!("easy = {}", easy.len());
+        info!("hard: {}", hard.len());
+        if args.show_hard {
+            for (i, cube) in hard.iter().enumerate() {
+                info!("hard {}/{} = {}", i + 1, hard.len(), display_slice(&cube));
+            }
+        }
+        info!("easy: {}", easy.len());
+        if args.show_easy {
+            for (i, cube) in easy.iter().enumerate() {
+                solver.propcheck_save_core(&cube);
+                let core = solver.0.propcheck_get_core();
+                info!(
+                    "easy {}/{} = {}, core = {}",
+                    i + 1,
+                    easy.len(),
+                    display_slice(&cube),
+                    display_slice(&core)
+                );
+            }
+        }
         hard.len() as u64
     };
     let rho = 1.0 - (num_hard as f64 / num_total as f64);
