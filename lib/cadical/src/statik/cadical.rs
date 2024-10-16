@@ -362,18 +362,6 @@ impl Cadical {
         unsafe {
             ccadical_set_learn(self.ptr, Box::into_raw(closure) as *mut c_void, 0, Some(cb));
         }
-
-        // Note: using `get_trampoline(&closure)` leads to SIGSEGV (can't reproduce outside cadical).
-        //       Do not try to revert it! I've spent 2 days debugging it, everything have fixed
-        //       only after deleting `get_trampoline` and using `trampoline::<F>` directly.
-        //       Boxing and fat pointers are also not the problem!
-        //
-        // fn get_trampoline<F>(_closure: &F) -> unsafe extern "C" fn(*mut c_void, *mut c_int)
-        // where
-        //     F: FnMut(*mut c_int),
-        // {
-        //     trampoline::<F>
-        // }
     }
 }
 
