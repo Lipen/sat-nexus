@@ -336,6 +336,15 @@ impl Cadical {
     pub fn set_learn<F>(&self, max_length: usize, learn: F)
     where
         F: FnMut(Vec<i32>),
+        F: 'static,
+    {
+        self.unsafe_set_learn(max_length, learn);
+    }
+
+    pub fn unsafe_set_learn<F>(&self, max_length: usize, learn: F)
+    where
+        F: FnMut(Vec<i32>),
+        // F: 'static,
     {
         unsafe extern "C" fn trampoline<F>(user_data: *mut c_void, clause: *mut c_int)
         where

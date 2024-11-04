@@ -1,4 +1,8 @@
 use super::*;
+
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::common::*;
 
 #[test]
@@ -92,7 +96,7 @@ fn test_learner() {
     let mut learnts: Vec<Vec<i32>> = Vec::new();
 
     println!("Setting learner...");
-    solver.set_learn(0, |clause| {
+    solver.unsafe_set_learn(0, |clause| {
         println!("learned clause: {:?}", clause);
         learnts.push(clause);
     });
@@ -115,6 +119,57 @@ fn test_learner() {
     println!("res = {:?}", res);
 
     println!("learnts = {:?}", learnts);
+}
+
+#[test]
+fn test_learner2() {
+    struct Wrapper {
+        solver: Cadical,
+        learnts: Rc<RefCell<Vec<Vec<i32>>>>,
+    }
+
+    impl Wrapper {
+        fn new() -> Self {
+            let solver = Cadical::new();
+            println!("solver = {:?}", solver);
+
+            solver.set_option("otfs", 0);
+
+            let learnts = Vec::new();
+            let learnts = Rc::new(RefCell::new(learnts));
+            {
+                println!("Setting learner...");
+                let learnts = Rc::clone(&learnts);
+                solver.set_learn(0, move |clause| {
+                    println!("learned clause: {:?}", clause);
+                    learnts.borrow_mut().push(clause);
+                });
+            }
+
+            Self { solver, learnts }
+        }
+    }
+
+    let wrapper = Wrapper::new();
+
+    println!("Adding clauses...");
+    for r in [-1, 1].iter() {
+        for s in [-1, 1].iter() {
+            for t in [-1, 1].iter() {
+                wrapper.solver.add_clause([r * 1, s * 2, t * 3]);
+            }
+        }
+    }
+
+    println!("vars: {}", wrapper.solver.vars());
+    println!("clauses: {}", wrapper.solver.irredundant());
+    println!("learnts = {:?}", wrapper.learnts);
+
+    println!("Solving...");
+    let res = wrapper.solver.solve();
+    println!("res = {:?}", res);
+
+    println!("learnts = {:?}", wrapper.learnts);
 }
 
 #[test]
