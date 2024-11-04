@@ -11,11 +11,11 @@ cadical = { path = "../cadical", features = ["dynamic"] }
 minisat = { path = "../minisat", features = ["dynamic"] }
 kissat = { path = "../kissat" }
 simple-sat = { path = "../simple-sat" }
-itertools = "0.12"
-strum = { version = "0.24", features = ["derive"] }
-tynm = "0.1.9"
-tap = "1.0.1"
+itertools = "0.13"
+strum = { version = "0.26", features = ["derive"] }
+tynm = "0.1"
+tap = "1.0"
 
 [dev-dependencies]
 color-eyre = "0.6"
-ndarray = "0.15"
+ndarray = "0.16"

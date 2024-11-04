@@ -11,10 +11,10 @@ static = ["cc", "glob"]
 
 [dependencies]
 libloading = { version = "0.8", optional = true }
-once_cell = { version = "1.19", optional = true }
+once_cell = { version = "1.20", optional = true }
 
 [build-dependencies]
 build_script = "0.2"
-bindgen = "0.69"
-cc = { version = "1.0", features = ["parallel"], optional = true }
+bindgen = "0.70"
+cc = { version = "1.1", features = ["parallel"], optional = true }
 glob = { version = "0.3", optional = true }
