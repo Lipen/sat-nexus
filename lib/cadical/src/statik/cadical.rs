@@ -8,10 +8,11 @@ use itertools::{zip_eq, Itertools};
 use log::{debug, trace};
 use snafu::ensure;
 
-use cadical_sys::statik::*;
 use ffi_utils::cstr2str;
 
 use crate::common::*;
+
+use super::ffi::*;
 
 #[derive(Debug)]
 pub struct Cadical {

@@ -1,18 +1,36 @@
-pub mod bindings {
-    #![allow(non_upper_case_globals)]
-    #![allow(non_camel_case_types)]
-    #![allow(non_snake_case)]
-    #![allow(dead_code)]
-    #![allow(clippy::style)]
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(dead_code)]
+#![allow(clippy::style)]
 
-    include!(concat!(env!("OUT_DIR"), "/bindings-cminisat-static.rs"));
-    // include!("../_bindings-cminisat-static.rs");
-}
+include!(concat!(env!("OUT_DIR"), "/bindings-cminisat-static.rs"));
+// include!("../_bindings-cminisat-static.rs");
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bindings::*;
+
+    use ffi_utils::cstr2str;
+
+    #[test]
+    fn test_signature() {
+        unsafe {
+            let s = cstr2str(minisat_signature());
+            println!("signature = {:?}", s);
+            assert!(s.starts_with("minisat"));
+        }
+    }
+
+    #[test]
+    fn test_init_and_release() {
+        unsafe {
+            let ptr = minisat_init();
+            println!("ptr = {:?}", ptr);
+            assert!(!ptr.is_null());
+            minisat_release(ptr);
+        }
+    }
 
     #[test]
     fn test_lbool() {

@@ -24,3 +24,26 @@ impl KissatFFI {
         INSTANCE.get_or_init(|| Self::load("kissat"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use ffi_utils::cstr2str;
+
+    #[test]
+    fn test_signature() {
+        let ffi = KissatFFI::instance();
+        let s = unsafe { cstr2str(ffi.kissat_signature()) };
+        println!("signature = {:?}", s);
+        assert!(s.starts_with("kissat"));
+    }
+
+    #[test]
+    fn test_init_and_release() {
+        let ffi = KissatFFI::instance();
+        let ptr = unsafe { ffi.kissat_init() };
+        assert!(!ptr.is_null());
+        unsafe { ffi.kissat_release(ptr) };
+    }
+}

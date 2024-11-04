@@ -1,4 +1,4 @@
-use minisat_sys::statik::bindings::*;
+use minisat_sys::statik::*;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;

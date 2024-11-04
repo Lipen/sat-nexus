@@ -24,3 +24,26 @@ impl CCadicalFFI {
         INSTANCE.get_or_init(|| Self::load("cadical"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use ffi_utils::cstr2str;
+
+    #[test]
+    fn test_signature() {
+        let ffi = CCadicalFFI::instance();
+        let s = unsafe { cstr2str(ffi.ccadical_signature()) };
+        println!("signature = {:?}", s);
+        assert!(s.starts_with("cadical"));
+    }
+
+    #[test]
+    fn test_init_and_release() {
+        let ffi = CCadicalFFI::instance();
+        let ptr = unsafe { ffi.ccadical_init() };
+        assert!(!ptr.is_null());
+        unsafe { ffi.ccadical_release(ptr) };
+    }
+}

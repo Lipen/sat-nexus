@@ -1,4 +1,4 @@
-pub use minisat_sys::statik::bindings as ffi;
+pub use minisat_sys::statik as ffi;
 
 pub use self::lbool::*;
 pub use self::lit::*;
