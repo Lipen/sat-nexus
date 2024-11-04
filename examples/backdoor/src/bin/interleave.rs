@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::fs::File;
@@ -239,7 +238,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     }
 
     // Set of ALL clauses (original + derived):
-    let all_clauses: RefCell<HashSet<Vec<Lit>>> = RefCell::new(HashSet::new());
+    let mut all_clauses: HashSet<Vec<Lit>> = HashSet::new();
 
     // All derived clauses:
     let mut all_derived_clauses: Vec<Vec<Lit>> = Vec::new();
@@ -248,14 +247,14 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
     for clause in searcher.solver.0.extract_clauses(true) {
         let mut clause = lits_from_external(clause);
         clause.sort_by_key(|lit| lit.inner());
-        all_clauses.borrow_mut().insert(clause);
+        all_clauses.insert(clause);
     }
 
     // Attach learner:
-    searcher.solver.0.set_learn(3, |clause| {
+    searcher.solver.0.unsafe_set_learn(3, |clause| {
         let mut clause = lits_from_external(clause);
         clause.sort_by_key(|lit| lit.inner());
-        if all_clauses.borrow_mut().insert(clause.clone()) {
+        if all_clauses.insert(clause.clone()) {
             // debug!("new learnt: {}", display_slice(&clause));
         }
     });
@@ -435,7 +434,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
 
                         let mut lemma = core.iter().map(|&lit| -lit).collect_vec();
                         lemma.sort_by_key(|lit| lit.inner());
-                        if all_clauses.borrow_mut().insert(lemma.clone()) {
+                        if all_clauses.insert(lemma.clone()) {
                             if let Some(f) = &mut file_derived_clauses {
                                 write_clause(f, &lemma)?;
                             }
@@ -499,7 +498,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             if hard.len() == 1 {
                 debug!("Adding {} units to the solver", hard[0].len());
                 for &lit in &hard[0] {
-                    if all_clauses.borrow_mut().insert(vec![lit]) {
+                    if all_clauses.insert(vec![lit]) {
                         if let Some(f) = &mut file_derived_clauses {
                             write_clause(f, &[lit])?;
                         }
@@ -533,7 +532,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 let mut new_clauses = Vec::new();
                 for mut lemma in derived_clauses {
                     lemma.sort_by_key(|lit| lit.inner());
-                    if all_clauses.borrow_mut().insert(lemma.clone()) {
+                    if all_clauses.insert(lemma.clone()) {
                         if let Some(f) = &mut file_derived_clauses {
                             write_clause(f, &lemma)?;
                         }
@@ -692,7 +691,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
 
                         let mut lemma = core.iter().map(|&lit| -lit).collect_vec();
                         lemma.sort_by_key(|lit| lit.inner());
-                        if all_clauses.borrow_mut().insert(lemma.clone()) {
+                        if all_clauses.insert(lemma.clone()) {
                             if let Some(f) = &mut file_derived_clauses {
                                 write_clause(f, &lemma)?;
                             }
@@ -745,7 +744,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             if cubes_product.len() == 1 {
                 debug!("Adding {} units to the solver", cubes_product[0].len());
                 for &lit in &cubes_product[0] {
-                    if all_clauses.borrow_mut().insert(vec![lit]) {
+                    if all_clauses.insert(vec![lit]) {
                         if let Some(f) = &mut file_derived_clauses {
                             write_clause(f, &[lit])?;
                         }
@@ -778,7 +777,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                 let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
                 for mut lemma in derived_clauses {
                     lemma.sort_by_key(|lit| lit.inner());
-                    if all_clauses.borrow_mut().insert(lemma.clone()) {
+                    if all_clauses.insert(lemma.clone()) {
                         if let Some(f) = &mut file_derived_clauses {
                             write_clause(f, &lemma)?;
                         }
@@ -1042,7 +1041,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     }
 
                     let lemma = core.iter().map(|&lit| -lit).collect_vec();
-                    if all_clauses.borrow_mut().insert(lemma.clone()) {
+                    if all_clauses.insert(lemma.clone()) {
                         if let Some(f) = &mut &mut file_derived_clauses {
                             write_clause(f, &lemma)?;
                         }
@@ -1158,7 +1157,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
                     }
 
                     let lemma = core.iter().map(|&lit| -lit).collect_vec();
-                    if all_clauses.borrow_mut().insert(lemma.clone()) {
+                    if all_clauses.insert(lemma.clone()) {
                         if let Some(f) = &mut file_derived_clauses {
                             write_clause(f, &lemma)?;
                         }
@@ -1223,7 +1222,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
         if cubes_product.len() == 1 {
             info!("Adding {} units to the solver", cubes_product[0].len());
             for &lit in &cubes_product[0] {
-                if all_clauses.borrow_mut().insert(vec![lit]) {
+                if all_clauses.insert(vec![lit]) {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &[lit])?;
                     }
@@ -1256,7 +1255,7 @@ fn solve(args: Cli) -> color_eyre::Result<SolveResult> {
             let mut new_clauses: Vec<Vec<Lit>> = Vec::new();
             for mut lemma in derived_clauses {
                 lemma.sort_by_key(|lit| lit.inner());
-                if all_clauses.borrow_mut().insert(lemma.clone()) {
+                if all_clauses.insert(lemma.clone()) {
                     if let Some(f) = &mut file_derived_clauses {
                         write_clause(f, &lemma)?;
                     }
