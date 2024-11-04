@@ -3,8 +3,6 @@ use super::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::common::*;
-
 #[test]
 fn test_cadical_solver() -> color_eyre::Result<()> {
     let solver = Cadical::new();

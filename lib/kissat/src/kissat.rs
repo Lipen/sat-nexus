@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use ffi_utils::cstr2str;
 
-use crate::ffi::*;
+use super::ffi::*;
 use crate::types::*;
 
 /// Kissat solver.

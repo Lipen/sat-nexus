@@ -1,5 +1,3 @@
-pub use minisat_sys::statik as ffi;
-
 pub use self::lbool::*;
 pub use self::lit::*;
 pub use self::minisat::*;
@@ -9,6 +7,10 @@ mod lbool;
 mod lit;
 mod minisat;
 mod var;
+
+pub mod ffi {
+    pub use minisat_sys::statik::*;
+}
 
 #[cfg(test)]
 mod tests;

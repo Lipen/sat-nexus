@@ -1,6 +1,7 @@
-use crate::common::Var;
 use std::fmt::{Display, Formatter};
 use std::ops;
+
+use crate::common::Var;
 
 /// MiniSat literal.
 ///

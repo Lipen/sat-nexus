@@ -3,12 +3,12 @@
 pub use self::ipasir::*;
 pub use self::types::*;
 
+mod ipasir;
+mod types;
+
 pub mod ffi {
     pub use ipasir_sys::*;
 }
-
-mod ipasir;
-mod types;
 
 #[cfg(test)]
 mod tests;

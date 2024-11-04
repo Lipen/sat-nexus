@@ -4,7 +4,7 @@ pub use self::types::*;
 mod kissat;
 mod types;
 
-pub(crate) mod ffi {
+pub mod ffi {
     pub use kissat_sys::dynamic::*;
 }
 
