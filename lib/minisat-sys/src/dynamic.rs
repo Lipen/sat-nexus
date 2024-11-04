@@ -24,3 +24,25 @@ impl CMiniSatFFI {
         INSTANCE.get_or_init(|| Self::load("minisat"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lbool() {
+        let ffi = CMiniSatFFI::instance();
+
+        let lbool_true = unsafe { ffi.minisat_get_l_True() };
+        println!("minisat_get_l_True() -> {:?}", lbool_true);
+        assert_eq!(lbool_true, 1);
+
+        let lbool_false = unsafe { ffi.minisat_get_l_False() };
+        println!("minisat_get_l_False() -> {:?}", lbool_false);
+        assert_eq!(lbool_false, 0);
+
+        let lbool_undef = unsafe { ffi.minisat_get_l_Undef() };
+        println!("minisat_get_l_Undef() -> {:?}", lbool_undef);
+        assert_eq!(lbool_undef, -1);
+    }
+}
