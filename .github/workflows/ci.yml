@@ -59,7 +59,7 @@ jobs:
         run: |
           ./configure -fPIC
           make -j8 shared
-          sudo install -m 644 build/libcadical.so -Dt /usr/local/lib
+          sudo install -m 644 build/dynamic/libcadical.so -Dt /usr/local/lib
 
       - name: Build and install Kissat shared library (libkissat.so)
         working-directory: lib/kissat-sys/vendor/kissat
