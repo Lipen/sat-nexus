@@ -62,8 +62,8 @@ where
 {
     pub fn new<F, S>(task_receiver: Receiver<Task>, init: F, solve: S) -> Self
     where
-        F: Fn() -> Cadical + Send + Sync + 'static,
-        S: Fn(&Task, &Cadical) -> SolveResponse + Send + Sync + 'static,
+        F: Fn() -> Cadical + Send + 'static,
+        S: Fn(&Task, &Cadical) -> SolveResponse + Send + 'static,
     {
         let (result_sender, result_receiver) = unbounded();
         let handle = thread::spawn(move || {
