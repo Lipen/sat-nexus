@@ -53,8 +53,42 @@ impl CubeTask {
 
 type TaskResult<Task> = (Task, SolveResponse, Duration);
 
+pub struct SolverActor {
+    handle: JoinHandle<()>,
+}
+
+impl SolverActor {
+    pub fn new<T, F, S>(task_receiver: Receiver<T>, result_sender: Sender<TaskResult<T>>, init: F, solve: S) -> Self
+    where
+        T: Debug + Send + 'static,
+        F: FnOnce() -> Cadical + Send + 'static,
+        S: Fn(&T, &Cadical) -> SolveResponse + Send + 'static,
+    {
+        let handle = thread::spawn(move || {
+            let solver = init();
+            for task in task_receiver {
+                let time_solve = Instant::now();
+                let res = solve(&task, &solver);
+                let time_solve = time_solve.elapsed();
+                trace!("{:?} in {:.1}s for {:?}", res, time_solve.as_secs_f64(), task);
+                if result_sender.send((task, res, time_solve)).is_err() {
+                    break;
+                }
+            }
+            debug!(
+                "finished {:?}: conflicts = {}, decisions = {}, propagations = {}",
+                thread::current().id(),
+                solver.conflicts(),
+                solver.decisions(),
+                solver.propagations(),
+            );
+        });
+        Self { handle }
+    }
+}
+
 pub struct SolverPool<Task> {
-    workers: Vec<JoinHandle<()>>,
+    workers: Vec<SolverActor>,
     task_sender: Sender<Task>,
     result_receiver: Receiver<TaskResult<Task>>,
 }
@@ -79,25 +113,12 @@ where
                 let task_receiver = task_receiver.clone();
                 let init = Arc::clone(&init);
                 let solve = Arc::clone(&solve);
-                thread::spawn(move || {
-                    let solver = init(i);
-                    for task in task_receiver {
-                        let time_solve = Instant::now();
-                        let res = solve(&task, &solver);
-                        let time_solve = time_solve.elapsed();
-                        trace!("{:?} in {:.1}s for {:?}", res, time_solve.as_secs_f64(), task);
-                        if result_sender.send((task, res, time_solve)).is_err() {
-                            break;
-                        }
-                    }
-                    debug!(
-                        "finished {:?}: conflicts = {}, decisions = {}, propagations = {}",
-                        thread::current().id(),
-                        solver.conflicts(),
-                        solver.decisions(),
-                        solver.propagations(),
-                    );
-                })
+                SolverActor::new(
+                    task_receiver,
+                    result_sender,
+                    move || init(i),
+                    move |task, solver| solve(task, solver),
+                )
             })
             .collect();
         Self {
@@ -142,8 +163,8 @@ impl<T> SolverPool<T> {
 
     pub fn finish(self) -> impl Iterator<Item = TaskResult<T>> {
         drop(self.task_sender);
-        for handle in self.workers {
-            handle.join().unwrap();
+        for s in self.workers {
+            s.handle.join().unwrap();
         }
         self.result_receiver.into_iter()
     }
