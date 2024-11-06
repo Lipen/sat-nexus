@@ -8,6 +8,7 @@ use log::info;
 
 use backdoor::pool::{CubeTask, SolverPool};
 use backdoor::utils::product_repeat;
+
 use simple_sat::lit::Lit;
 use simple_sat::var::Var;
 
@@ -50,9 +51,13 @@ fn main() -> color_eyre::Result<()> {
     info!("Submitted {} tasks", num_tasks);
 
     // info!("Results so far:");
+    // let mut num_results = 0;
     // for (task, res, time) in pool.results() {
-    //     info!("{:?} in {:.1}s for cube = {}", res, time.as_secs_f64(), DisplaySlice(&task.cube));
+    //     // info!("{:?} in {:.1}s for cube = {}", res, time.as_secs_f64(), display_slice(&task.cube));
+    //     num_results += 1;
     // }
+    // info!("Got {} results", num_results);
+    // pool.finish().for_each(drop);
 
     info!("Joining...");
     let pb = ProgressBar::new(num_tasks as u64);
@@ -61,14 +66,16 @@ fn main() -> color_eyre::Result<()> {
     // let mut results = results;
     // results.sort_by_key(|r| r.0.i);
     // for (task, res, time) in results.iter() {
-    //     info!("{:?} in {:.3}ms for cube = {}", res, time.as_secs_f64(), DisplaySlice(&task.cube));
+    //     info!("{:?} in {:.3}ms for cube = {}", res, time.as_secs_f64(), display_slice(&task.cube));
     // }
     info!(
         "Total CPU time: {:.1}s",
         results.iter().map(|(_, _, time)| time.as_secs_f64()).sum::<f64>()
     );
 
-    pool.finish();
+    info!("Finishing...");
+    let num_left = pool.finish().count();
+    info!("Leftover tasks: {}", num_left);
 
     println!("\nAll done in {:.3} s", start_time.elapsed().as_secs_f64());
     Ok(())
