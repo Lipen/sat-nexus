@@ -127,20 +127,20 @@ where
     }
 }
 
-impl<Task> SolverPool<Task> {
-    pub fn submit(&self, task: Task) {
+impl<T> SolverPool<T> {
+    pub fn submit(&self, task: T) {
         self.task_sender.send(task).unwrap();
     }
 
-    pub fn results(&self) -> impl Iterator<Item = TaskResult<Task>> + '_ {
+    pub fn results(&self) -> impl Iterator<Item = TaskResult<T>> + '_ {
         self.result_receiver.try_iter()
     }
 
-    pub fn join(&self) -> impl Iterator<Item = TaskResult<Task>> + '_ {
+    pub fn join(&self) -> impl Iterator<Item = TaskResult<T>> + '_ {
         self.result_receiver.iter()
     }
 
-    pub fn finish(self) -> impl Iterator<Item = TaskResult<Task>> {
+    pub fn finish(self) -> impl Iterator<Item = TaskResult<T>> {
         drop(self.task_sender);
         for handle in self.workers {
             handle.join().unwrap();
