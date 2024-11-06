@@ -5,7 +5,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use crossbeam_channel::{unbounded, Receiver, Select, Sender};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use log::{debug, trace};
 
 use cadical::statik::Cadical;
@@ -51,21 +51,19 @@ impl CubeTask {
     }
 }
 
-pub struct SolverActor<Task> {
+type TaskResult<Task> = (Task, SolveResponse, Duration);
+
+pub struct SolverActor {
     handle: JoinHandle<()>,
-    result_receiver: Receiver<(Task, SolveResponse, Duration)>,
 }
 
-impl<Task> SolverActor<Task>
-where
-    Task: Debug + Send + 'static,
-{
-    pub fn new<F, S>(task_receiver: Receiver<Task>, init: F, solve: S) -> Self
+impl SolverActor {
+    pub fn new<Task, F, S>(task_receiver: Receiver<Task>, result_sender: Sender<TaskResult<Task>>, init: F, solve: S) -> Self
     where
+        Task: Debug + Send + 'static,
         F: Fn() -> Cadical + Send + 'static,
         S: Fn(&Task, &Cadical) -> SolveResponse + Send + 'static,
     {
-        let (result_sender, result_receiver) = unbounded();
         let handle = thread::spawn(move || {
             let solver = init();
             for task in task_receiver {
@@ -85,13 +83,14 @@ where
                 solver.propagations(),
             );
         });
-        Self { handle, result_receiver }
+        Self { handle }
     }
 }
 
 pub struct SolverPool<Task> {
-    pool: Vec<SolverActor<Task>>,
+    pool: Vec<SolverActor>,
     task_sender: Sender<Task>,
+    result_receiver: Receiver<TaskResult<Task>>,
 }
 
 impl<Task> SolverPool<Task>
@@ -104,18 +103,24 @@ where
         S: Fn(&Task, &Cadical) -> SolveResponse + Send + Sync + 'static,
     {
         debug!("Initializing pool of size {}", size);
-        let (task_sender, task_receiver) = unbounded::<Task>();
+        let (result_sender, result_receiver) = unbounded::<TaskResult<Task>>();
+        let (task_sender, task_receiver) = unbounded();
         let init = Arc::new(init);
         let solve = Arc::new(solve);
         let pool = (0..size)
             .map(|i| {
+                let sender = result_sender.clone();
                 let receiver = task_receiver.clone();
                 let init = Arc::clone(&init);
                 let solve = Arc::clone(&solve);
-                SolverActor::new(receiver, move || init(i), move |task, solver| solve(task, solver))
+                SolverActor::new(receiver, sender, move || init(i), move |task, solver| solve(task, solver))
             })
             .collect();
-        Self { pool, task_sender }
+        Self {
+            pool,
+            task_sender,
+            result_receiver,
+        }
     }
 
     pub fn new_from<P, S>(size: usize, path: P, solve: S) -> Self
@@ -143,38 +148,19 @@ impl<Task> SolverPool<Task> {
         self.task_sender.send(task).unwrap();
     }
 
-    pub fn results(&self) -> impl Iterator<Item = (Task, SolveResponse, Duration)> + '_ {
-        self.pool.iter().flat_map(|s| s.result_receiver.try_iter())
+    pub fn results(&self) -> impl Iterator<Item = TaskResult<Task>> + '_ {
+        self.result_receiver.try_iter()
     }
 
-    pub fn join(&self) -> impl Iterator<Item = (Task, SolveResponse, Duration)> + '_ {
-        let receivers: Vec<_> = self.pool.iter().map(|s| &s.result_receiver).collect();
-        std::iter::from_fn(move || {
-            let mut sel = Select::new();
-            let mut num_receivers = 0;
-            for r in receivers.iter() {
-                sel.recv(r);
-                num_receivers += 1;
-            }
-            while num_receivers > 0 {
-                let index = sel.ready();
-                match receivers[index].try_recv() {
-                    Ok(res) => return Some(res),
-                    Err(_) => {
-                        sel.remove(index);
-                        num_receivers -= 1;
-                    }
-                }
-            }
-            None
-        })
+    pub fn join(&self) -> impl Iterator<Item = TaskResult<Task>> + '_ {
+        self.result_receiver.iter()
     }
 
-    pub fn finish(self) {
+    pub fn finish(self) -> impl Iterator<Item = TaskResult<Task>> {
         drop(self.task_sender);
         for s in self.pool {
             s.handle.join().unwrap();
         }
-        // TODO: collect the remaining results in pool's receivers
+        self.result_receiver.into_iter()
     }
 }
