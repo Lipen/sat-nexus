@@ -13,7 +13,7 @@ fn main() {
     let time_start = Instant::now();
 
     // Create a pool with NUM_THREADS threads
-    let pool = Pool::<(), usize, u64>::new_with(NUM_THREADS, |i, rx, tx| {
+    let pool = Pool::<usize, u64>::new_with(NUM_THREADS, |i, rx, tx| {
         // input is the number of samples
         // output is the number of points inside the circle
 

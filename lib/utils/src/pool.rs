@@ -4,16 +4,15 @@ use std::thread::JoinHandle;
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
 
-pub struct Worker<T> {
-    handle: JoinHandle<T>,
+pub struct Worker {
+    handle: JoinHandle<()>,
 }
 
-impl<T> Worker<T> {
+impl Worker {
     pub fn new<F>(init: F) -> Self
     where
-        F: FnOnce() -> T,
+        F: FnOnce(),
         F: Send + 'static,
-        T: Send + 'static,
     {
         Self {
             handle: thread::spawn(init),
@@ -21,17 +20,16 @@ impl<T> Worker<T> {
     }
 }
 
-pub struct Pool<T, Input, Output> {
-    workers: Vec<Worker<T>>,
+pub struct Pool<Input, Output> {
+    workers: Vec<Worker>,
     task_sender: Sender<Input>,
     task_receiver: Receiver<Input>,
     result_sender: Sender<Output>,
     result_receiver: Receiver<Output>,
 }
 
-impl<T, Input, Output> Pool<T, Input, Output>
+impl<Input, Output> Pool<Input, Output>
 where
-    T: Send + 'static,
     Input: Send + 'static,
     Output: Send + 'static,
 {
@@ -49,7 +47,7 @@ where
 
     pub fn new_with<F>(size: usize, f: F) -> Self
     where
-        F: Fn(usize, Receiver<Input>, Sender<Output>) -> T,
+        F: Fn(usize, Receiver<Input>, Sender<Output>),
         F: Send + Sync + 'static,
     {
         let (task_sender, task_receiver) = unbounded::<Input>();
@@ -74,9 +72,8 @@ where
 
     pub fn add_worker<F>(&mut self, f: F)
     where
-        F: FnOnce(usize, Receiver<Input>, Sender<Output>) -> T,
+        F: FnOnce(usize, Receiver<Input>, Sender<Output>),
         F: Send + 'static,
-        T: Send + 'static,
     {
         let index = self.workers.len();
         let receiver = self.task_receiver.clone();
@@ -98,23 +95,23 @@ where
     }
 
     /// Stop the workers and return the iterator of remaining tasks.
-    pub fn finish(self) -> (Vec<T>, impl Iterator<Item = Output>) {
+    pub fn finish(self) -> impl Iterator<Item = Output> {
         drop(self.task_sender);
         // TODO: do we also need `drop(self.task_receiver)` here?
-        let results = self.workers.into_iter().map(|w| w.handle.join().unwrap()).collect();
+        for w in self.workers {
+            w.handle.join().unwrap()
+        }
         drop(self.result_sender);
-        let remaining = self.result_receiver.into_iter();
-        (results, remaining)
+        self.result_receiver.into_iter()
     }
 
     /// Stop the workers and optionally discard the remaining tasks.
     /// - If `discard` is `true`, the remaining tasks are exhausted and dropped.
     /// - If `discard` is `false`, the remaining tasks are ignored.
-    pub fn stop(self, discard: bool) -> Vec<T> {
-        let (results, remaining) = self.finish();
+    pub fn stop(self, discard: bool) {
+        let remaining = self.finish();
         if discard {
             remaining.for_each(drop);
         }
-        results
     }
 }
