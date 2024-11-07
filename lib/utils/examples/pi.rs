@@ -45,6 +45,9 @@ fn main() {
     println!("Number of points inside the circle: {}", num_inside);
 
     // Estimate the value of pi
+    //     pi * R^2 / S = num_inside / total_samples
+    //     R = 1, S = 4
+    // ~~> pi = 4 * num_inside / total_samples
     let pi = 4.0 * num_inside as f64 / (NUM_SAMPLES as u64 * NUM_TASKS as u64) as f64;
     println!("Estimated value of pi: {}", pi);
 
