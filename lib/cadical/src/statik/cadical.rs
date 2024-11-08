@@ -57,6 +57,10 @@ impl Cadical {
         }
     }
 
+    pub fn copy_to(&self, other: &Cadical) {
+        unsafe { ccadical_copy(self.ptr, other.ptr) }
+    }
+
     /// Adds a literal to the constraint clause. Same functionality as 'add' but
     /// the clause only exists for the next call to solve (same lifetime as
     /// assumptions). Only one constraint may exists at a time. A new constraint
