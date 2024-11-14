@@ -378,6 +378,19 @@ impl Cadical {
             ccadical_set_learn(self.ptr, Box::into_raw(closure) as *mut c_void, max_length as i32, Some(cb));
         }
     }
+
+    pub fn get_top_score_variables(&self, limit: usize) -> &[i32] {
+        unsafe {
+            let mut size = 0;
+            let data = ccadical_get_top_score_variables(self.ptr, limit, &mut size);
+            if data.is_null() || size == 0 {
+                eprintln!("ccadical_get_top_score_variables returned data = {:?}, size = {}", data, size);
+                &[]
+            } else {
+                slice::from_raw_parts(data, size)
+            }
+        }
+    }
 }
 
 impl Cadical {

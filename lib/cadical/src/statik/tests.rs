@@ -191,3 +191,53 @@ fn test_traverse_clauses() {
     println!("Total {} clauses: {:?}", clauses.len(), clauses);
     assert_eq!(clauses.len(), 3);
 }
+
+#[test]
+fn test_top_score_variables() {
+    let solver = Cadical::new();
+    println!("solver = {:?}", solver);
+
+    println!("Adding clauses...");
+
+    let n: usize = 10; // number of holes for (n+1) pigeons
+    println!("Encoding PHP({}, {})...", n + 1, n);
+
+    fn pigeon_in_hole(p: usize, h: usize, n: usize) -> i32 {
+        let p = p as i32;
+        let h = h as i32;
+        let n = n as i32;
+        n * (p - 1) + h
+    }
+
+    for p in 1..=(n + 1) {
+        let mut clause = Vec::new();
+        for h in 1..=n {
+            clause.push(pigeon_in_hole(p, h, n));
+        }
+        solver.add_clause(clause);
+    }
+
+    for h in 1..=n {
+        for p1 in 1..=(n + 1) {
+            let v1 = pigeon_in_hole(p1, h, n);
+            for p2 in (p1 + 1)..=(n + 1) {
+                let v2 = pigeon_in_hole(p2, h, n);
+                solver.add_clause(vec![-v1, -v2]);
+            }
+        }
+    }
+
+    // for p in 1..=(n + 1) {
+    //     for h in 1..=n {
+    //         println!("pigeon_in_hole({}, {}) = {}", p, h, pigeon_in_hole(p, h, n));
+    //     }
+    // }
+
+    solver.limit("conflicts", 1000);
+    let res = solver.solve().unwrap();
+    println!("res = {:?}", res);
+
+    let limit = 100;
+    let top_score_vars = solver.get_top_score_variables(limit);
+    println!("Top {} vars with highest score: {:?}", limit, top_score_vars);
+}
