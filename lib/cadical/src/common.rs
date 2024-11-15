@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use snafu::Snafu;
 
 pub type Result<T, E = CadicalError> = std::result::Result<T, E>;
@@ -47,6 +49,16 @@ pub enum SolveResponse {
     Unsat = 20,
     /// The solver was interrupted.
     Interrupted = 0,
+}
+
+impl Display for SolveResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SolveResponse::Sat => write!(f, "SAT"),
+            SolveResponse::Unsat => write!(f, "UNSAT"),
+            SolveResponse::Interrupted => write!(f, "INDET"),
+        }
+    }
 }
 
 /// Possible literal values from a call to `Cadical::val`.
