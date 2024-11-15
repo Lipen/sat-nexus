@@ -19,6 +19,7 @@ members = [
     "examples/partition",
     "examples/backdoor",
     "examples/pyeda",
+    "examples/bf",
 ]
 
 [dependencies]

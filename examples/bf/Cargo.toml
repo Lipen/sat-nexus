@@ -1,0 +1,12 @@
+[package]
+name = "bf"
+version = "0.1.0"
+authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
+edition = "2021"
+publish = false
+
+[dependencies]
+sat-nexus-core = { path = "../../lib/core" }
+cadical = { path = "../../lib/cadical", features = ["static"] }
+
+color-eyre = "0.6"
