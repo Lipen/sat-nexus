@@ -1,8 +1,10 @@
+use bf::encoder::SatEncoder;
+use bf::encoding::encode_boolean_synthesis;
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
 
-use bf::encoding::{decode_onehot, SatEncoder};
 use bf::table::TruthTable;
+use bf::utils::decode_onehot;
 
 fn main() -> color_eyre::Result<()> {
     let n = 3;
@@ -25,7 +27,7 @@ fn main() -> color_eyre::Result<()> {
 
     println!("Encoding...");
     let mut encoder = SatEncoder::default();
-    let vars = encoder.encode(num_nodes, &table);
+    let vars = encode_boolean_synthesis(&mut encoder, num_nodes, &table);
     println!("Encoded using {} variables and {} clauses", encoder.num_vars, encoder.clauses.len());
 
     // println!("DIMACS:");

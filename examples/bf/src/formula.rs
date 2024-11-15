@@ -1,3 +1,5 @@
+#![allow(clippy::should_implement_trait)]
+
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
