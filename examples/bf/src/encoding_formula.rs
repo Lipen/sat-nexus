@@ -29,7 +29,8 @@ pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, trut
     // Generate TYPE variables for each node and node type
     let mut node_type_vars = DomainVar::default();
     for node in 1..=num_nodes {
-        let var = encoder.new_direct(vec![NodeType::Terminal, NodeType::And, NodeType::Or, NodeType::Not]);
+        let possible_types = vec![NodeType::Terminal, NodeType::And, NodeType::Or, NodeType::Not];
+        let var = encoder.new_direct(possible_types);
 
         // Each node must have exactly one type
         encoder.exactly_one(&var.values);
