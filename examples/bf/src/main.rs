@@ -1,5 +1,5 @@
 use bf::encoder::SatEncoder;
-use bf::encoding::encode_boolean_synthesis;
+use bf::encoding_formula::encode_boolean_synthesis;
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
 
