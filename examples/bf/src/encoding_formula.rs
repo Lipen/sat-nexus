@@ -1,8 +1,8 @@
 use cadical::statik::Cadical;
 
-use crate::domainvar::DomainVar;
 use crate::encoder::SatEncoder;
 use crate::formula::BooleanFormula;
+use crate::map::Map;
 use crate::table::TruthTable;
 use crate::utils::*;
 
@@ -15,11 +15,11 @@ pub enum NodeType {
 }
 
 pub struct BooleanFormulaSynthesis {
-    pub node_type: DomainVar<usize, DomainVar<NodeType, i32>>,
-    pub index: DomainVar<usize, DomainVar<usize, i32>>,
-    pub parent: DomainVar<usize, DomainVar<usize, i32>>,
-    pub child: DomainVar<usize, DomainVar<usize, i32>>,
-    pub value: DomainVar<(usize, usize), i32>,
+    pub node_type: Map<usize, Map<NodeType, i32>>,
+    pub index: Map<usize, Map<usize, i32>>,
+    pub parent: Map<usize, Map<usize, i32>>,
+    pub child: Map<usize, Map<usize, i32>>,
+    pub value: Map<(usize, usize), i32>,
 }
 
 pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, truth_table: &TruthTable) -> BooleanFormulaSynthesis {
@@ -27,7 +27,7 @@ pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, trut
     // Note: 'row' is a 0-based index of a row in `truth_table.rows`.
 
     // Generate TYPE variables for each node and node type
-    let mut node_type_vars = DomainVar::default();
+    let mut node_type_vars = Map::default();
     for node in 1..=num_nodes {
         let possible_types = vec![NodeType::Terminal, NodeType::And, NodeType::Or, NodeType::Not];
         let var = encoder.new_direct(possible_types);
@@ -54,7 +54,7 @@ pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, trut
     }
 
     // Generate INDEX variables for each node
-    let mut index_vars = DomainVar::default();
+    let mut index_vars = Map::default();
     for node in 1..=num_nodes {
         let possible_indices = (0..=truth_table.variables).collect();
         let index_var = encoder.new_direct(possible_indices);
@@ -75,7 +75,7 @@ pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, trut
     }
 
     // Generate PARENT variables for each node
-    let mut parent_vars = DomainVar::default();
+    let mut parent_vars = Map::default();
     for node in 2..=num_nodes {
         let possible_parents = (1..node).collect();
         let parent_var = encoder.new_direct(possible_parents);
@@ -99,7 +99,7 @@ pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, trut
     }
 
     // Generate CHILD variables for each node
-    let mut child_vars = DomainVar::default();
+    let mut child_vars = Map::default();
     for node in 1..=num_nodes {
         let mut possible_children = vec![0];
         possible_children.extend((node + 1)..=num_nodes);
@@ -192,7 +192,7 @@ pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, trut
     }
 
     // Generate VALUE variables for each node and input row
-    let mut value_vars = DomainVar::default();
+    let mut value_vars = Map::default();
     for node in 1..=num_nodes {
         for row in 0..truth_table.rows.len() {
             let v = encoder.new_var();

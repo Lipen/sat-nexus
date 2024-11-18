@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use crate::domainvar::DomainVar;
+use crate::map::Map;
 
 pub struct SatEncoder {
     pub num_vars: usize,
@@ -70,8 +70,8 @@ impl SatEncoder {
 }
 
 impl SatEncoder {
-    pub fn new_direct<T>(&mut self, values: Vec<T>) -> DomainVar<T, i32> {
+    pub fn new_direct<T>(&mut self, values: Vec<T>) -> Map<T, i32> {
         let variables = values.iter().map(|_| self.new_var()).collect();
-        DomainVar::new(values, variables)
+        Map::new(values, variables)
     }
 }

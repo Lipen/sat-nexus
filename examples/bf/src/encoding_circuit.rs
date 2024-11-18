@@ -6,8 +6,8 @@ use itertools::Itertools;
 use cadical::statik::Cadical;
 
 use crate::circuit::{BooleanCircuit, LogicGate};
-use crate::domainvar::DomainVar;
 use crate::encoder::SatEncoder;
+use crate::map::Map;
 use crate::table::TruthTable;
 use crate::utils::*;
 
@@ -28,9 +28,9 @@ pub struct CircuitSynthesis {
     pub gate_input_pins: HashMap<Gate, Vec<Pin>>,
     pub gate_output_pins: HashMap<Gate, Vec<Pin>>,
     pub unique_cubes: Vec<Vec<bool>>,
-    pub gate_type: DomainVar<Gate, DomainVar<GateType, i32>>,
-    pub pin_parent: DomainVar<Pin, DomainVar<Pin, i32>>,
-    pub pin_value: DomainVar<Pin, DomainVar<usize, i32>>,
+    pub gate_type: Map<Gate, Map<GateType, i32>>,
+    pub pin_parent: Map<Pin, Map<Pin, i32>>,
+    pub pin_value: Map<Pin, Map<usize, i32>>,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -62,7 +62,7 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
     let num_cubes = unique_cubes.len();
 
     // Generate GATE_TYPE variables for each gate
-    let mut gate_type_vars = DomainVar::default();
+    let mut gate_type_vars = Map::default();
     for gate in (1..=num_gates).map(Gate) {
         let possible_gate_types = vec![GateType::And2, GateType::Or2, GateType::Not];
         let var = encoder.new_direct(possible_gate_types);
@@ -114,7 +114,7 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
     let num_pins = num_pins; // make immutable
 
     // Generate PIN_PARENT variables for each gate and input pin
-    let mut pin_parent_vars = DomainVar::default();
+    let mut pin_parent_vars = Map::default();
     for gate in (1..=num_gates).map(Gate) {
         for &pin in gate_input_pins[&gate].iter() {
             let mut possible_parent_pins = vec![Pin::DISCONNECTED]; // [outgoing_pin]
@@ -162,7 +162,7 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
     }
 
     // Generate PIN_VALUE variables for each pin and input cube
-    let mut pin_value_vars = DomainVar::default();
+    let mut pin_value_vars = Map::default();
     for pin in (1..=num_pins).map(Pin) {
         let var = encoder.new_direct((0..num_cubes).collect());
         pin_value_vars.add(pin, var);
