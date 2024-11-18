@@ -49,6 +49,15 @@ impl SatEncoder {
     }
 }
 
+// Variables
+impl SatEncoder {
+    pub fn new_direct<T>(&mut self, values: Vec<T>) -> Map<T, i32> {
+        let variables = values.iter().map(|_| self.new_var()).collect();
+        Map::new(values, variables)
+    }
+}
+
+// Constraints
 impl SatEncoder {
     pub fn exactly_one(&mut self, vars: &[i32]) {
         self.at_least_one(vars);
@@ -66,12 +75,5 @@ impl SatEncoder {
                 self.add_clause(vec![-var1, -var2]);
             }
         }
-    }
-}
-
-impl SatEncoder {
-    pub fn new_direct<T>(&mut self, values: Vec<T>) -> Map<T, i32> {
-        let variables = values.iter().map(|_| self.new_var()).collect();
-        Map::new(values, variables)
     }
 }
