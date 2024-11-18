@@ -73,19 +73,19 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
         gate_type_vars.add(gate, var);
     }
 
-    let mut pin = 0;
+    let mut num_pins = 0;
 
     let mut external_input_pins: Vec<Pin> = Vec::new(); // [outgoing_pin]
     for _ in 0..num_inputs {
-        pin += 1;
-        external_input_pins.push(Pin(pin));
+        num_pins += 1;
+        external_input_pins.push(Pin(num_pins));
     }
     println!("external_input_pins = {:?}", external_input_pins);
 
     let mut external_output_pins: Vec<Pin> = Vec::new(); // [incoming_pin]
     for _ in 0..num_outputs {
-        pin += 1;
-        external_output_pins.push(Pin(pin));
+        num_pins += 1;
+        external_output_pins.push(Pin(num_pins));
     }
     println!("external_output_pins = {:?}", external_output_pins);
 
@@ -94,8 +94,8 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
     for gate in (1..=num_gates).map(Gate) {
         let pins = (1..=max_gate_inputs)
             .map(|_| {
-                pin += 1;
-                Pin(pin)
+                num_pins += 1;
+                Pin(num_pins)
             })
             .collect();
         println!("gate = {:?}, input_pins = {:?}", gate, pins);
@@ -103,17 +103,15 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
 
         let pins = (1..=max_gate_outputs)
             .map(|_| {
-                pin += 1;
-                Pin(pin)
+                num_pins += 1;
+                Pin(num_pins)
             })
             .collect();
         println!("gate = {:?}, output_pins = {:?}", gate, pins);
         gate_output_pins.insert(gate, pins);
     }
 
-    let num_pins = pin;
-    #[allow(unused_variables)]
-    let pin = (); // sentinel
+    let num_pins = num_pins; // make immutable
 
     // Generate PIN_PARENT variables for each gate and input pin
     let mut pin_parent_vars = DomainVar::default();
