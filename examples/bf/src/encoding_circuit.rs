@@ -181,14 +181,16 @@ pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, trut
     }
 
     // Encode output values
-    for (i, tt) in truth_tables.iter().enumerate() {
-        for &(ref inputs, output) in tt.rows.iter() {
-            let input_index = unique_cubes.iter().position(|cube| cube == inputs).unwrap();
-            let v = pin_value_vars[external_output_pins[i]][input_index];
-            if output {
-                encoder.add_clause(vec![v]);
-            } else {
-                encoder.add_clause(vec![-v]);
+    for (i, cube) in unique_cubes.iter().enumerate() {
+        let outputs = &outputs_for_cube[cube];
+        for (j, &output) in outputs.iter().enumerate() {
+            if let Some(output) = output {
+                let v = pin_value_vars[external_output_pins[j]][i];
+                if output {
+                    encoder.add_clause(vec![v]);
+                } else {
+                    encoder.add_clause(vec![-v]);
+                }
             }
         }
     }
