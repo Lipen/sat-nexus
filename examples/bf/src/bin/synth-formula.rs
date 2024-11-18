@@ -1,10 +1,10 @@
-use bf::encoder::SatEncoder;
-use bf::encoding_formula::encode_boolean_synthesis;
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
 
+use bf::encoder::SatEncoder;
+use bf::encoding_formula::encode_boolean_synthesis;
 use bf::table::TruthTable;
-use bf::utils::decode_onehot;
+use bf::utils::*;
 
 fn main() -> color_eyre::Result<()> {
     let n = 3;

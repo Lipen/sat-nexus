@@ -4,7 +4,7 @@ use crate::domainvar::DomainVar;
 use crate::encoder::SatEncoder;
 use crate::formula::BooleanFormula;
 use crate::table::TruthTable;
-use crate::utils;
+use crate::utils::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum NodeType {
@@ -295,26 +295,26 @@ impl BooleanFormulaSynthesis {
         let mut formula: Vec<Option<BooleanFormula>> = vec![None; num_nodes];
 
         for node in (1..=num_nodes).rev() {
-            let node_type = *utils::decode_onehot(&self.node_type[node], solver).unwrap();
+            let node_type = *decode_onehot(&self.node_type[node], solver).unwrap();
             match node_type {
                 NodeType::Terminal => {
-                    let index = *utils::decode_onehot(&self.index[node], solver).unwrap();
+                    let index = *decode_onehot(&self.index[node], solver).unwrap();
                     formula[node - 1] = Some(BooleanFormula::var(index));
                 }
                 NodeType::And => {
-                    let child = *utils::decode_onehot(&self.child[node], solver).unwrap();
+                    let child = *decode_onehot(&self.child[node], solver).unwrap();
                     let left = formula[child - 1].take().unwrap();
                     let right = formula[child].take().unwrap();
                     formula[node - 1] = Some(BooleanFormula::and(left, right));
                 }
                 NodeType::Or => {
-                    let child = *utils::decode_onehot(&self.child[node], solver).unwrap();
+                    let child = *decode_onehot(&self.child[node], solver).unwrap();
                     let left = formula[child - 1].take().unwrap();
                     let right = formula[child].take().unwrap();
                     formula[node - 1] = Some(BooleanFormula::or(left, right));
                 }
                 NodeType::Not => {
-                    let child = *utils::decode_onehot(&self.child[node], solver).unwrap();
+                    let child = *decode_onehot(&self.child[node], solver).unwrap();
                     let child_formula = formula[child - 1].take().unwrap();
                     formula[node - 1] = Some(BooleanFormula::not(child_formula));
                 }

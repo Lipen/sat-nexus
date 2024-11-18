@@ -8,5 +8,6 @@ publish = false
 [dependencies]
 sat-nexus-core = { path = "../../lib/core" }
 cadical = { path = "../../lib/cadical", features = ["static"] }
+itertools = "0.13"
 
 color-eyre = "0.6"
