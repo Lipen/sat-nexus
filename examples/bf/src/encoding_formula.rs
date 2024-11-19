@@ -1,8 +1,8 @@
 use cadical::statik::Cadical;
+use sat_nexus_core::map::Map;
 
 use crate::encoder::CnfEncoder;
 use crate::formula::BooleanFormula;
-use crate::map::Map;
 use crate::table::TruthTable;
 use crate::utils::*;
 

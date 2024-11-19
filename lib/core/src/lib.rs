@@ -7,6 +7,7 @@ pub mod domainvar;
 pub mod eval;
 pub mod formula;
 pub mod lit;
+pub mod map;
 pub mod model;
 pub mod op;
 pub mod solver;

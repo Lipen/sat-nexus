@@ -4,10 +4,10 @@ use std::iter::zip;
 use itertools::Itertools;
 
 use cadical::statik::Cadical;
+use sat_nexus_core::map::Map;
 
 use crate::circuit::{BooleanCircuit, LogicGate};
 use crate::encoder::CnfEncoder;
-use crate::map::Map;
 use crate::table::TruthTable;
 use crate::utils::*;
 

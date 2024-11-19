@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use crate::map::Map;
+use sat_nexus_core::map::Map;
 
 pub struct CnfEncoder {
     pub num_vars: usize,
