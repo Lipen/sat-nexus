@@ -68,7 +68,7 @@ pub fn encode_circuit_synthesis(encoder: &mut CnfEncoder, num_gates: usize, trut
         let var = encoder.new_direct(possible_gate_types);
 
         // Each gate must have exactly one type
-        encoder.exactly_one(&var.values);
+        encoder.exactly_one(var.values());
 
         gate_type_vars.add(gate, var);
     }
@@ -131,7 +131,7 @@ pub fn encode_circuit_synthesis(encoder: &mut CnfEncoder, num_gates: usize, trut
             let var = encoder.new_direct(possible_parent_pins);
 
             // Each gate input pin must have exactly one parent
-            encoder.exactly_one(&var.values);
+            encoder.exactly_one(var.values());
 
             pin_parent_vars.add(pin, var);
         }
@@ -147,7 +147,7 @@ pub fn encode_circuit_synthesis(encoder: &mut CnfEncoder, num_gates: usize, trut
         let var = encoder.new_direct(possible_parent_pins);
 
         // Each gate input pin must have exactly one parent
-        encoder.exactly_one(&var.values);
+        encoder.exactly_one(var.values());
 
         pin_parent_vars.add(pin, var);
     }

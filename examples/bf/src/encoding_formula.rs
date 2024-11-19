@@ -33,7 +33,7 @@ pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, trut
         let var = encoder.new_direct(possible_types);
 
         // Each node must have exactly one type
-        encoder.exactly_one(&var.values);
+        encoder.exactly_one(var.values());
 
         node_type_vars.add(node, var);
     }
@@ -57,12 +57,12 @@ pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, trut
     let mut index_vars = Map::default();
     for node in 1..=num_nodes {
         let possible_indices = (0..=truth_table.variables).collect();
-        let index_var = encoder.new_direct(possible_indices);
+        let var = encoder.new_direct(possible_indices);
 
         // Each node must have exactly one variable index associated
-        encoder.exactly_one(&index_var.values);
+        encoder.exactly_one(var.values());
 
-        index_vars.add(node, index_var);
+        index_vars.add(node, var);
     }
 
     // Only terminal nodes can have variable index 0
@@ -78,12 +78,12 @@ pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, trut
     let mut parent_vars = Map::default();
     for node in 2..=num_nodes {
         let possible_parents = (1..node).collect();
-        let parent_var = encoder.new_direct(possible_parents);
+        let var = encoder.new_direct(possible_parents);
 
         // Each node (except root) must have exactly one parent
-        encoder.exactly_one(&parent_var.values);
+        encoder.exactly_one(var.values());
 
-        parent_vars.add(node, parent_var);
+        parent_vars.add(node, var);
     }
 
     // BFS constraint
@@ -104,12 +104,12 @@ pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, trut
         let mut possible_children = vec![0];
         possible_children.extend((node + 1)..=num_nodes);
 
-        let child_var = encoder.new_direct(possible_children);
+        let var = encoder.new_direct(possible_children);
 
         // Each node must have exactly one child
-        encoder.exactly_one(&child_var.values);
+        encoder.exactly_one(var.values());
 
-        child_vars.add(node, child_var);
+        child_vars.add(node, var);
     }
 
     // Encode parent-child relationships
@@ -290,7 +290,7 @@ pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, trut
 
 impl BooleanFormulaSynthesis {
     pub fn build_formula(&self, solver: &Cadical) -> BooleanFormula {
-        let num_nodes = self.node_type.keys.len();
+        let num_nodes = self.node_type.len();
 
         let mut formula: Vec<Option<BooleanFormula>> = vec![None; num_nodes];
 
