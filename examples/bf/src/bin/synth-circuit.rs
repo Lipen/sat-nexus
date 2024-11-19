@@ -1,7 +1,7 @@
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
 
-use bf::encoder::SatEncoder;
+use bf::encoder::CnfEncoder;
 use bf::encoding_circuit::encode_circuit_synthesis;
 use bf::table::TruthTable;
 use bf::utils::*;
@@ -29,7 +29,7 @@ fn main() -> color_eyre::Result<()> {
     println!("num_nodes = {}", num_nodes);
 
     println!("Encoding...");
-    let mut encoder = SatEncoder::default();
+    let mut encoder = CnfEncoder::default();
     let vars = encode_circuit_synthesis(&mut encoder, num_nodes, &tables);
     println!("Encoded using {} variables and {} clauses", encoder.num_vars, encoder.clauses.len());
 

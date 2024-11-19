@@ -1,6 +1,6 @@
 use cadical::statik::Cadical;
 
-use crate::encoder::SatEncoder;
+use crate::encoder::CnfEncoder;
 use crate::formula::BooleanFormula;
 use crate::map::Map;
 use crate::table::TruthTable;
@@ -22,7 +22,7 @@ pub struct BooleanFormulaSynthesis {
     pub value: Map<(usize, usize), i32>,
 }
 
-pub fn encode_boolean_synthesis(encoder: &mut SatEncoder, num_nodes: usize, truth_table: &TruthTable) -> BooleanFormulaSynthesis {
+pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, truth_table: &TruthTable) -> BooleanFormulaSynthesis {
     // Note: most "domain" variables are 1-based, and some domains include 0 as sentinel value.
     // Note: 'row' is a 0-based index of a row in `truth_table.rows`.
 

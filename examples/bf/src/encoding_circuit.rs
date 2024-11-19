@@ -6,7 +6,7 @@ use itertools::Itertools;
 use cadical::statik::Cadical;
 
 use crate::circuit::{BooleanCircuit, LogicGate};
-use crate::encoder::SatEncoder;
+use crate::encoder::CnfEncoder;
 use crate::map::Map;
 use crate::table::TruthTable;
 use crate::utils::*;
@@ -43,7 +43,7 @@ impl Pin {
     pub const DISCONNECTED: Pin = Pin(0);
 }
 
-pub fn encode_circuit_synthesis(encoder: &mut SatEncoder, num_gates: usize, truth_tables: &[TruthTable]) -> CircuitSynthesis {
+pub fn encode_circuit_synthesis(encoder: &mut CnfEncoder, num_gates: usize, truth_tables: &[TruthTable]) -> CircuitSynthesis {
     assert!(truth_tables.iter().all(|tt| tt.variables == truth_tables[0].variables));
 
     let num_inputs = truth_tables[0].variables;

@@ -2,12 +2,12 @@ use std::fmt::Write as _;
 
 use crate::map::Map;
 
-pub struct SatEncoder {
+pub struct CnfEncoder {
     pub num_vars: usize,
     pub clauses: Vec<Vec<i32>>,
 }
 
-impl SatEncoder {
+impl CnfEncoder {
     pub fn new(num_vars: usize) -> Self {
         Self {
             num_vars,
@@ -16,26 +16,23 @@ impl SatEncoder {
     }
 }
 
-impl Default for SatEncoder {
+impl Default for CnfEncoder {
     fn default() -> Self {
         Self::new(0)
     }
 }
 
-impl SatEncoder {
-    /// Generate a new unique variable ID for SAT encoding.
+impl CnfEncoder {
     pub fn new_var(&mut self) -> i32 {
         self.num_vars += 1;
         self.num_vars as i32
     }
 
-    /// Add a clause to the SAT encoding in CNF format.
     pub fn add_clause(&mut self, clause: Vec<i32>) {
         assert!(!clause.is_empty(), "clause must not be empty");
         self.clauses.push(clause);
     }
 
-    /// Convert the SAT encoding to DIMACS format for the SAT solver.
     pub fn to_dimacs(&self) -> String {
         let mut output = String::new();
         writeln!(output, "p cnf {} {}", self.num_vars, self.clauses.len()).unwrap();
@@ -50,7 +47,7 @@ impl SatEncoder {
 }
 
 // Variables
-impl SatEncoder {
+impl CnfEncoder {
     pub fn new_direct<T>(&mut self, values: Vec<T>) -> Map<T, i32> {
         let variables = values.iter().map(|_| self.new_var()).collect();
         Map::new(values, variables)
@@ -58,7 +55,7 @@ impl SatEncoder {
 }
 
 // Constraints
-impl SatEncoder {
+impl CnfEncoder {
     pub fn exactly_one(&mut self, vars: &[i32]) {
         self.at_least_one(vars);
         self.at_most_one(vars);
