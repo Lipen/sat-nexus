@@ -20,10 +20,7 @@ impl Clause {
 impl Clause {
     pub fn new(lits: Vec<Lit>) -> Self {
         debug_assert!(!lits.is_empty(), "Clause must be non-empty");
-        debug_assert!(
-            itertools::equal(lits.iter(), lits.iter().unique()),
-            "Clause must have unique literals"
-        );
+        debug_assert!(lits.iter().all_unique(), "Clause must have unique literals");
         Clause { lits }
     }
 }
