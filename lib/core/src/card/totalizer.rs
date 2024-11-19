@@ -24,19 +24,21 @@ impl Totalizer {
     {
         assert!(!input_vars.is_empty());
 
-        let mut queue = VecDeque::new();
+        let mut queue = VecDeque::from([input_vars]);
+        let mut output_vars = Vec::new();
 
-        for &e in input_vars {
-            queue.push_back(vec![e]);
-        }
+        while let Some(x) = queue.pop_front() {
+            let m = x.len();
+            if m == 1 {
+                output_vars.push(x[0]);
+                continue;
+            }
 
-        while queue.len() != 1 {
-            let a = queue.pop_front().unwrap();
-            let b = queue.pop_front().unwrap();
-
+            let (a, b) = x.split_at(m / 2);
             let m1 = a.len();
             let m2 = b.len();
-            let m = m1 + m2;
+            queue.push_front(b);
+            queue.push_front(a);
 
             let r = (0..m).map(|_| solver.new_var()).collect_vec();
 
@@ -70,11 +72,8 @@ impl Totalizer {
                     }
                 }
             }
-
-            queue.push_back(r);
         }
 
-        let output_vars = queue.pop_front().unwrap();
         Self {
             output_vars,
             declared_lower_bound: None,
@@ -152,5 +151,28 @@ impl Totalizer {
             // Note: totalizer is 0-based, but all params are naturally 1-based
             solver.add_clause([self.output_vars[i - 1]]);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use itertools::Itertools;
+
+    use crate::card::Cardinality;
+    use crate::solver::ext::SolverExt;
+    use crate::solver::mock::MockSolver;
+
+    #[test]
+    fn test_totalizer_output() {
+        let mut s = MockSolver::new();
+        let n = 11;
+        let lits = s.new_var_vec(n);
+        let t = s.declare_totalizer(&lits);
+        println!("{:?}", t.output_vars);
+        assert_eq!(t.output_vars.len(), lits.len());
+        assert_eq!(
+            t.output_vars.iter().map(|lit| lit.get()).collect_vec(),
+            (1..=n as i32).collect_vec()
+        );
     }
 }
