@@ -16,6 +16,7 @@ impl<K, V> Map<K, V> {
 }
 
 impl<K, V> Default for Map<K, V> {
+    /// Creates an empty `Map`.
     fn default() -> Self {
         Self::new(Vec::new(), Vec::new())
     }
