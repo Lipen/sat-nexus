@@ -11,7 +11,7 @@ pub trait AllSat: Solver + Sized {
         F: FnMut(&mut Self) -> T,
     {
         // If no essential vars were passed, then *all* variables are essential!
-        let essential = 1..=self.num_vars();
+        let essential = 1..=self.num_vars() as i32;
         self.all_sat_essential(essential, f)
     }
 

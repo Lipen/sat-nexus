@@ -1,13 +1,15 @@
-use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::ops::Neg;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[repr(transparent)]
 pub struct Lit(i32);
 
 impl Lit {
+    pub const ZERO: Lit = Lit(0);
+
     pub const fn new(val: i32) -> Self {
-        debug_assert!(val != 0);
+        debug_assert!(val != 0, "literal must not be zero, use Lit::ZERO instead");
         Lit(val)
     }
 
@@ -18,11 +20,15 @@ impl Lit {
     pub const fn var(self) -> u32 {
         self.get().unsigned_abs()
     }
+
+    pub const fn sign(self) -> i32 {
+        self.get().signum()
+    }
 }
 
 impl Display for Lit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.get())
     }
 }
 
@@ -41,19 +47,14 @@ impl From<i32> for Lit {
     }
 }
 
-impl From<usize> for Lit {
-    fn from(val: usize) -> Self {
-        Self::new(val.try_into().unwrap())
-    }
-}
-
 // Into<i32>
 impl From<Lit> for i32 {
     fn from(lit: Lit) -> Self {
-        lit.0
+        lit.get()
     }
 }
 
+// -Lit
 impl Neg for Lit {
     type Output = Self;
 
@@ -73,13 +74,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(debug_assertions)]
-    #[should_panic(expected = "assertion failed: val != 0")]
-    fn test_lit_new_zero() {
-        let _lit = Lit::new(0);
-    }
-
-    #[test]
     fn test_lit_display() {
         let lit = Lit::new(42);
         assert_eq!(format!("{}", lit), "42");
@@ -92,8 +86,8 @@ mod tests {
     }
 
     #[test]
-    fn test_lit_from_usize() {
-        let lit: Lit = 42usize.into();
+    fn test_lit_from_i32_ref() {
+        let lit: Lit = (&42).into();
         assert_eq!(lit.get(), 42);
     }
 

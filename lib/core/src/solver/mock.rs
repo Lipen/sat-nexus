@@ -61,7 +61,7 @@ impl Solver for MockSolver {
 
     fn new_var(&mut self) -> Lit {
         self.nvars += 1;
-        Lit::from(self.nvars)
+        Lit::new(self.nvars as i32)
     }
 
     fn assume<L>(&mut self, _lit: L)
