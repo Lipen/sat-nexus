@@ -1,7 +1,8 @@
 use cadical::statik::Cadical;
+use sat_nexus_core::encoder::CnfEncoder;
+use sat_nexus_core::lit::Lit;
 use sat_nexus_core::map::Map;
 
-use crate::encoder::CnfEncoder;
 use crate::formula::BooleanFormula;
 use crate::table::TruthTable;
 use crate::utils::*;
@@ -15,11 +16,11 @@ pub enum NodeType {
 }
 
 pub struct BooleanFormulaSynthesis {
-    pub node_type: Map<usize, Map<NodeType, i32>>,
-    pub index: Map<usize, Map<usize, i32>>,
-    pub parent: Map<usize, Map<usize, i32>>,
-    pub child: Map<usize, Map<usize, i32>>,
-    pub value: Map<(usize, usize), i32>,
+    pub node_type: Map<usize, Map<NodeType, Lit>>,
+    pub index: Map<usize, Map<usize, Lit>>,
+    pub parent: Map<usize, Map<usize, Lit>>,
+    pub child: Map<usize, Map<usize, Lit>>,
+    pub value: Map<(usize, usize), Lit>,
 }
 
 pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, truth_table: &TruthTable) -> BooleanFormulaSynthesis {
@@ -221,8 +222,8 @@ pub fn encode_boolean_synthesis(encoder: &mut CnfEncoder, num_nodes: usize, trut
         for (row, (inputs, _)) in truth_table.rows.iter().enumerate() {
             assert_eq!(inputs.len(), truth_table.variables);
             let v = value_vars[(node, row)];
-            for index in 1..=truth_table.variables {
-                let i = &index_vars[node][index];
+            for index in 1..=inputs.len() {
+                let i = index_vars[node][index];
                 // (node's variable is i) -> (node's value is input[i])
                 if inputs[index - 1] {
                     encoder.add_clause(vec![-i, v]);

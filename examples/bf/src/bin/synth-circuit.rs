@@ -1,7 +1,7 @@
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
+use sat_nexus_core::encoder::CnfEncoder;
 
-use bf::encoder::CnfEncoder;
 use bf::encoding_circuit::encode_circuit_synthesis;
 use bf::table::TruthTable;
 use bf::utils::*;
@@ -62,7 +62,7 @@ fn main() -> color_eyre::Result<()> {
         println!("VALUE:");
         for (&pin, pin_value_var) in vars.pin_value.iter() {
             for (i, cube) in vars.unique_cubes.iter().enumerate() {
-                let pin_value = solver.val(pin_value_var[i])?;
+                let pin_value = solver.val(pin_value_var[i].get())?;
                 println!(
                     "value[{:?}][{}] = {:?}",
                     pin,

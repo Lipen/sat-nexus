@@ -1,7 +1,7 @@
 use cadical::statik::Cadical;
 use cadical::SolveResponse;
+use sat_nexus_core::encoder::CnfEncoder;
 
-use bf::encoder::CnfEncoder;
 use bf::encoding_formula::encode_boolean_synthesis;
 use bf::table::TruthTable;
 use bf::utils::*;

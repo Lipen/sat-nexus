@@ -4,10 +4,11 @@ use std::iter::zip;
 use itertools::Itertools;
 
 use cadical::statik::Cadical;
+use sat_nexus_core::encoder::CnfEncoder;
+use sat_nexus_core::lit::Lit;
 use sat_nexus_core::map::Map;
 
 use crate::circuit::{BooleanCircuit, LogicGate};
-use crate::encoder::CnfEncoder;
 use crate::table::TruthTable;
 use crate::utils::*;
 
@@ -28,9 +29,9 @@ pub struct CircuitSynthesis {
     pub gate_input_pins: HashMap<Gate, Vec<Pin>>,
     pub gate_output_pins: HashMap<Gate, Vec<Pin>>,
     pub unique_cubes: Vec<Vec<bool>>,
-    pub gate_type: Map<Gate, Map<GateType, i32>>,
-    pub pin_parent: Map<Pin, Map<Pin, i32>>,
-    pub pin_value: Map<Pin, Map<usize, i32>>,
+    pub gate_type: Map<Gate, Map<GateType, Lit>>,
+    pub pin_parent: Map<Pin, Map<Pin, Lit>>,
+    pub pin_value: Map<Pin, Map<usize, Lit>>,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]

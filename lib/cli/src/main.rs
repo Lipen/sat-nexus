@@ -79,7 +79,7 @@ where
     info!("{} in {}", result, elapsed);
 
     if result == SolveResponse::Sat {
-        let model = (1..=solver.num_vars()).map(|i| solver.value(i)).collect_vec();
+        let model = (1..=solver.num_vars()).map(|i| solver.value(i as i32)).collect_vec();
         let model_string = model.iter().map(|x| if x.bool() { "1" } else { "0" }).join("");
         info!("model: {}", model_string);
     }

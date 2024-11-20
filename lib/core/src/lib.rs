@@ -4,6 +4,7 @@ pub mod card;
 pub mod cnf;
 pub mod context;
 pub mod domainvar;
+pub mod encoder;
 pub mod eval;
 pub mod formula;
 pub mod lit;
