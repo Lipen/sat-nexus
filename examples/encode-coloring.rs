@@ -1,8 +1,10 @@
 //! Graph coloring example.
 
 use std::collections::HashMap;
+use std::time::Instant;
 
 use itertools::Itertools;
+
 use sat_nexus_core::encoder::CnfEncoder;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::map::Map;
@@ -43,6 +45,7 @@ impl Coloring {
         assert!(num_vertices > 0, "Number of vertices must be positive");
         assert!(num_colors > 0, "Number of colors must be positive");
 
+        let time_encode = Instant::now();
         println!(
             "=> Encoding graph coloring problem: {} vertices, {} edges, {} colors",
             num_vertices,
@@ -81,10 +84,12 @@ impl Coloring {
             encoder.add_clause(vec![c]);
         }
 
+        let time_encode = time_encode.elapsed();
         println!(
-            "=> Encoded using {} variables and {} clauses",
+            "=> Encoded using {} variables and {} clauses in {:.1} s",
             encoder.num_vars,
-            encoder.clauses.len()
+            encoder.clauses.len(),
+            time_encode.as_secs_f64()
         );
 
         Self {
@@ -103,6 +108,7 @@ pub fn decode_onehot<'a, T>(var: &'a Map<T, Lit>, solver: &Cadical) -> Option<&'
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     println!("==> Graph coloring example");
+    let time_total = Instant::now();
 
     let num_vertices = 10;
     let num_colors = 3;
@@ -127,7 +133,7 @@ fn main() -> color_eyre::Result<()> {
     let mut encoder = CnfEncoder::default();
     let coloring = Coloring::encode(&mut encoder, &edges, num_vertices, num_colors);
 
-    println!("Initializing the solver...");
+    println!("=> Initializing the solver...");
     let mut solver = Cadical::default();
     println!("solver = {}", solver);
 
@@ -137,18 +143,19 @@ fn main() -> color_eyre::Result<()> {
     }
 
     println!("=> Solving...");
+    let time_solve = Instant::now();
     let res = solver.solve();
-    println!("=> Solver returned: {:?}", res);
+    let time_solve = time_solve.elapsed();
+    println!("=> Solver returned {:?} in {:.1} s", res, time_solve.as_secs_f64());
 
     if res == SolveResponse::Sat {
         println!("=> Coloring: SAT");
 
         let mut color = HashMap::new();
 
-        println!("COLOR:");
         for v in (1..=num_vertices).map(Vertex) {
             let c = *decode_onehot(&coloring.color[v], &solver).unwrap();
-            println!("color[{:?}] = {:?}", v, c);
+            println!("{:?} is colored in {:?}", v, c);
             color.insert(v, c);
         }
 
@@ -160,10 +167,13 @@ fn main() -> color_eyre::Result<()> {
                 a, b, color[a], color[b]
             );
         }
-        println!("=> Coloring: OK");
+        println!("=> Coloring is valid");
     } else {
         println!("=> Coloring: UNSAT");
     }
+
+    let time_total = time_total.elapsed();
+    println!("==> All done in {:.1} s", time_total.as_secs_f64());
 
     Ok(())
 }
