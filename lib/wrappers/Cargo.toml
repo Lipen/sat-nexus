@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
 
+[features]
+cadical-static = ["cadical/static"]
+cadical-dynamic = ["cadical/dynamic"]
+
 [dependencies]
 sat-nexus-core = { path = "../core" }
 ipasir = { path = "../ipasir" }
