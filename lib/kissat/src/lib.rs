@@ -1,12 +1,9 @@
-pub use self::kissat::*;
-pub use self::types::*;
+pub use self::common::*;
 
-mod kissat;
-mod types;
+mod common;
 
-pub mod ffi {
-    pub use kissat_sys::dynamic::*;
-}
+#[cfg(feature = "dynamic")]
+pub mod dynamic;
 
-#[cfg(test)]
-mod tests;
+#[cfg(feature = "static")]
+pub mod statik;

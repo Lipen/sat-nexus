@@ -6,14 +6,14 @@ edition = "2021"
 
 [features]
 cadical-static = ["cadical/static"]
-cadical-dynamic = ["cadical/dynamic"]
+kissat-static = ["kissat/static"]
 
 [dependencies]
 sat-nexus-core = { path = "../core" }
 ipasir = { path = "../ipasir" }
 cadical = { path = "../cadical", features = ["dynamic"] }
 minisat = { path = "../minisat", features = ["dynamic"] }
-kissat = { path = "../kissat" }
+kissat = { path = "../kissat", features = ["dynamic"] }
 simple-sat = { path = "../simple-sat" }
 itertools = "0.13"
 strum = { version = "0.26", features = ["derive"] }

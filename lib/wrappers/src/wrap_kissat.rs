@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 
-use kissat::Kissat;
+use kissat::dynamic::Kissat;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 

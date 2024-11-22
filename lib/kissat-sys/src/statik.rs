@@ -7,6 +7,8 @@
 include!(concat!(env!("OUT_DIR"), "/bindings-kissat-static.rs"));
 // include!("../_bindings-kissat-static.rs");
 
+pub type KissatPtr = *mut kissat;
+
 #[cfg(test)]
 mod tests {
     use super::*;

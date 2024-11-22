@@ -2,8 +2,9 @@ use std::fmt::{Debug, Display, Formatter};
 
 use ffi_utils::cstr2str;
 
+pub use crate::common::*;
+
 use super::ffi::*;
-use crate::types::*;
 
 /// Kissat solver.
 pub struct Kissat {

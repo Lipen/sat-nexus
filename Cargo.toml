@@ -24,6 +24,7 @@ members = [
 
 [features]
 cadical-static = ["cadical/static", "sat-nexus-wrappers/cadical-static"]
+kissat-static = ["kissat/static", "sat-nexus-wrappers/kissat-static"]
 
 [dependencies]
 sat-nexus-core = { path = "lib/core" }
@@ -31,7 +32,7 @@ sat-nexus-wrappers = { path = "lib/wrappers" }
 ipasir = { path = "lib/ipasir" }
 minisat = { path = "lib/minisat", features = ["dynamic"] }
 cadical = { path = "lib/cadical", features = ["dynamic"] }
-kissat = { path = "lib/kissat" }
+kissat = { path = "lib/kissat", features = ["dynamic"] }
 
 [dev-dependencies]
 sat-nexus-wrappers = { path = "lib/wrappers", features = ["cadical-static"] }

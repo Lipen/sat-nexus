@@ -4,8 +4,13 @@ version = "0.1.0"
 authors = ["Konstantin Chukharev <lipen00@gmail.com>"]
 edition = "2021"
 
+[features]
+default = []
+dynamic = ["kissat-sys/dynamic"]
+static = ["kissat-sys/static"]
+
 [dependencies]
-kissat-sys = { path = "../kissat-sys", features = ["dynamic"] }
+kissat-sys = { path = "../kissat-sys", optional = true }
 ffi-utils = { path = "../ffi-utils" }
 snafu = "0.7"
 itertools = "0.13"
