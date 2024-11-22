@@ -22,6 +22,9 @@ members = [
     "examples/bf",
 ]
 
+[features]
+cadical-static = ["cadical/static", "sat-nexus-wrappers/cadical-static"]
+
 [dependencies]
 sat-nexus-core = { path = "lib/core" }
 sat-nexus-wrappers = { path = "lib/wrappers" }
