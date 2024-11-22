@@ -34,6 +34,7 @@ cadical = { path = "lib/cadical", features = ["dynamic"] }
 kissat = { path = "lib/kissat" }
 
 [dev-dependencies]
+sat-nexus-wrappers = { path = "lib/wrappers", features = ["cadical-static"] }
 sat-nexus-test-utils = { path = "lib/_test_utils" }
 ffi-utils = { path = "lib/ffi-utils" }
 minisat-sys = { path = "lib/minisat-sys", features = ["dynamic", "static"] }
