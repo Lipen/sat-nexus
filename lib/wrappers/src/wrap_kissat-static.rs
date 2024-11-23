@@ -3,18 +3,18 @@ use std::fmt::{Debug, Display, Formatter};
 
 use itertools::Itertools;
 
-use cadical::statik::Cadical;
+use kissat::statik::Kissat;
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-pub struct CadicalStaticSolver {
-    inner: Cadical,
+pub struct KissatStaticSolver {
+    inner: Kissat,
     nvars: usize,
     nclauses: usize,
 }
 
-impl CadicalStaticSolver {
-    pub fn new(inner: Cadical) -> Self {
+impl KissatStaticSolver {
+    pub fn new(inner: Kissat) -> Self {
         Self {
             inner,
             nvars: 0,
@@ -23,31 +23,31 @@ impl CadicalStaticSolver {
     }
 }
 
-impl Default for CadicalStaticSolver {
+impl Default for KissatStaticSolver {
     fn default() -> Self {
-        Self::new(Cadical::new())
+        Self::new(Kissat::new())
     }
 }
 
-impl From<Cadical> for CadicalStaticSolver {
-    fn from(inner: Cadical) -> Self {
-        CadicalStaticSolver::new(inner)
+impl From<Kissat> for KissatStaticSolver {
+    fn from(inner: Kissat) -> Self {
+        KissatStaticSolver::new(inner)
     }
 }
 
-impl Debug for CadicalStaticSolver {
+impl Debug for KissatStaticSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CadicalStaticSolver").field("inner", &self.inner).finish()
+        f.debug_struct("KissatStaticSolver").field("inner", &self.inner).finish()
     }
 }
 
-impl Display for CadicalStaticSolver {
+impl Display for KissatStaticSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
     }
 }
 
-impl Solver for CadicalStaticSolver {
+impl Solver for KissatStaticSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -71,11 +71,11 @@ impl Solver for CadicalStaticSolver {
         Lit::new(self.nvars as i32)
     }
 
-    fn assume<L>(&mut self, lit: L)
+    fn assume<L>(&mut self, _lit: L)
     where
         L: Into<Lit>,
     {
-        self.inner.assume(lit.into().into()).unwrap();
+        panic!("Kissat does not support assumptions");
     }
 
     fn add_clause<I>(&mut self, lits: I)
@@ -88,12 +88,11 @@ impl Solver for CadicalStaticSolver {
     }
 
     fn solve(&mut self) -> SolveResponse {
-        use cadical::SolveResponse as CadicalSolveResponse;
+        use kissat::SolveResponse as KissatSolveResponse;
         match self.inner.solve() {
-            Ok(CadicalSolveResponse::Sat) => SolveResponse::Sat,
-            Ok(CadicalSolveResponse::Unsat) => SolveResponse::Unsat,
-            Ok(CadicalSolveResponse::Interrupted) => SolveResponse::Unknown,
-            Err(e) => panic!("Could not solve: {}", e),
+            KissatSolveResponse::Sat => SolveResponse::Sat,
+            KissatSolveResponse::Unsat => SolveResponse::Unsat,
+            KissatSolveResponse::Interrupted => SolveResponse::Unknown,
         }
     }
 
@@ -101,11 +100,11 @@ impl Solver for CadicalStaticSolver {
     where
         L: Into<Lit>,
     {
-        use cadical::LitValue as CadicalLitValue;
-        match self.inner.val(lit.into().into()) {
-            Ok(CadicalLitValue::True) => LitValue::True,
-            Ok(CadicalLitValue::False) => LitValue::False,
-            Err(e) => panic!("Could not get literal value: {}", e),
+        use kissat::LitValue as KissatLitValue;
+        match self.inner.value(lit.into().into()) {
+            KissatLitValue::True => LitValue::True,
+            KissatLitValue::False => LitValue::False,
+            _ => panic!("Unexpected value"),
         }
     }
 }
@@ -115,9 +114,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wrap_cadical_static() -> color_eyre::Result<()> {
-        let mut solver = CadicalStaticSolver::default();
-        assert!(solver.signature().contains("cadical"));
+    fn test_wrap_kissat_static() -> color_eyre::Result<()> {
+        let mut solver = KissatStaticSolver::default();
+        assert!(solver.signature().contains("kissat"));
 
         // Initializing variables
         let a = solver.new_var();
@@ -140,16 +139,18 @@ mod tests {
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Sat);
 
-        // Assuming both a and b to be true
-        solver.assume(a);
-        solver.assume(b);
-        // Problem is unsatisfiable under assumptions
-        let response = solver.solve();
-        assert_eq!(response, SolveResponse::Unsat);
-
-        // `solve` resets assumptions, so calling it again should produce SAT
-        let response = solver.solve();
-        assert_eq!(response, SolveResponse::Sat);
+        // Note: Kissat currently does not support assumptions.
+        //
+        // // Assuming both a and b to be true
+        // solver.assume(a);
+        // solver.assume(b);
+        // // Problem is unsatisfiable under assumptions
+        // let response = solver.solve();
+        // assert_eq!(response, SolveResponse::Unsat);
+        //
+        // // `solve` resets assumptions, so calling it again should produce SAT
+        // let response = solver.solve();
+        // assert_eq!(response, SolveResponse::Sat);
 
         Ok(())
     }

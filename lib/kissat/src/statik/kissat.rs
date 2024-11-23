@@ -138,3 +138,22 @@ impl Kissat {
         unsafe { cstr2str(kissat_compiler()) }
     }
 }
+
+/// Extra methods.
+impl Kissat {
+    pub fn reset(&mut self) {
+        self.release();
+        self.ptr = unsafe { kissat_init() };
+    }
+
+    pub fn add_clause<I>(&self, lits: I)
+    where
+        I: IntoIterator,
+        I::Item: Into<i32>,
+    {
+        for lit in lits.into_iter() {
+            self.add(lit.into());
+        }
+        self.add(0);
+    }
+}

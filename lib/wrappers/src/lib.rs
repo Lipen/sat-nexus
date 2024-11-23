@@ -14,6 +14,10 @@ pub mod minisat;
 #[path = "wrap_kissat.rs"]
 pub mod kissat;
 
+#[cfg(feature = "kissat-static")]
+#[path = "wrap_kissat-static.rs"]
+pub mod kissat_static;
+
 #[path = "wrap_simple-sat.rs"]
 pub mod simplesat;
 
