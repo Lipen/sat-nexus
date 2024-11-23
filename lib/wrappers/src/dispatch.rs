@@ -8,23 +8,26 @@ use sat_nexus_core::solver::delegate::DelegateSolver;
 use sat_nexus_core::solver::simple::SimpleSolver;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-use crate::cadical::CadicalSolver;
-use crate::minisat::MiniSatSolver;
+use crate::cadical_dynamic::CadicalDynamicSolver;
+use crate::kissat_dynamic::KissatDynamicSolver;
+use crate::minisat_dynamic::MiniSatDynamicSolver;
 
 #[derive(Debug, IntoStaticStr)]
 #[strum(ascii_case_insensitive)]
 pub enum DispatchSolver {
     Delegate(DelegateSolver),
-    MiniSat(MiniSatSolver),
-    Cadical(CadicalSolver),
+    MiniSatDynamic(MiniSatDynamicSolver),
+    CadicalDynamic(CadicalDynamicSolver),
+    KissatDynamic(KissatDynamicSolver),
 }
 
 macro_rules! dispatch {
     ($value:expr, $pattern:pat => $result:expr) => {
         match $value {
             DispatchSolver::Delegate($pattern) => $result,
-            DispatchSolver::MiniSat($pattern) => $result,
-            DispatchSolver::Cadical($pattern) => $result,
+            DispatchSolver::MiniSatDynamic($pattern) => $result,
+            DispatchSolver::CadicalDynamic($pattern) => $result,
+            DispatchSolver::KissatDynamic($pattern) => $result,
         }
     };
 }
@@ -37,16 +40,20 @@ impl DispatchSolver {
         Self::from(DelegateSolver::wrap(solver))
     }
     pub fn new_minisat() -> Self {
-        Self::from(MiniSatSolver::new())
+        Self::from(MiniSatDynamicSolver::new())
     }
     pub fn new_cadical() -> Self {
-        Self::from(CadicalSolver::new())
+        Self::from(CadicalDynamicSolver::new())
+    }
+    pub fn new_kissat() -> Self {
+        Self::from(KissatDynamicSolver::new())
     }
 
     pub fn by_name(name: &str) -> Self {
         match name.to_ascii_lowercase().as_str() {
             "minisat" => Self::new_minisat(),
             "cadical" => Self::new_cadical(),
+            "kissat" => Self::new_kissat(),
             _ => panic!("Bad name '{}'", name),
         }
     }
@@ -58,15 +65,21 @@ impl From<DelegateSolver> for DispatchSolver {
     }
 }
 
-impl From<MiniSatSolver> for DispatchSolver {
-    fn from(inner: MiniSatSolver) -> Self {
-        DispatchSolver::MiniSat(inner)
+impl From<MiniSatDynamicSolver> for DispatchSolver {
+    fn from(inner: MiniSatDynamicSolver) -> Self {
+        DispatchSolver::MiniSatDynamic(inner)
     }
 }
 
-impl From<CadicalSolver> for DispatchSolver {
-    fn from(inner: CadicalSolver) -> Self {
-        DispatchSolver::Cadical(inner)
+impl From<CadicalDynamicSolver> for DispatchSolver {
+    fn from(inner: CadicalDynamicSolver) -> Self {
+        DispatchSolver::CadicalDynamic(inner)
+    }
+}
+
+impl From<KissatDynamicSolver> for DispatchSolver {
+    fn from(inner: KissatDynamicSolver) -> Self {
+        DispatchSolver::KissatDynamic(inner)
     }
 }
 
@@ -154,6 +167,7 @@ impl Solver for DispatchSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cadical_dynamic::CadicalDynamicSolver;
 
     fn run_test(mut solver: DispatchSolver) -> color_eyre::Result<()> {
         // Initializing variables
@@ -189,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_delegate_minisat() -> color_eyre::Result<()> {
-        let solver = DispatchSolver::new_delegate_wrap(MiniSatSolver::new());
+        let solver = DispatchSolver::new_delegate_wrap(MiniSatDynamicSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("minisat"));
         run_test(solver)
@@ -197,16 +211,24 @@ mod tests {
 
     #[test]
     fn test_dispatch_delegate_cadical() -> color_eyre::Result<()> {
-        let solver = DispatchSolver::new_delegate_wrap(CadicalSolver::new());
+        let solver = DispatchSolver::new_delegate_wrap(CadicalDynamicSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("cadical"));
         run_test(solver)
     }
 
     #[test]
+    fn test_dispatch_delegate_kissat() -> color_eyre::Result<()> {
+        let solver = DispatchSolver::new_delegate_wrap(KissatDynamicSolver::new());
+        assert!(matches!(solver, DispatchSolver::Delegate(_)));
+        assert!(solver.signature().contains("kissat"));
+        run_test(solver)
+    }
+
+    #[test]
     fn test_dispatch_minisat() -> color_eyre::Result<()> {
         let solver = DispatchSolver::new_minisat();
-        assert!(matches!(solver, DispatchSolver::MiniSat(_)));
+        assert!(matches!(solver, DispatchSolver::MiniSatDynamic(_)));
         assert!(solver.signature().contains("minisat"));
         run_test(solver)
     }
@@ -214,8 +236,16 @@ mod tests {
     #[test]
     fn test_dispatch_cadical() -> color_eyre::Result<()> {
         let solver = DispatchSolver::new_cadical();
-        assert!(matches!(solver, DispatchSolver::Cadical(_)));
+        assert!(matches!(solver, DispatchSolver::CadicalDynamic(_)));
         assert!(solver.signature().contains("cadical"));
+        run_test(solver)
+    }
+
+    #[test]
+    fn test_dispatch_kissat() -> color_eyre::Result<()> {
+        let solver = DispatchSolver::new_kissat();
+        assert!(matches!(solver, DispatchSolver::KissatDynamic(_)));
+        assert!(solver.signature().contains("kissat"));
         run_test(solver)
     }
 }

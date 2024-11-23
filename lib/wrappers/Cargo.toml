@@ -11,8 +11,8 @@ kissat-static = ["kissat/static"]
 [dependencies]
 sat-nexus-core = { path = "../core" }
 ipasir = { path = "../ipasir" }
-cadical = { path = "../cadical", features = ["dynamic"] }
 minisat = { path = "../minisat", features = ["dynamic"] }
+cadical = { path = "../cadical", features = ["dynamic"] }
 kissat = { path = "../kissat", features = ["dynamic"] }
 simple-sat = { path = "../simple-sat" }
 itertools = "0.13"

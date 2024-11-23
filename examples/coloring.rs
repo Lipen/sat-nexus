@@ -12,7 +12,7 @@ use sat_nexus_core::lit::Lit;
 use sat_nexus_core::op::ops::Ops;
 use sat_nexus_core::solver::ext::SolverExt;
 use sat_nexus_core::solver::*;
-use sat_nexus_wrappers::cadical::CadicalSolver;
+use sat_nexus_wrappers::cadical_dynamic::CadicalDynamicSolver;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Edge(usize, usize);
@@ -135,7 +135,7 @@ fn main() -> color_eyre::Result<()> {
         Edge(10, 6),
     ];
 
-    let mut solver = CadicalSolver::new();
+    let mut solver = CadicalDynamicSolver::new();
     println!("solver = {}", solver);
 
     let mut context = Context::new();

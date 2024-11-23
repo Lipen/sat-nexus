@@ -9,12 +9,12 @@ use minisat::dynamic::{LBool, MiniSat};
 use sat_nexus_core::lit::Lit;
 use sat_nexus_core::solver::{LitValue, SolveResponse, Solver};
 
-pub struct MiniSatSolver {
+pub struct MiniSatDynamicSolver {
     inner: MiniSat,
     assumptions: Vec<MiniSatLit>,
 }
 
-impl MiniSatSolver {
+impl MiniSatDynamicSolver {
     pub fn new() -> Self {
         Self::new_custom(MiniSat::new())
     }
@@ -27,31 +27,31 @@ impl MiniSatSolver {
     }
 }
 
-impl Default for MiniSatSolver {
+impl Default for MiniSatDynamicSolver {
     fn default() -> Self {
-        MiniSatSolver::new()
+        MiniSatDynamicSolver::new()
     }
 }
 
-impl From<MiniSat> for MiniSatSolver {
+impl From<MiniSat> for MiniSatDynamicSolver {
     fn from(inner: MiniSat) -> Self {
-        MiniSatSolver::new_custom(inner)
+        MiniSatDynamicSolver::new_custom(inner)
     }
 }
 
-impl Debug for MiniSatSolver {
+impl Debug for MiniSatDynamicSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MiniSatSolver").field("inner", &self.inner).finish()
     }
 }
 
-impl Display for MiniSatSolver {
+impl Display for MiniSatDynamicSolver {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}({})", tynm::type_name::<Self>(), self.inner)
     }
 }
 
-impl Solver for MiniSatSolver {
+impl Solver for MiniSatDynamicSolver {
     fn signature(&self) -> Cow<str> {
         self.inner.signature().into()
     }
@@ -134,8 +134,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wrap_minisat() -> color_eyre::Result<()> {
-        let mut solver = MiniSatSolver::new();
+    fn test_wrap_minisat_dynamic() -> color_eyre::Result<()> {
+        let mut solver = MiniSatDynamicSolver::new();
         assert!(solver.signature().contains("minisat"));
 
         // Initializing variables

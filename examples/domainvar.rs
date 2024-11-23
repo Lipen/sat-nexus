@@ -4,12 +4,12 @@ use sat_nexus_core::context::Context;
 use sat_nexus_core::domainvar::DomainVar;
 use sat_nexus_core::solver::ext::SolverExt;
 use sat_nexus_core::solver::*;
-use sat_nexus_wrappers::cadical::CadicalSolver;
+use sat_nexus_wrappers::cadical_dynamic::CadicalDynamicSolver;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let mut solver = CadicalSolver::new();
+    let mut solver = CadicalDynamicSolver::new();
     let mut context = Context::new();
 
     let num_states = 5;

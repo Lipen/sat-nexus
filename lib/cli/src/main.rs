@@ -12,9 +12,10 @@ use sat_nexus_core::cnf::Cnf;
 use sat_nexus_core::solver::simple::SimpleSolver;
 use sat_nexus_core::solver::{SolveResponse, Solver};
 use sat_nexus_core::utils::bootstrap_solver_from_cnf;
-use sat_nexus_wrappers::cadical::CadicalSolver;
+use sat_nexus_wrappers::cadical_dynamic::CadicalDynamicSolver;
 use sat_nexus_wrappers::dispatch::DispatchSolver;
-use sat_nexus_wrappers::minisat::MiniSatSolver;
+use sat_nexus_wrappers::kissat_dynamic::KissatDynamicSolver;
+use sat_nexus_wrappers::minisat_dynamic::MiniSatDynamicSolver;
 
 #[derive(Parser, Debug)]
 #[command(author, version)]
@@ -30,14 +31,15 @@ struct Cli {
 
 #[allow(dead_code)]
 fn get_solver1() -> DispatchSolver {
-    DispatchSolver::new_delegate_wrap(CadicalSolver::new())
+    DispatchSolver::new_delegate_wrap(CadicalDynamicSolver::new())
 }
 
 #[allow(dead_code)]
 fn get_solver2(name: &str) -> color_eyre::Result<Box<dyn SimpleSolver>> {
     let solver: Box<dyn SimpleSolver> = match name.to_ascii_lowercase().as_str() {
-        "minisat" => MiniSatSolver::new().into(),
-        "cadical" => CadicalSolver::new().into(),
+        "minisat" => MiniSatDynamicSolver::new().into(),
+        "cadical" => CadicalDynamicSolver::new().into(),
+        "kissat" => KissatDynamicSolver::new().into(),
         _ => bail!("Bad solver '{}'", name),
     };
     Ok(solver)

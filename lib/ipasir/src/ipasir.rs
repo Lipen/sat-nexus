@@ -21,20 +21,20 @@ macro_rules! ipasir_instance {
 }
 
 impl Ipasir {
-    pub fn new_custom(ffi: &'static IpasirFFI) -> Self {
+    pub fn new(ffi: &'static IpasirFFI) -> Self {
         let ptr = ffi.init();
         Self { ffi, ptr }
     }
 
     pub fn new_cadical() -> Self {
-        Self::new_custom(ipasir_instance!("cadical"))
+        Self::new(ipasir_instance!("cadical"))
     }
-    // pub fn new_minisat() -> Self {
-    //     Self::new_custom(IpasirFFI::instance_minisat())
-    // }
-    // pub fn new_glucose() -> Self {
-    //     Self::new_custom(IpasirFFI::instance_glucose())
-    // }
+    pub fn new_minisat() -> Self {
+        Self::new(ipasir_instance!("minisat"))
+    }
+    pub fn new_glucose() -> Self {
+        Self::new(ipasir_instance!("glucose"))
+    }
 }
 
 impl Drop for Ipasir {
@@ -45,7 +45,7 @@ impl Drop for Ipasir {
 
 impl From<&'static IpasirFFI> for Ipasir {
     fn from(ffi: &'static IpasirFFI) -> Self {
-        Self::new_custom(ffi)
+        Self::new(ffi)
     }
 }
 
