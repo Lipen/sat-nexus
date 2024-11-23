@@ -12,7 +12,7 @@ use crate::lit::Lit;
 use crate::solver::Solver;
 
 pub struct Totalizer {
-    output_vars: Vec<Lit>,
+    pub output_vars: Vec<Lit>,
     declared_lower_bound: Option<usize>,
     declared_upper_bound: Option<usize>,
 }
@@ -24,27 +24,36 @@ impl Totalizer {
     {
         assert!(!input_vars.is_empty());
 
-        let mut queue = VecDeque::from([input_vars]);
-        let mut output_vars = Vec::new();
+        let output_vars = (0..input_vars.len()).map(|_| solver.new_var()).collect_vec();
+        let mut queue = VecDeque::from([(input_vars, output_vars.clone())]);
 
-        while let Some(x) = queue.pop_front() {
-            let m = x.len();
+        while let Some((leaves, r)) = queue.pop_front() {
+            let m = leaves.len();
             if m == 1 {
-                output_vars.push(x[0]);
                 continue;
             }
+            assert!(m > 1);
 
-            let (a, b) = x.split_at(m / 2);
-            let m1 = a.len();
-            let m2 = b.len();
-            queue.push_front(b);
-            queue.push_front(a);
+            let (left, right) = leaves.split_at(m / 2);
+            let m1 = left.len();
+            let m2 = right.len();
+            assert_eq!(m1 + m2, m);
 
-            let r = (0..m).map(|_| solver.new_var()).collect_vec();
+            let a = if m1 > 1 {
+                (0..m1).map(|_| solver.new_var()).collect_vec()
+            } else {
+                vec![left[0]]
+            };
+            let b = if m2 > 1 {
+                (0..m2).map(|_| solver.new_var()).collect_vec()
+            } else {
+                vec![right[0]]
+            };
 
             for alpha in 0..=m1 {
                 for beta in 0..=m2 {
                     let sigma = alpha + beta;
+
                     let c1 = if sigma == 0 {
                         None
                     } else if alpha == 0 {
@@ -72,6 +81,9 @@ impl Totalizer {
                     }
                 }
             }
+
+            queue.push_front((right, b));
+            queue.push_front((left, a));
         }
 
         Self {
@@ -167,12 +179,13 @@ mod tests {
         let mut s = MockSolver::new();
         let n = 11;
         let lits = s.new_var_vec(n);
+        println!("input = {:?}", lits);
         let t = s.declare_totalizer(&lits);
-        println!("{:?}", t.output_vars);
+        println!("output = {:?}", t.output_vars);
         assert_eq!(t.output_vars.len(), lits.len());
         assert_eq!(
             t.output_vars.iter().map(|lit| lit.get()).collect_vec(),
-            (1..=n as i32).collect_vec()
+            ((n + 1) as i32..=(n + n) as i32).collect_vec()
         );
     }
 }
