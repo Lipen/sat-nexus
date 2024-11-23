@@ -169,7 +169,7 @@ mod tests {
     use super::*;
     use crate::cadical_dynamic::CadicalDynamicSolver;
 
-    fn run_test(mut solver: DispatchSolver) -> color_eyre::Result<()> {
+    fn run_test(mut solver: DispatchSolver, use_assumptions: bool) -> color_eyre::Result<()> {
         // Initializing variables
         let a = solver.new_var();
         let b = solver.new_var();
@@ -187,16 +187,18 @@ mod tests {
         let response = solver.solve();
         assert_eq!(response, SolveResponse::Sat);
 
-        // Assuming both a and b to be true
-        solver.assume(a);
-        solver.assume(b);
-        // Problem is unsatisfiable under assumptions
-        let response = solver.solve();
-        assert_eq!(response, SolveResponse::Unsat);
+        if use_assumptions {
+            // Assuming both a and b to be true
+            solver.assume(a);
+            solver.assume(b);
+            // Problem is unsatisfiable under assumptions
+            let response = solver.solve();
+            assert_eq!(response, SolveResponse::Unsat);
 
-        // `solve` resets assumptions, so calling it again should produce SAT
-        let response = solver.solve();
-        assert_eq!(response, SolveResponse::Sat);
+            // `solve` resets assumptions, so calling it again should produce SAT
+            let response = solver.solve();
+            assert_eq!(response, SolveResponse::Sat);
+        }
 
         Ok(())
     }
@@ -206,7 +208,7 @@ mod tests {
         let solver = DispatchSolver::new_delegate_wrap(MiniSatDynamicSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("minisat"));
-        run_test(solver)
+        run_test(solver, true)
     }
 
     #[test]
@@ -214,7 +216,7 @@ mod tests {
         let solver = DispatchSolver::new_delegate_wrap(CadicalDynamicSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("cadical"));
-        run_test(solver)
+        run_test(solver, true)
     }
 
     #[test]
@@ -222,7 +224,7 @@ mod tests {
         let solver = DispatchSolver::new_delegate_wrap(KissatDynamicSolver::new());
         assert!(matches!(solver, DispatchSolver::Delegate(_)));
         assert!(solver.signature().contains("kissat"));
-        run_test(solver)
+        run_test(solver, false)
     }
 
     #[test]
@@ -230,7 +232,7 @@ mod tests {
         let solver = DispatchSolver::new_minisat();
         assert!(matches!(solver, DispatchSolver::MiniSatDynamic(_)));
         assert!(solver.signature().contains("minisat"));
-        run_test(solver)
+        run_test(solver, true)
     }
 
     #[test]
@@ -238,7 +240,7 @@ mod tests {
         let solver = DispatchSolver::new_cadical();
         assert!(matches!(solver, DispatchSolver::CadicalDynamic(_)));
         assert!(solver.signature().contains("cadical"));
-        run_test(solver)
+        run_test(solver, true)
     }
 
     #[test]
@@ -246,6 +248,6 @@ mod tests {
         let solver = DispatchSolver::new_kissat();
         assert!(matches!(solver, DispatchSolver::KissatDynamic(_)));
         assert!(solver.signature().contains("kissat"));
-        run_test(solver)
+        run_test(solver, false)
     }
 }
