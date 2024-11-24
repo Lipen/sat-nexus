@@ -1,5 +1,3 @@
-extern crate core;
-
 pub mod card;
 pub mod cnf;
 pub mod context;
