@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs::File;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
@@ -6,6 +6,8 @@ use std::path::Path;
 use itertools::{zip_eq, Itertools, MultiProduct};
 use log::{debug, trace};
 
+use bdd_rs::bdd::Bdd;
+use bdd_rs::reference::Ref;
 use cadical::statik::Cadical;
 use simple_sat::lit::Lit;
 use simple_sat::trie::Trie;
@@ -389,6 +391,130 @@ pub fn write_clause(f: &mut impl Write, lits: &[Lit]) -> std::io::Result<()> {
     writeln!(f, "0")
 }
 
+pub fn bdd_tseytin_encode(bdd: &Bdd, f: Ref, num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
+    bdd_tseytin_encode_ite(bdd, f, num_vars)
+}
+
+// Returns (clauses, extra_vars)
+pub fn bdd_tseytin_encode_ite(bdd: &Bdd, f: Ref, mut num_vars: u64) -> (Vec<Vec<Lit>>, Vec<Var>) {
+    let mut clauses = Vec::new();
+    let mut extra_vars = Vec::new();
+
+    let mut visited = HashSet::new();
+    visited.insert(bdd.one.index());
+    let mut queue = VecDeque::from([f]);
+    let mut topo = Vec::new(); // BFS order
+
+    while let Some(node) = queue.pop_front() {
+        let i = node.index();
+        if visited.insert(i) {
+            topo.push(i);
+            queue.push_back(bdd.low(i));
+            queue.push_back(bdd.high(i));
+        }
+    }
+
+    let mut index2var: HashMap<u32, Var> = HashMap::new();
+    for &index in topo.iter() {
+        num_vars += 1;
+        let var = Var::from_external(num_vars as u32);
+        extra_vars.push(var);
+        index2var.insert(index, var);
+    }
+
+    let node2lit = |node: Ref| -> Lit { Lit::new(index2var[&node.index()], node.is_negated()) };
+
+    for &index in topo.iter() {
+        let aux = Lit::positive(index2var[&index]);
+        let var = bdd.variable(index);
+        let low = bdd.low(index);
+        let high = bdd.high(index);
+        let x = Lit::positive(Var::from_external(var));
+
+        if bdd.is_zero(high) && bdd.is_zero(low) {
+            // unreachable!();
+            // ITE(x, 0, 0) = 0
+            // aux <=> 0
+            clauses.push(vec![-aux]);
+        } else if bdd.is_zero(high) && bdd.is_one(low) {
+            // ITE(x, 0, 1) = -x
+            // aux <=> -x
+            clauses.push(vec![-aux, -x]);
+            clauses.push(vec![aux, x]);
+        } else if bdd.is_one(high) && bdd.is_zero(low) {
+            // ITE(x, 1, 0) = x
+            // aux <=> x
+            clauses.push(vec![-aux, x]);
+            clauses.push(vec![aux, -x]);
+        } else if bdd.is_one(high) && bdd.is_one(low) {
+            // unreachable!();
+            // ITE(x, 1, 1) = 1
+            // aux <=> 1
+            clauses.push(vec![aux]);
+        } else if bdd.is_zero(low) {
+            assert!(!bdd.is_terminal(high));
+            // ITE(x, high, 0) = x AND high
+            // aux <=> x & high
+            let high_lit = node2lit(high);
+            clauses.push(vec![aux, -x, -high_lit]);
+            clauses.push(vec![-aux, x]);
+            clauses.push(vec![-aux, high_lit]);
+        } else if bdd.is_one(high) {
+            assert!(!bdd.is_terminal(low));
+            // ITE(x, 1, low) = x OR low
+            // aux <=> x | low
+            let low_lit = node2lit(low);
+            clauses.push(vec![-aux, x, low_lit]);
+            clauses.push(vec![aux, -x]);
+            clauses.push(vec![aux, -low_lit]);
+        } else if bdd.is_one(low) {
+            assert!(!bdd.is_terminal(high));
+            // ITE(x, high, 1) = -x OR high
+            // aux <=> -x | high
+            let high_lit = node2lit(high);
+            clauses.push(vec![-aux, -x, high_lit]);
+            clauses.push(vec![aux, x]);
+            clauses.push(vec![aux, -high_lit]);
+        } else if bdd.is_zero(high) {
+            assert!(!bdd.is_terminal(low));
+            // ITE(x, 0, low) = -x AND low
+            // aux <=> -x & low
+            let low_lit = node2lit(low);
+            clauses.push(vec![aux, x, -low_lit]);
+            clauses.push(vec![-aux, -x]);
+            clauses.push(vec![-aux, low_lit]);
+        } else {
+            assert!(!bdd.is_terminal(low));
+            assert!(!bdd.is_terminal(high));
+            // aux <=> ITE(x, high, low)
+            let low_lit = node2lit(low);
+            let high_lit = node2lit(high);
+            // aux <=> ITE(x, high, low)
+            clauses.push(vec![aux, -x, -high_lit]);
+            clauses.push(vec![aux, x, -low_lit]);
+            clauses.push(vec![-aux, -x, high_lit]);
+            clauses.push(vec![-aux, x, low_lit]);
+            // extra redundant clauses:
+            // clauses.push(vec![aux, -high_lit, -low_lit]);
+            // clauses.push(vec![-aux, high_lit, low_lit]);
+        }
+    }
+
+    clauses.push(vec![node2lit(f)]);
+
+    (clauses, extra_vars)
+}
+
+pub fn bdd_cnf_encode(bdd: &Bdd, f: Ref) -> Vec<Vec<Lit>> {
+    // Note: both `f` and each `Lit` are negated here,
+    //       because `paths` returns paths to 1, and each path is a cube.
+    // - In order to enumerate all paths to 0, we first negate the function `f`.
+    // - In order to obtain the clauses, we negate the resulting cubes.
+    bdd.paths(-f)
+        .map(|path| path.into_iter().map(|i| -Lit::from_external(i)).collect())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::assert_equal;
@@ -396,6 +522,7 @@ mod tests {
     use test_log::test;
 
     use simple_sat::trie::build_trie;
+    use simple_sat::utils::*;
 
     use super::*;
 
@@ -483,5 +610,31 @@ mod tests {
         assert_eq!(count_trie_internal, valid_trie.len() as u64);
 
         assert_eq!(count_tree_internal, count_trie_internal);
+    }
+
+    #[test]
+    fn test_bdd_tseytin_encode() {
+        let bdd = Bdd::default();
+        let solver = Cadical::new();
+
+        // Force allocation of variables
+        for i in 1..=3 {
+            solver.add_clause([i, -i]);
+        }
+        assert_eq!(solver.vars(), 3);
+
+        let f = bdd.cube([1, 2, 3]);
+        println!("f = {} of size {} = {}", f, bdd.size(f), bdd.to_bracket_string(f));
+
+        let (clauses, extra_vars) = bdd_tseytin_encode(&bdd, f, solver.vars() as u64);
+        println!("clauses = {}", display_iter_slices(&clauses));
+        println!("extra_vars = {}", display_slice(&extra_vars));
+
+        // Force allocation of extra vars
+        for v in extra_vars.iter() {
+            let x = v.to_external() as i32;
+            solver.add_clause([x, -x]);
+        }
+        assert_eq!(solver.vars(), 6);
     }
 }
