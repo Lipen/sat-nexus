@@ -21,7 +21,7 @@ fn generate_bindings_dynamic() {
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("ccadical")
-        // .dynamic_link_require_all(true) // Note: fails in runtime on ccadical instantiation
+        .dynamic_link_require_all(true)
         .allowlist_function("ccadical_.*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .layout_tests(false)
