@@ -28,7 +28,7 @@ fn generate_bindings_dynamic() {
         .blocklist_item("kissat_options_print_value")
         .clang_arg("-DCOMPACT")
         .clang_arg("-DNDEBUG")
-        .clang_arg("-DNOPTIONS")
+        // .clang_arg("-DNOPTIONS")
         .clang_arg("-DNPROOFS")
         .clang_arg("-DQUIET")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
@@ -70,7 +70,7 @@ fn build_static_lib() {
         .warnings(false)
         .define("COMPACT", None)
         .define("NDEBUG", None)
-        .define("NOPTIONS", None)
+        // .define("NOPTIONS", None)
         .define("NPROOFS", None)
         .define("QUIET", None);
 
