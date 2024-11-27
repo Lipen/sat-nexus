@@ -17,7 +17,7 @@ fn generate_bindings_dynamic() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-kissat-dynamic.rs --dynamic-loading kissat_ffi --allowlist-function "kissat_.*" --no-layout-tests
+    //   bindgen wrapper.h -o _bindings-kissat-dynamic.rs --dynamic-loading kissat_ffi --dynamic-link-require-all --no-layout-tests --allowlist-function "kissat_.*" --blocklist-item "kissat_changes" --blocklist-item "kissat_changed" --blocklist-item "kissat_options_print_value" --clang-arg "-DCOMPACT" --clang-arg "-DNDEBUG" --clang-arg "-DNOPTIONS" --clang-arg "-DNPROOFS" --clang-arg "-DQUIET"
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("kissat_ffi")
@@ -32,7 +32,6 @@ fn generate_bindings_dynamic() {
         .clang_arg("-DNPROOFS")
         .clang_arg("-DQUIET")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .layout_tests(false)
         .generate()
         .expect("Could not create bindings!");
 

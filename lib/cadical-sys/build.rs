@@ -17,14 +17,13 @@ fn generate_bindings_dynamic() {
     build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
-    //   bindgen wrapper.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical --no-layout-tests --allowlist-function "ccadical_.*"
+    //   bindgen wrapper.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical --dynamic-link-require-all --no-layout-tests --allowlist-function "ccadical_.*"
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("ccadical")
         .dynamic_link_require_all(true)
         .allowlist_function("ccadical_.*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .layout_tests(false)
         .generate()
         .expect("Could not create bindings!");
 
