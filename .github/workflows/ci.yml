@@ -129,7 +129,7 @@ jobs:
         run: |
           ./configure -fPIC
           make -j8 dll
-          # Result: build/cadical.dll
+          # Result: build/dynamic/cadical.dll
 
       - name: Build Kissat dynamic library
         working-directory: lib/kissat-sys/vendor/kissat
@@ -146,7 +146,7 @@ jobs:
         run: |
           mkdir -p libs
           cp lib/minisat-sys/vendor/minisat/build/minisat.dll libs/
-          cp lib/cadical-sys/vendor/cadical/build/cadical.dll libs/
+          cp lib/cadical-sys/vendor/cadical/build/dynamic/cadical.dll libs/
           cp lib/kissat-sys/vendor/kissat/build/kissat.dll libs/
           ldd libs/*.dll
           ls -al libs/*.dll
