@@ -64,7 +64,7 @@ jobs:
       - name: Build and install Kissat shared library (libkissat.so)
         working-directory: lib/kissat-sys/vendor/kissat
         run: |
-          ./configure --compact --no-options --no-proofs --quiet -shared
+          ./configure --compact --no-proofs --quiet -shared
           make -j8
           sudo install -m 644 build/libkissat.so -Dt /usr/local/lib
 
@@ -136,7 +136,7 @@ jobs:
         run: |
           git fetch origin windows:windows --depth=1
           git switch windows
-          ./configure --compact --quiet --no-options --no-proofs -shared
+          ./configure --compact --no-proofs --quiet -shared
           make -j8
           # Note: the resulting file `build/libkissat.so` is actually a DLL, just have a Linux-name!
           cp build/libkissat.so build/kissat.dll
