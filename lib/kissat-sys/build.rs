@@ -21,7 +21,7 @@ fn generate_bindings_dynamic() {
     let bindings = bindgen::builder()
         .header("wrapper.h")
         .dynamic_library_name("kissat_ffi")
-        // .dynamic_link_require_all(true)
+        .dynamic_link_require_all(true)
         .allowlist_function("kissat_.*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .layout_tests(false)
