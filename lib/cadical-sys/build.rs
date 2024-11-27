@@ -14,6 +14,7 @@ fn main() {
 #[cfg(feature = "dynamic")]
 fn generate_bindings_dynamic() {
     build_script::cargo_warning("Generating Cadical dynamic bindings...");
+    build_script::cargo_rerun_if_changed("wrapper.h");
 
     // Note: to generate these bindings manually, use the following command:
     //   bindgen wrapper.h -o _bindings-ccadical-dynamic.rs --dynamic-loading ccadical --no-layout-tests --allowlist-function "ccadical_.*"
