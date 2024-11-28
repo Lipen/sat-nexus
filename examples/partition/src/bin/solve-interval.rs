@@ -107,7 +107,7 @@ fn main() -> color_eyre::Result<()> {
         let pool_size = args.pool_size.min(interval_indices.len());
         if pool_size > 1 {
             info!("Building a thread pool with {} workers...", pool_size);
-            let pool = rayon::ThreadPoolBuilder::new().num_threads(pool_size).build().unwrap();
+            let pool = rayon::ThreadPoolBuilder::new().num_threads(pool_size).build()?;
 
             let tls = Arc::new(ThreadLocal::new());
             let cnf = Arc::new(Cnf::from_file(&args.path_cnf));
@@ -185,7 +185,7 @@ fn main() -> color_eyre::Result<()> {
         let pool_size = args.pool_size.min(interval_indices.len());
         if pool_size > 1 {
             info!("Building a thread pool with {} workers...", pool_size);
-            let pool = rayon::ThreadPoolBuilder::new().num_threads(pool_size).build().unwrap();
+            let pool = rayon::ThreadPoolBuilder::new().num_threads(pool_size).build()?;
 
             info!("Spawning {} jobs...", interval_indices.len());
             let (tx, rx) = std::sync::mpsc::channel();
