@@ -17,8 +17,8 @@ use partition::utils::{extract_intervals, is_power_of_two, mean, median, median_
 use sat_nexus_core::cnf::Cnf;
 use sat_nexus_core::solver::SolveResponse;
 use sat_nexus_core::utils::bootstrap_solver_from_cnf;
-use sat_nexus_wrappers::cadical_dynamic::CadicalDynamicSolver;
-use sat_nexus_wrappers::kissat_dynamic::KissatDynamicSolver;
+use sat_nexus_wrappers::cadical_static::CadicalStaticSolver;
+use sat_nexus_wrappers::kissat_static::KissatStaticSolver;
 
 // Run this example:
 // cargo run -p partition --bin solve-interval -- data/some.cnf --vars 1-32 --size 16 --index 0-15
@@ -118,7 +118,7 @@ fn main() -> color_eyre::Result<()> {
                 pool.broadcast(|_ctx| {
                     let _solver = tls.get_or(|| {
                         info!("Spawning a new solver on thread {:?}", std::thread::current().id());
-                        let mut solver = CadicalDynamicSolver::new();
+                        let mut solver = CadicalStaticSolver::default();
                         bootstrap_solver_from_cnf(&mut solver, &cnf);
                         Sticky::new(RefCell::new(solver))
                     });
@@ -162,7 +162,7 @@ fn main() -> color_eyre::Result<()> {
             // Note: actually, intervals.len() == 1 here.
             for &interval_index in interval_indices.iter() {
                 let time_start = Instant::now();
-                let mut solver = CadicalDynamicSolver::new();
+                let mut solver = CadicalStaticSolver::default();
                 let cnf = Cnf::from_file(&args.path_cnf);
                 bootstrap_solver_from_cnf(&mut solver, &cnf);
                 let result = solve_interval_reified(&mut solver, &input_variables, interval_size, interval_index);
@@ -196,7 +196,7 @@ fn main() -> color_eyre::Result<()> {
                 pool.spawn(move || {
                     debug!("Executing on thread {:?}", std::thread::current().id());
                     let time_start = Instant::now();
-                    let mut solver = KissatDynamicSolver::new();
+                    let mut solver = KissatStaticSolver::default();
                     let cnf = Cnf::from_file(cnf_path);
                     bootstrap_solver_from_cnf(&mut solver, &cnf);
                     let result = solve_interval(&mut solver, &input_variables, interval_size, interval_index);
@@ -224,7 +224,7 @@ fn main() -> color_eyre::Result<()> {
             // Note: actually, intervals.len() == 1 here.
             for &interval_index in interval_indices.iter() {
                 let time_start = Instant::now();
-                let mut solver = KissatDynamicSolver::new();
+                let mut solver = KissatStaticSolver::default();
                 let cnf = Cnf::from_file(&args.path_cnf);
                 bootstrap_solver_from_cnf(&mut solver, &cnf);
                 let result = solve_interval(&mut solver, &input_variables, interval_size, interval_index);
