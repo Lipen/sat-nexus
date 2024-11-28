@@ -1,8 +1,11 @@
-use crate::utils::num2bits;
+use std::time::Instant;
+
 use log::debug;
+
 use sat_nexus_core::op::rel::{encode_both, encode_geq_reified, encode_leq_reified};
 use sat_nexus_core::solver::{SolveResponse, Solver};
-use std::time::Instant;
+
+use crate::utils::num2bits;
 
 pub fn encode_interval(lits: &[i32], low: usize, high: usize) -> Vec<Vec<i32>> {
     // info!("Encoding interval [{}, {}] for {} variables...", low, high, lits.len());
