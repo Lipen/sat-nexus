@@ -39,7 +39,7 @@ struct Cli {
 
     /// Interval indices (0-based) (comma-separated).
     #[arg(long = "index", value_name = "INT...")]
-    intervals: String,
+    intervals: Option<String>,
 
     /// Pool size.
     #[arg(short, long, default_value_t = 4)]
@@ -68,7 +68,11 @@ fn main() -> color_eyre::Result<()> {
 
     let input_variables = parse_input_variables(&args.input_variables);
     let interval_size = parse_integer_maybe_power(&args.interval_size);
-    let interval_indices = parse_intervals(&args.intervals);
+    let interval_indices = if let Some(intervals) = &args.intervals {
+        parse_intervals(intervals)
+    } else {
+        (0..(1 << input_variables.len()) / interval_size).collect()
+    };
 
     info!(
         "Total {} input variables: {}",
