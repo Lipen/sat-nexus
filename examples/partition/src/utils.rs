@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::iter::once;
 
 use itertools::Itertools;
 
@@ -36,12 +37,7 @@ pub fn bits2num(bits: &[bool]) -> u32 {
 }
 
 pub fn to_dimacs(clause: &[i32]) -> String {
-    let mut s = String::new();
-    for &lit in clause {
-        s += &format!("{} ", lit);
-    }
-    s += "0";
-    s
+    format!("{}", clause.iter().copied().chain(once(0)).join(" "))
 }
 
 pub fn is_power_of_two(x: usize) -> bool {
