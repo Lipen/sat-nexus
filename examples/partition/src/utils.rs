@@ -16,7 +16,7 @@ pub fn num2bits(x: usize, n: usize) -> Vec<bool> {
 }
 
 pub fn bits2str(bits: &[bool]) -> String {
-    bits.iter().map(|&bit| if bit { '1' } else { '0' }).collect::<String>()
+    bits.iter().map(|&bit| if bit { '1' } else { '0' }).collect()
 }
 
 pub fn bits2num(bits: &[bool]) -> u32 {
