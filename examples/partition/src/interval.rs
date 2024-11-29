@@ -39,9 +39,9 @@ pub fn solve_interval(solver: &mut impl Solver, input_variables: &[usize], inter
     }
 
     debug!("Solving...");
-    let time_start_solve = Instant::now();
+    let time_solve = Instant::now();
     let result = solver.solve();
-    let time_solve = time_start_solve.elapsed();
+    let time_solve = time_solve.elapsed();
     debug!(
         "Result for interval #{} [{}, {}] of size {}: {} in {:.3}s",
         interval_index,
