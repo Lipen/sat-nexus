@@ -7,7 +7,7 @@ use sat_nexus_core::solver::{SolveResponse, Solver};
 
 use crate::utils::num2bits;
 
-pub fn encode_interval(lits: &[i32], low: usize, high: usize) -> Vec<Vec<i32>> {
+pub fn encode_interval(lits: &[i32], low: u64, high: u64) -> Vec<Vec<i32>> {
     // info!("Encoding interval [{}, {}] for {} variables...", low, high, lits.len());
     let n = lits.len();
     let a = num2bits(low, n);
@@ -15,15 +15,15 @@ pub fn encode_interval(lits: &[i32], low: usize, high: usize) -> Vec<Vec<i32>> {
     encode_both(lits, &a, &b)
 }
 
-pub fn get_bounds(interval_index: usize, interval_size: usize) -> (usize, usize) {
-    let low = interval_index * interval_size;
+pub fn get_bounds(interval_size: u64, interval_index: u64) -> (u64, u64) {
+    let low = interval_size * interval_index;
     let high = low + interval_size - 1;
     (low, high)
 }
 
-pub fn solve_interval(solver: &mut impl Solver, input_variables: &[usize], interval_size: usize, interval_index: usize) -> SolveResponse {
+pub fn solve_interval(solver: &mut impl Solver, input_variables: &[u64], interval_size: u64, interval_index: u64) -> SolveResponse {
     let lits: Vec<i32> = input_variables.iter().map(|&x| x as i32).collect();
-    let (low, high) = get_bounds(interval_index, interval_size);
+    let (low, high) = get_bounds(interval_size, interval_index);
     let clauses = encode_interval(&lits, low, high);
 
     debug!(
@@ -55,7 +55,7 @@ pub fn solve_interval(solver: &mut impl Solver, input_variables: &[usize], inter
     result
 }
 
-pub fn encode_interval_reified(lits: &[i32], low: usize, high: usize, t_geq: i32, t_leq: i32, t_both: i32) -> Vec<Vec<i32>> {
+pub fn encode_interval_reified(lits: &[i32], low: u64, high: u64, t_geq: i32, t_leq: i32, t_both: i32) -> Vec<Vec<i32>> {
     // info!("Encoding interval [{}, {}] for {} variables...", low, high, lits.len());
     let n = lits.len();
     let a = num2bits(low, n);
@@ -70,14 +70,9 @@ pub fn encode_interval_reified(lits: &[i32], low: usize, high: usize, t_geq: i32
     clauses
 }
 
-pub fn solve_interval_reified(
-    solver: &mut impl Solver,
-    input_variables: &[usize],
-    interval_size: usize,
-    interval_index: usize,
-) -> SolveResponse {
+pub fn solve_interval_reified(solver: &mut impl Solver, input_variables: &[u64], interval_size: u64, interval_index: u64) -> SolveResponse {
     let lits: Vec<i32> = input_variables.iter().map(|&x| x as i32).collect();
-    let low = interval_size * interval_index;
+    let low = interval_size * interval_index as u64;
     let high = low + interval_size - 1;
     let t_geq = solver.new_var().get();
     let t_leq = solver.new_var().get();

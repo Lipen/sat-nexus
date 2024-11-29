@@ -71,7 +71,7 @@ fn main() -> color_eyre::Result<()> {
     let interval_indices = if let Some(intervals) = &args.intervals {
         parse_intervals(intervals)
     } else {
-        (0..(1 << input_variables.len()) / interval_size).collect()
+        (0..(1 << input_variables.len()) as u64 / interval_size).collect()
     };
 
     info!(
@@ -93,7 +93,7 @@ fn main() -> color_eyre::Result<()> {
     }
 
     for &interval_index in interval_indices.iter() {
-        let (low, high) = get_bounds(interval_index, interval_size);
+        let (low, high) = get_bounds(interval_size, interval_index);
         if high >= (1 << input_variables.len()) {
             panic!(
                 "Interval #{} [{}, {}] is out of bounds (2^N = {})",
@@ -143,7 +143,7 @@ fn main() -> color_eyre::Result<()> {
                     let solver = &mut *solver.get(tok).borrow_mut();
                     let result = solve_interval_reified(solver, &input_variables, interval_size, interval_index);
                     let time = time_start.elapsed();
-                    let (low, high) = get_bounds(interval_index, interval_size);
+                    let (low, high) = get_bounds(interval_size, interval_index);
                     info!(
                         "Solved interval #{} [{}, {}] of size {} in {:.3}s",
                         interval_index,
@@ -171,7 +171,7 @@ fn main() -> color_eyre::Result<()> {
                 bootstrap_solver_from_cnf(&mut solver, &cnf);
                 let result = solve_interval_reified(&mut solver, &input_variables, interval_size, interval_index);
                 let time = time_start.elapsed();
-                let (low, high) = get_bounds(interval_index, interval_size);
+                let (low, high) = get_bounds(interval_size, interval_index);
                 info!(
                     "Solved interval #{} [{}, {}] of size {} in {:.3}s",
                     interval_index,
@@ -205,7 +205,7 @@ fn main() -> color_eyre::Result<()> {
                     bootstrap_solver_from_cnf(&mut solver, &cnf);
                     let result = solve_interval(&mut solver, &input_variables, interval_size, interval_index);
                     let time = time_start.elapsed();
-                    let (low, high) = get_bounds(interval_index, interval_size);
+                    let (low, high) = get_bounds(interval_size, interval_index);
                     info!(
                         "Solved interval #{} [{}, {}] of size {} in {:.3}s",
                         interval_index,
@@ -221,7 +221,7 @@ fn main() -> color_eyre::Result<()> {
             drop(tx);
 
             info!("Awaiting results...");
-            for result in rx.into_iter() {
+            for result in rx {
                 results.push(result);
             }
         } else {
@@ -233,7 +233,7 @@ fn main() -> color_eyre::Result<()> {
                 bootstrap_solver_from_cnf(&mut solver, &cnf);
                 let result = solve_interval(&mut solver, &input_variables, interval_size, interval_index);
                 let time = time_start.elapsed();
-                let (low, high) = get_bounds(interval_index, interval_size);
+                let (low, high) = get_bounds(interval_size, interval_index);
                 info!(
                     "Solved interval #{} [{}, {}] of size {} in {:.3}s",
                     interval_index,
@@ -261,16 +261,16 @@ fn main() -> color_eyre::Result<()> {
     if let Some(path_results) = &args.path_results {
         #[derive(Serialize)]
         struct Row {
-            index: usize,
-            size: usize,
-            low: usize,
-            high: usize,
+            index: u64,
+            size: u64,
+            low: u64,
+            high: u64,
             time: f64,
         }
 
         let mut wrt = csv::Writer::from_path(path_results)?;
         for &(interval_index, _result, time) in results.iter() {
-            let (low, high) = get_bounds(interval_index, interval_size);
+            let (low, high) = get_bounds(interval_size, interval_index);
             wrt.serialize(Row {
                 index: interval_index,
                 size: interval_size,

@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-pub fn parse_input_variables(input: &str) -> Vec<usize> {
+pub fn parse_input_variables(input: &str) -> Vec<u64> {
     let mut result = Vec::new();
     for part in input.split(',') {
         match parse_interval(part) {
@@ -19,7 +19,7 @@ pub fn parse_input_variables(input: &str) -> Vec<usize> {
     result
 }
 
-pub fn parse_intervals(input: &str) -> Vec<usize> {
+pub fn parse_intervals(input: &str) -> Vec<u64> {
     let mut result = Vec::new();
     for part in input.split(',') {
         match parse_interval(part) {
@@ -57,7 +57,7 @@ where
     }
 }
 
-pub fn parse_interval(input: &str) -> Interval<usize> {
+pub fn parse_interval(input: &str) -> Interval<u64> {
     let range_parts: Vec<&str> = input.splitn(2, '-').collect();
     if range_parts.len() == 2 {
         let start = range_parts[0].parse().unwrap();
@@ -69,11 +69,11 @@ pub fn parse_interval(input: &str) -> Interval<usize> {
     }
 }
 
-pub fn parse_integer_maybe_power(input: &str) -> usize {
+pub fn parse_integer_maybe_power(input: &str) -> u64 {
     let pow_parts: Vec<&str> = input.splitn(2, '^').collect();
     if pow_parts.len() == 2 {
-        let base: usize = pow_parts[0].parse().unwrap();
-        let power = pow_parts[1].parse().unwrap();
+        let base: u64 = pow_parts[0].parse().unwrap();
+        let power: u32 = pow_parts[1].parse().unwrap();
         base.pow(power)
     } else {
         input.parse().unwrap()

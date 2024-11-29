@@ -5,23 +5,18 @@ use itertools::Itertools;
 
 use crate::parsers::Interval;
 
-pub fn num2bits(x: usize, n: usize) -> Vec<bool> {
+pub fn num2bits(x: u64, n: usize) -> Vec<bool> {
+    assert!(n <= 64, "Number of bits must be less than or equal to 64");
     assert!(x < (1 << n), "Number {} must be less than 2^{}={}", x, n, 1 << n);
-    let mut bits = vec![false; n];
-
-    for i in 0..n.min(32) {
-        bits[n - i - 1] = (x >> i) & 1 != 0;
-    }
-
-    bits
+    (0..n).rev().map(|i| (x & (1 << i)) != 0).collect()
 }
 
 pub fn bits2str(bits: &[bool]) -> String {
     bits.iter().map(|&bit| if bit { '1' } else { '0' }).collect()
 }
 
-pub fn bits2num(bits: &[bool]) -> u32 {
-    assert!(bits.len() <= 32);
+pub fn bits2num(bits: &[bool]) -> u64 {
+    assert!(bits.len() <= 64, "Number of bits must be less than or equal to 64");
 
     let mut result = 0;
     let mut shift = 0;
@@ -40,7 +35,7 @@ pub fn to_dimacs(clause: &[i32]) -> String {
     format!("{}", clause.iter().copied().chain(once(0)).join(" "))
 }
 
-pub fn is_power_of_two(x: usize) -> bool {
+pub fn is_power_of_two(x: u64) -> bool {
     x & (x - 1) == 0
 }
 
@@ -176,7 +171,7 @@ pub fn zscore(data: &[f64]) -> Vec<f64> {
     data.iter().map(|&x| (x - avg) / sd).collect_vec()
 }
 
-pub fn extract_intervals(data: &[usize]) -> Vec<Interval<usize>> {
+pub fn extract_intervals(data: &[u64]) -> Vec<Interval<u64>> {
     let n = data.len();
     let mut result = Vec::new();
     let mut i = 0;
@@ -197,4 +192,18 @@ pub fn extract_intervals(data: &[usize]) -> Vec<Interval<usize>> {
         i += 1;
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bits() {
+        let x = 0b11010;
+        let bits = num2bits(x, 8);
+        assert_eq!(bits2str(&bits), "00011010");
+        let y = bits2num(&bits);
+        assert_eq!(x, y);
+    }
 }
