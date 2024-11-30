@@ -21,7 +21,7 @@ use sat_nexus_wrappers::cadical_static::CadicalStaticSolver;
 use sat_nexus_wrappers::kissat_static::KissatStaticSolver;
 
 // Run this example:
-// cargo run -p partition --bin solve-interval -- data/some.cnf --vars 1-32 --size 16 --index 0-15
+// cargo run -p partition --bin solve-intervals -- data/some.cnf --vars 1-32 --size 16 --index 0-15
 
 #[derive(Parser, Debug)]
 #[command(author, version)]
