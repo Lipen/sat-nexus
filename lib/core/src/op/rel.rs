@@ -1,3 +1,4 @@
+/// `x >= a`
 pub fn encode_geq(x: &[i32], a: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, a.len());
@@ -22,6 +23,7 @@ pub fn encode_geq(x: &[i32], a: &[bool]) -> Vec<Vec<i32>> {
     clauses
 }
 
+/// `x <= b`
 pub fn encode_leq(x: &[i32], b: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, b.len());
@@ -46,6 +48,7 @@ pub fn encode_leq(x: &[i32], b: &[bool]) -> Vec<Vec<i32>> {
     clauses
 }
 
+/// `a <= x <= b`
 pub fn encode_both(x: &[i32], a: &[bool], b: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, a.len());
@@ -90,6 +93,7 @@ pub fn encode_both(x: &[i32], a: &[bool], b: &[bool]) -> Vec<Vec<i32>> {
     clauses
 }
 
+/// `x > a`
 pub fn encode_gt(x: &[i32], a: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, a.len());
@@ -102,6 +106,7 @@ pub fn encode_gt(x: &[i32], a: &[bool]) -> Vec<Vec<i32>> {
     }
 }
 
+/// `x < b`
 pub fn encode_lt(x: &[i32], b: &[bool]) -> Vec<Vec<i32>> {
     let n = x.len();
     assert_eq!(n, b.len());
