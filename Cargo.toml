@@ -20,6 +20,7 @@ members = [
     "examples/backdoor",
     "examples/pyeda",
     "examples/bf",
+    "examples/pydical",
 ]
 
 [features]

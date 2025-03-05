@@ -6,5 +6,4 @@ edition = "2021"
 publish = false
 
 [dependencies]
-pyo3 = { version = "0.20", features = ["auto-initialize"] }
-itertools = "0.12"
+pyo3 = { version = "0.23", features = ["auto-initialize"] }
