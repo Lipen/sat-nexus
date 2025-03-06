@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -9,13 +11,19 @@ fn pydical(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[pyclass]
+#[pyclass(str)]
 struct Pydical {
     cadical: Cadical,
 }
 
 unsafe impl Send for Pydical {}
 unsafe impl Sync for Pydical {}
+
+impl Display for Pydical {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Pydical({})", self.cadical)
+    }
+}
 
 #[pymethods]
 impl Pydical {
