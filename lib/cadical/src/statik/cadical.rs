@@ -53,7 +53,7 @@ impl Cadical {
     pub fn release(&mut self) {
         if !self.ptr.is_null() {
             unsafe { ccadical_release(self.ptr) }
-            self.ptr = std::ptr::null_mut();
+            self.ptr = ptr::null_mut();
         }
     }
 
