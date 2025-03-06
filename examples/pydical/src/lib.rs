@@ -9,10 +9,13 @@ fn pydical(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[pyclass(unsendable)]
+#[pyclass]
 struct Pydical {
     cadical: Cadical,
 }
+
+unsafe impl Send for Pydical {}
+unsafe impl Sync for Pydical {}
 
 #[pymethods]
 impl Pydical {
