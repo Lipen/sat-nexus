@@ -65,10 +65,12 @@ impl Pydical {
     /// Returns 10 for SAT.
     /// Returns 20 for UNSAT.
     /// Returns 0 for UNKNOWN.
-    #[pyo3(signature = (*lits))]
-    pub fn solve(&mut self, lits: Vec<i32>) -> Result<i32, MyCadicalError> {
-        for lit in lits {
-            self.cadical.assume(lit)?;
+    #[pyo3(signature = (assumptions=None))]
+    pub fn solve(&mut self, assumptions: Option<Vec<i32>>) -> Result<i32, MyCadicalError> {
+        if let Some(assumptions) = assumptions {
+            for lit in assumptions {
+                self.cadical.assume(lit)?;
+            }
         }
         let res = self.cadical.solve()?;
         Ok(res as i32)
