@@ -379,15 +379,14 @@ impl Cadical {
         }
     }
 
-    pub fn get_top_score_variables(&self, limit: usize) -> &[i32] {
+    pub fn get_top_score_variables(&self, limit: usize) -> Vec<i32> {
         unsafe {
             let mut size = 0;
             let data = ccadical_get_top_score_variables(self.ptr, limit, &mut size);
             if data.is_null() || size == 0 {
-                eprintln!("ccadical_get_top_score_variables returned data = {:?}, size = {}", data, size);
-                &[]
+                Vec::new()
             } else {
-                slice::from_raw_parts(data, size)
+                slice::from_raw_parts(data, size).to_vec()
             }
         }
     }
@@ -446,7 +445,11 @@ impl Cadical {
         unsafe {
             let mut size = 0;
             let ptr = ccadical_propcheck_get_propagated(self.ptr, &mut size);
-            slice::from_raw_parts(ptr, size).to_vec()
+            if ptr.is_null() || size == 0 {
+                Vec::new()
+            } else {
+                slice::from_raw_parts(ptr, size).to_vec()
+            }
         }
     }
 
@@ -454,7 +457,11 @@ impl Cadical {
         unsafe {
             let mut size = 0;
             let data = ccadical_propcheck_get_core(self.ptr, &mut size);
-            slice::from_raw_parts(data, size).to_vec()
+            if data.is_null() || size == 0 {
+                Vec::new()
+            } else {
+                slice::from_raw_parts(data, size).to_vec()
+            }
         }
     }
 
