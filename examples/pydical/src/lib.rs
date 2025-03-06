@@ -17,31 +17,48 @@ struct Pydical {
 #[pymethods]
 impl Pydical {
     #[new]
-    pub fn new() -> PyResult<Self> {
-        Ok(Self { cadical: Cadical::new() })
+    pub fn new() -> Self {
+        Self { cadical: Cadical::new() }
     }
 
-    pub fn signature(&self) -> PyResult<&str> {
-        Ok(self.cadical.signature())
+    pub fn signature(&self) -> &'static str {
+        self.cadical.signature()
     }
 
-    pub fn release(&mut self) -> PyResult<()> {
-        Ok(self.cadical.release())
+    pub fn release(&mut self) {
+        self.cadical.release();
     }
 
-    pub fn limit(&mut self, name: &str, limit: i32) -> PyResult<()> {
-        Ok(self.cadical.limit(name, limit))
+    pub fn reset(&mut self) {
+        self.cadical.reset();
     }
 
-    pub fn add(&mut self, lit: i32) -> PyResult<()> {
-        Ok(self.cadical.add(lit))
+    pub fn limit(&self, name: &str, limit: i32) {
+        self.cadical.limit(name, limit);
     }
 
-    pub fn assume(&mut self, lit: i32) -> Result<(), MyCadicalError> {
-        Ok(self.cadical.assume(lit)?)
+    pub fn add(&self, lit: i32) {
+        self.cadical.add(lit);
     }
 
-    pub fn solve(&mut self) -> Result<i32, MyCadicalError> {
+    #[pyo3(signature = (*lits))]
+    pub fn add_clause(&self, lits: Vec<i32>) {
+        self.cadical.add_clause(lits);
+    }
+
+    pub fn assume(&self, lit: i32) -> Result<(), MyCadicalError> {
+        self.cadical.assume(lit)?;
+        Ok(())
+    }
+
+    /// Returns 10 for SAT.
+    /// Returns 20 for UNSAT.
+    /// Returns 0 for UNKNOWN.
+    #[pyo3(signature = (*lits))]
+    pub fn solve(&mut self, lits: Vec<i32>) -> Result<i32, MyCadicalError> {
+        for lit in lits {
+            self.cadical.assume(lit)?;
+        }
         let res = self.cadical.solve()?;
         Ok(res as i32)
     }
@@ -61,7 +78,7 @@ impl Pydical {
         Ok(res)
     }
 
-    pub fn propcheck(&mut self, lits: Vec<i32>) -> Result<(bool, Vec<i32>), MyCadicalError> {
+    pub fn propcheck(&self, lits: Vec<i32>) -> Result<(bool, Vec<i32>), MyCadicalError> {
         let (res, num_propagated) = self.cadical.propcheck(&lits, false, true, false);
         let propagated = self.cadical.propcheck_get_propagated();
         assert_eq!(num_propagated, propagated.len() as u64);
