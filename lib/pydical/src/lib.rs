@@ -89,11 +89,15 @@ impl Pydical {
         Ok(res)
     }
 
-    pub fn propcheck(&self, lits: Vec<i32>) -> Result<(bool, Vec<i32>), MyCadicalError> {
+    pub fn propcheck(&self, lits: Vec<i32>) -> (bool, u64) {
+        self.cadical.propcheck(&lits, false, false, false)
+    }
+
+    pub fn propagate(&self, lits: Vec<i32>) -> (bool, Vec<i32>) {
         let (res, num_propagated) = self.cadical.propcheck(&lits, false, true, false);
         let propagated = self.cadical.propcheck_get_propagated();
         assert_eq!(num_propagated, propagated.len() as u64);
-        Ok((res, propagated))
+        (res, propagated)
     }
 }
 
