@@ -4,6 +4,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use cadical::statik::{Cadical, CadicalError};
+use cadical::SolveResponse;
 
 #[pymodule]
 fn pydical(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -62,16 +63,20 @@ impl Pydical {
         Ok(())
     }
 
-    /// Returns 10 for SAT.
-    /// Returns 20 for UNSAT.
-    /// Returns 0 for UNKNOWN.
+    /// Returns True for SAT.
+    /// Returns False for UNSAT.
+    /// Returns None for UNKNOWN.
     #[pyo3(signature = (assumptions=vec![]), text_signature = "(assumptions=[])")]
-    pub fn solve(&mut self, assumptions: Vec<i32>) -> Result<i32, MyCadicalError> {
+    pub fn solve(&mut self, assumptions: Vec<i32>) -> Result<Option<bool>, MyCadicalError> {
         for lit in assumptions {
             self.cadical.assume(lit)?;
         }
         let res = self.cadical.solve()?;
-        Ok(res as i32)
+        Ok(match res {
+            SolveResponse::Sat => Some(true),
+            SolveResponse::Unsat => Some(false),
+            SolveResponse::Interrupted => None,
+        })
     }
 
     pub fn val(&self, lit: i32) -> Result<bool, MyCadicalError> {
