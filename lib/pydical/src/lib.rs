@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -56,6 +57,14 @@ impl Pydical {
     #[pyo3(signature = (*lits))]
     pub fn add_clause(&self, lits: Vec<i32>) {
         self.cadical.add_clause(lits);
+    }
+
+    pub fn read_dimacs(&self, path: PathBuf) {
+        self.cadical.read_dimacs(path, 0);
+    }
+
+    pub fn write_dimacs(&self, path: PathBuf) {
+        self.cadical.write_dimacs(path);
     }
 
     pub fn assume(&self, lit: i32) -> Result<(), MyCadicalError> {
