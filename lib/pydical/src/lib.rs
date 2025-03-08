@@ -72,9 +72,9 @@ impl Pydical {
         Ok(())
     }
 
-    /// Returns True for SAT.
-    /// Returns False for UNSAT.
-    /// Returns None for UNKNOWN.
+    /// Returns `True` for SAT.
+    /// Returns `False` for UNSAT.
+    /// Returns `None` for UNKNOWN.
     #[pyo3(signature = (assumptions=vec![]), text_signature = "(assumptions=[])")]
     pub fn solve(&mut self, assumptions: Vec<i32>) -> Result<Option<bool>, MyCadicalError> {
         for lit in assumptions {
@@ -94,13 +94,56 @@ impl Pydical {
     }
 
     pub fn failed(&self, lit: i32) -> Result<bool, MyCadicalError> {
-        let res = self.cadical.failed(lit).map(|v| v.into())?;
+        let res = self.cadical.failed(lit).map(|v| v)?;
         Ok(res)
     }
 
+    /// Returns `1` if `lit` is implied by the formula.
+    /// Returns `-1` if `-lit` is implied by the formula.
+    /// Returns `0` if it is unclear whether the literal is implied by the formula.
     pub fn fixed(&self, lit: i32) -> Result<i8, MyCadicalError> {
         let res = self.cadical.fixed(lit).map(|v| v as _)?;
         Ok(res)
+    }
+
+    /// Number of variables.
+    pub fn vars(&self) -> i64 {
+        self.cadical.vars()
+    }
+
+    /// Number of active variables.
+    pub fn active(&self) -> i64 {
+        self.cadical.active()
+    }
+
+    /// Number of active redundant clauses.
+    pub fn redundant(&self) -> i64 {
+        self.cadical.redundant()
+    }
+
+    /// Number of active irredundant clauses.
+    pub fn irredundant(&self) -> i64 {
+        self.cadical.irredundant()
+    }
+
+    /// Number of conflicts.
+    pub fn conflicts(&self) -> i64 {
+        self.cadical.conflicts()
+    }
+
+    /// Number of decisions.
+    pub fn decisions(&self) -> i64 {
+        self.cadical.decisions()
+    }
+
+    /// Number of restarts.
+    pub fn restarts(&self) -> i64 {
+        self.cadical.restarts()
+    }
+
+    /// Number of propagations.
+    pub fn propagations(&self) -> i64 {
+        self.cadical.propagations()
     }
 
     pub fn propcheck(&self, lits: Vec<i32>) -> (bool, u64) {
