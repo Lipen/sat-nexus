@@ -106,6 +106,25 @@ impl Pydical {
         Ok(res)
     }
 
+    pub fn is_active(&self, lit: i32) -> bool {
+        self.cadical.is_active(lit)
+    }
+
+    pub fn frozen(&self, lit: i32) -> Result<bool, MyCadicalError> {
+        let res = self.cadical.frozen(lit)?;
+        Ok(res)
+    }
+
+    pub fn freeze(&self, lit: i32) -> Result<(), MyCadicalError> {
+        self.cadical.freeze(lit)?;
+        Ok(())
+    }
+
+    pub fn melt(&self, lit: i32) -> Result<(), MyCadicalError> {
+        self.cadical.melt(lit)?;
+        Ok(())
+    }
+
     /// Number of variables.
     pub fn vars(&self) -> i64 {
         self.cadical.vars()
