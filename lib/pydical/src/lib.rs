@@ -146,12 +146,22 @@ impl Pydical {
         self.cadical.propagations()
     }
 
-    pub fn propcheck(&self, lits: Vec<i32>) -> (bool, u64) {
-        self.cadical.propcheck(&lits, false, false, false)
+    #[pyo3(signature = (lits, save_propagated = false, save_core = false))]
+    pub fn propcheck(&self, lits: Vec<i32>, save_propagated: bool, save_core: bool) -> bool {
+        let (res, _num_propagated) = self.cadical.propcheck(&lits, false, save_propagated, save_core);
+        res
+    }
+
+    pub fn propcheck_get_propagated(&self) -> Vec<i32> {
+        self.cadical.propcheck_get_propagated()
+    }
+
+    pub fn propcheck_get_core(&self) -> Vec<i32> {
+        self.cadical.propcheck_get_core()
     }
 
     pub fn propagate(&self, lits: Vec<i32>) -> (bool, Vec<i32>) {
-        let (res, num_propagated) = self.cadical.propcheck(&lits, false, true, false);
+        let (res, num_propagated) = self.cadical.propcheck(&lits, false, true, true);
         let propagated = self.cadical.propcheck_get_propagated();
         assert_eq!(num_propagated, propagated.len() as u64);
         (res, propagated)
