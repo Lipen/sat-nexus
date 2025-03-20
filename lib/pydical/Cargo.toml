@@ -6,9 +6,11 @@ edition = "2021"
 publish = false
 
 [lib]
-name = "pydical"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.23", features = ["extension-module"] }
 cadical = { path = "../cadical", features = ["static"] }
+
+[dependencies.pyo3]
+version = "0.23"
+features = ["extension-module", "abi3", "abi3-py37"]
