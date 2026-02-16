@@ -4,7 +4,7 @@ use ahash::{AHashMap, AHashSet};
 use indicatif::ProgressIterator;
 use itertools::zip_eq;
 use log::{debug, info, trace};
-use rand::distributions::{Bernoulli, Distribution};
+use rand::distr::{Bernoulli, Distribution};
 use rand::prelude::*;
 
 use simple_sat::lit::Lit;
@@ -339,7 +339,7 @@ fn mutate(instance: &mut Backdoor, pool: &[Var], rng: &mut impl Rng) {
 
         let other_vars: Vec<Var> = pool.iter().filter(|v| !instance.variables.contains(v)).copied().collect();
         assert!(other_vars.len() >= to_replace.len());
-        let substituted = other_vars.choose_multiple(rng, to_replace.len());
+        let substituted = other_vars.sample(rng, to_replace.len());
         for (i, &v) in zip_eq(to_replace, substituted) {
             instance.variables[i] = v;
         }
@@ -362,7 +362,7 @@ fn mutate(instance: &mut Backdoor, pool: &[Var], rng: &mut impl Rng) {
         // to_replace.len() ~ Bin(1/m)
         assert!(to_replace.len() <= m);
 
-        let substituted = (0..instance.len()).choose_multiple(rng, to_replace.len());
+        let substituted = (0..instance.len()).sample(rng, to_replace.len());
         for (i, v) in zip_eq(substituted, to_replace) {
             instance.variables[i] = v;
         }
@@ -383,7 +383,7 @@ mod tests {
             let mut rng = StdRng::seed_from_u64(42);
             let pool: Vec<Var> = (0..n).map(|i| Var::from_external(i as u32 + 1)).collect();
 
-            let base = Backdoor::new(pool.choose_multiple(&mut rng, len).copied().collect());
+            let base = Backdoor::new(pool.sample(&mut rng, len).copied().collect());
             assert_eq!(base.len(), len);
 
             let mut instance = base.clone();

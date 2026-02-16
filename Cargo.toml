@@ -45,12 +45,12 @@ kissat-sys = { path = "lib/kissat-sys", features = ["dynamic", "static"] }
 minisat = { path = "lib/minisat", features = ["dynamic", "static"] }
 cadical = { path = "lib/cadical", features = ["dynamic", "static"] }
 color-eyre = "0.6"
-quickcheck = "1.0.3"
-quickcheck_macros = "1.0.0"
-itertools = "0.13"
-ndarray = "0.16"
-criterion = "0.3"
-once_cell = "1.20"
+quickcheck = "1.1.0"
+quickcheck_macros = "1.2.0"
+itertools = "0.14"
+ndarray = "0.17"
+criterion = "0.8"
+once_cell = "1.21"
 
 [[bench]]
 name = "my_benchmark"

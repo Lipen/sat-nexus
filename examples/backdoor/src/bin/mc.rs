@@ -65,7 +65,7 @@ fn main() -> color_eyre::Result<()> {
     for _ in 0..args.num_samples {
         let mut cube = Vec::<bool>::with_capacity(n);
         for _ in 0..n {
-            cube.push(rng.gen());
+            cube.push(rng.random());
         }
         let assumptions = input_variables
             .iter()

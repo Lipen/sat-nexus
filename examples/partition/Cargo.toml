@@ -8,8 +8,8 @@ publish = false
 [dependencies]
 log = "0.4"
 simplelog = "0.12"
-itertools = "0.13"
-rayon = "1.10"
+itertools = "0.14"
+rayon = "1.11"
 
 sat-nexus-core = { path = "../../lib/core" }
 sat-nexus-wrappers = { path = "../../lib/wrappers", features = ["cadical-static", "kissat-static"] }
@@ -17,6 +17,6 @@ sat-nexus-wrappers = { path = "../../lib/wrappers", features = ["cadical-static"
 clap = { version = "4.5", features = ["derive"] }
 color-eyre = "0.6"
 thread_local = "1.1"
-fragile = "2.0.0"
-csv = "1.3"
+fragile = "2.0.1"
+csv = "1.4"
 serde = "1.0"

@@ -1,9 +1,10 @@
+pub extern crate pyo3;
 use pyo3::ffi::c_str;
 use pyo3::prelude::*;
 
 pub fn backdoor_to_clauses(cubes: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     // Note: `cubes` are "easy" tasks.
-    Python::with_gil(|py| -> PyResult<_> {
+    Python::attach(|py| -> PyResult<_> {
         // let pyeda = PyModule::import(py, "pyeda")?;
         // println!("pyeda = {}", pyeda);
         // let pyeda_version: String = pyeda.getattr("__version__")?.extract()?;

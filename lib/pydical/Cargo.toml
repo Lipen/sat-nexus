@@ -12,5 +12,5 @@ crate-type = ["cdylib"]
 cadical = { path = "../cadical", features = ["static"] }
 
 [dependencies.pyo3]
-version = "0.23"
+version = "0.28"
 features = ["extension-module", "abi3", "abi3-py37"]

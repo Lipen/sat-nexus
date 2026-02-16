@@ -23,7 +23,7 @@ impl Backdoor {
             size,
             pool.len()
         );
-        let variables = pool.choose_multiple(rng, size).copied().collect();
+        let variables = pool.sample(rng, size).copied().collect();
         Self::new(variables)
     }
 }

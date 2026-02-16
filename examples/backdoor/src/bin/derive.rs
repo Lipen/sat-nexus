@@ -300,7 +300,7 @@ fn main() -> color_eyre::Result<()> {
         cubes_product.retain(|cube| {
             pb.inc(1);
 
-            if rng.gen_bool(0.9) {
+            if rng.random_bool(0.9) {
                 return true;
             }
 

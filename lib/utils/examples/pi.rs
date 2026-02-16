@@ -22,8 +22,8 @@ fn main() {
         for num_samples in rx {
             let mut num_inside = 0;
             for _ in 0..num_samples {
-                let x = rng.gen_range(-1.0..=1.0);
-                let y = rng.gen_range(-1.0..=1.0);
+                let x = rng.random_range(-1.0..=1.0);
+                let y = rng.random_range(-1.0..=1.0);
                 if x * x + y * y <= 1.0 {
                     num_inside += 1;
                 }

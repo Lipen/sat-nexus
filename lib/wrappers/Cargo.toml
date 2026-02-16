@@ -15,9 +15,9 @@ minisat = { path = "../minisat", features = ["dynamic"] }
 cadical = { path = "../cadical", features = ["dynamic"] }
 kissat = { path = "../kissat", features = ["dynamic"] }
 simple-sat = { path = "../simple-sat" }
-itertools = "0.13"
-strum = { version = "0.26", features = ["derive"] }
-tynm = "0.1"
+itertools = "0.14"
+strum = { version = "0.27", features = ["derive"] }
+tynm = "0.2"
 tap = "1.0"
 
 [dev-dependencies]
